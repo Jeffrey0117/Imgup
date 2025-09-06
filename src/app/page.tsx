@@ -75,7 +75,7 @@ export default function Home() {
         setQueue(prev => {
           const newQueue = prev.map(q => 
             q.id === item.id 
-              ? { ...q, done: true, url: result.result, progress: 100, status: 'success' }
+              ? { ...q, done: true, url: result.result, progress: 100, status: 'success' as const }
               : q
           )
           // 立即構建 Markdown
@@ -89,7 +89,7 @@ export default function Home() {
         console.log('上傳失敗:', result)
         setQueue(prev => prev.map(q => 
           q.id === item.id 
-            ? { ...q, status: 'error' }
+            ? { ...q, status: 'error' as const }
             : q
         ))
       }
@@ -97,7 +97,7 @@ export default function Home() {
       console.error('上傳錯誤:', error)
       setQueue(prev => prev.map(q => 
         q.id === item.id 
-          ? { ...q, status: 'error' }
+          ? { ...q, status: 'error' as const }
           : q
       ))
     }
@@ -109,7 +109,7 @@ export default function Home() {
     for (const item of pendingItems) {
       setQueue(prev => prev.map(q => 
         q.id === item.id 
-          ? { ...q, status: 'uploading' }
+          ? { ...q, status: 'uploading' as const }
           : q
       ))
       
