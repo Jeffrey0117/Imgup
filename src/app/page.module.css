@@ -831,7 +831,7 @@
 }
 
 /* 上傳完畢彈窗樣式 */
-.modal {
+.modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -858,15 +858,55 @@
   animation: modalSlideIn 0.3s ease;
 }
 
-.modalTitle {
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modalHeader h3 {
   font-size: 1.5rem;
   font-weight: 700;
   color: #fff;
-  margin-bottom: 16px;
+  margin: 0;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.modalUrl {
+.closeButton {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.urlContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.urlInput {
   background: #0f1115;
   border: 1px solid #333;
   border-radius: 8px;
@@ -874,12 +914,13 @@
   color: #cfe;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 14px;
-  margin-bottom: 16px;
   word-break: break-all;
   user-select: all;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.modalButton {
+.copyButton {
   background: linear-gradient(135deg, #9b6bff, #ff7a59);
   border: none;
   border-radius: 8px;
@@ -889,23 +930,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  margin: 0 8px;
   box-shadow: 0 4px 12px rgba(155, 107, 255, 0.3);
 }
 
-.modalButton:hover {
+.copyButton:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(155, 107, 255, 0.4);
-}
-
-.modalButton.secondary {
-  background: #2b2f39;
-  box-shadow: 0 4px 12px rgba(43, 47, 57, 0.3);
-}
-
-.modalButton.secondary:hover {
-  background: #333842;
-  box-shadow: 0 8px 20px rgba(43, 47, 57, 0.4);
 }
 
 @keyframes modalFadeIn {
