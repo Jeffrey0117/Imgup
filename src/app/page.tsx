@@ -23,6 +23,8 @@ export default function Home() {
     visible: false,
   });
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [currentUploadUrl, setCurrentUploadUrl] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -103,6 +105,10 @@ export default function Home() {
           setImgTag(imgLines.join("\n"));
           return newQueue;
         });
+
+        // 顯示上傳成功彈窗
+        setCurrentUploadUrl(result.result);
+        setShowModal(true);
       } else {
         console.log("上傳失敗:", result);
         setQueue((prev) =>
@@ -497,6 +503,50 @@ export default function Home() {
       </section>
       <footer className={styles.footer}>© 2025 Powered by UPPER</footer>
       {toast.visible && <div className={styles.toast}>{toast.message}</div>}
+
+      {/* 上傳成功彈窗 */}
+      {showModal && currentUploadUrl && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h3>上傳成功！</h3>
+              <button
+                className={styles.closeButton}
+                onClick={() => setShowModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <div className={styles.urlContainer}>
+                <input
+                  type="text"
+                  value={currentUploadUrl}
+                  readOnly
+                  className={styles.urlInput}
+                />
+              </div>
+
+              <button
+                className={styles.copyButton}
+                onClick={() => {
+                  navigator.clipboard.writeText(currentUploadUrl);
+                  showToast("連結已複製到剪貼簿");
+                }}
+              >
+                複製
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
