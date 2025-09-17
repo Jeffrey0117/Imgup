@@ -334,38 +334,52 @@ export default function Home() {
         <div className={styles.accordion}>
           <button
             className={styles.accordionHeader}
-            onClick={() => handleAccordionToggle('why')}
+            onClick={() => handleAccordionToggle("why")}
           >
             為什麼要用圖床？
           </button>
-          <div className={`${styles.accordionContent} ${openAccordion === 'why' ? styles.open : ''}`}>
+          <div
+            className={`${styles.accordionContent} ${
+              openAccordion === "why" ? styles.open : ""
+            }`}
+          >
             <p>
-              圖床（Image Hosting）是專門用來存放圖片的網路服務。使用圖床的好處包括：
+              圖床（Image
+              Hosting）是專門用來存放圖片的網路服務。使用圖床的好處包括：
             </p>
             <ul>
-              <li><strong>永不失效：</strong>專業圖床服務有更好的穩定性，不像網站文章刪除後圖片就消失</li>
-              <li><strong>加速載入：</strong>圖床有CDN加速，使用者載入圖片更快</li>
-              <li><strong>節省空間：</strong>部落格或網站不需要儲存大量圖片檔案</li>
-              <li><strong>統一管理：</strong>所有圖片集中管理，方便後續維護</li>
+              <li>
+                <strong>永不失效：</strong>
+                專業圖床服務有更好的穩定性，不像網站文章刪除後圖片就消失
+              </li>
+              <li>
+                <strong>加速載入：</strong>圖床有CDN加速，使用者載入圖片更快
+              </li>
+              <li>
+                <strong>節省空間：</strong>部落格或網站不需要儲存大量圖片檔案
+              </li>
+              <li>
+                <strong>統一管理：</strong>所有圖片集中管理，方便後續維護
+              </li>
             </ul>
           </div>
 
           <button
             className={styles.accordionHeader}
-            onClick={() => handleAccordionToggle('markdown')}
+            onClick={() => handleAccordionToggle("markdown")}
           >
             Markdown 插入圖片教學
           </button>
-          <div className={`${styles.accordionContent} ${openAccordion === 'markdown' ? styles.open : ''}`}>
-            <p>
-              在 Markdown 文件中插入圖片的語法非常簡單：
-            </p>
+          <div
+            className={`${styles.accordionContent} ${
+              openAccordion === "markdown" ? styles.open : ""
+            }`}
+          >
+            <p>在 Markdown 文件中插入圖片的語法非常簡單：</p>
             <pre>![替代文字](圖片網址)</pre>
             <p>例如：</p>
             <pre>![我的貓咪](https://i.imgur.com/example.jpg)</pre>
-            <p>
-              ImgUP 會自動為你生成正確的 Markdown 語法，你只需要：
-            </p>
+            <p>ImgUP 會自動為你生成正確的 Markdown 語法，你只需要：</p>
             <ol>
               <li>上傳圖片</li>
               <li>複製 Markdown 輸出區域的內容</li>
@@ -375,20 +389,24 @@ export default function Home() {
 
           <button
             className={styles.accordionHeader}
-            onClick={() => handleAccordionToggle('html')}
+            onClick={() => handleAccordionToggle("html")}
           >
             HTML 插入圖片語法
           </button>
-          <div className={`${styles.accordionContent} ${openAccordion === 'html' ? styles.open : ''}`}>
-            <p>
-              在 HTML 中插入圖片需要使用 <img> 標籤：
-            </p>
-            <pre><img src="圖片網址" alt="替代文字" /></pre>
+          <div
+            className={`${styles.accordionContent} ${
+              openAccordion === "html" ? styles.open : ""
+            }`}
+          >
+            <p>在 HTML 中插入圖片需要使用 &lt;img&gt; 標籤：</p>
+            <pre>
+              <img src="圖片網址" alt="替代文字" />
+            </pre>
             <p>例如：</p>
-            <pre><img src="https://i.imgur.com/example.jpg" alt="我的貓咪" /></pre>
-            <p>
-              ImgUP 會自動生成完整的 HTML 標籤，你只需要：
-            </p>
+            <pre>
+              <img src="https://i.imgur.com/example.jpg" alt="我的貓咪" />
+            </pre>
+            <p>ImgUP 會自動生成完整的 HTML 標籤，你只需要：</p>
             <ol>
               <li>上傳圖片到 ImgUP</li>
               <li>複製 HTML 標籤輸出區域的內容</li>
@@ -398,31 +416,50 @@ export default function Home() {
 
           <button
             className={styles.accordionHeader}
-            onClick={() => handleAccordionToggle('features')}
+            onClick={() => handleAccordionToggle("features")}
           >
             ImgUP 功能與優勢
           </button>
-          <div className={`${styles.accordionContent} ${openAccordion === 'features' ? styles.open : ''}`}>
-            <p>
-              ImgUP 是專為部落客、開發者和內容創作者設計的免費圖床工具：
-            </p>
+          <div
+            className={`${styles.accordionContent} ${
+              openAccordion === "features" ? styles.open : ""
+            }`}
+          >
+            <p>ImgUP 是專為部落客、開發者和內容創作者設計的免費圖床工具：</p>
             <ul>
-              <li><strong>拖曳上傳：</strong>支援拖曳多張圖片快速上傳</li>
-              <li><strong>批量處理：</strong>同時上傳多張圖片，節省時間</li>
-              <li><strong>格式支援：</strong>支援 PNG、JPG、WebP 等常見圖片格式</li>
-              <li><strong>即時生成：</strong>上傳完成後立即生成 Markdown 和 HTML 語法</li>
-              <li><strong>一鍵複製：</strong>點擊按鈕即可複製到剪貼簿</li>
-              <li><strong>免費使用：</strong>完全免費，無需註冊</li>
+              <li>
+                <strong>拖曳上傳：</strong>支援拖曳多張圖片快速上傳
+              </li>
+              <li>
+                <strong>批量處理：</strong>同時上傳多張圖片，節省時間
+              </li>
+              <li>
+                <strong>格式支援：</strong>支援 PNG、JPG、WebP 等常見圖片格式
+              </li>
+              <li>
+                <strong>即時生成：</strong>上傳完成後立即生成 Markdown 和 HTML
+                語法
+              </li>
+              <li>
+                <strong>一鍵複製：</strong>點擊按鈕即可複製到剪貼簿
+              </li>
+              <li>
+                <strong>免費使用：</strong>完全免費，無需註冊
+              </li>
             </ul>
           </div>
 
           <button
             className={styles.accordionHeader}
-            onClick={() => handleAccordionToggle('faq')}
+            onClick={() => handleAccordionToggle("faq")}
           >
             常見問題（FAQ）
           </button>
-          <div className={`${styles.accordionContent} ${openAccordion === 'faq' ? styles.open : ''}`}>
+          <div
+            className={`${styles.accordionContent} ${
+              openAccordion === "faq" ? styles.open : ""
+            }`}
+          >
             <h4>Q: 上傳的圖片會儲存多久？</h4>
             <p>A: 上傳到 Imgur 的圖片會永久保存，不會過期。</p>
 
@@ -433,24 +470,14 @@ export default function Home() {
             <p>A: 支援 PNG、JPG、GIF、WebP 等常見格式。</p>
 
             <h4>Q: 如何一次上傳多張圖片？</h4>
-            <p>A: 你可以拖曳多張圖片到上傳區域，或使用檔案選擇器選擇多個檔案。</p>
+            <p>
+              A: 你可以拖曳多張圖片到上傳區域，或使用檔案選擇器選擇多個檔案。
+            </p>
 
             <h4>Q: 圖片會被壓縮嗎？</h4>
             <p>A: Imgur 會根據檔案大小自動優化，但不會明顯降低畫質。</p>
           </div>
         </div>
-        <h3>如何在 Markdown 中插入圖片</h3>
-        <p>
-          要在 Markdown
-          中插入圖片，只需使用以下語法：![替代文字](圖片網址)。圖圖上床會自動為你生成正確的
-          Markdown 語法，你可以直接複製使用。
-        </p>
-        <h3>如何在 HTML 中添加圖片</h3>
-        <p>
-          若你要在 HTML 文件中添加圖片，可以使用 &lt;img&gt; 標籤，語法為
-          &lt;img src="圖片網址" alt="替代文字"
-          /&gt;。圖圖上床也會自動生成完整的 HTML 標籤供你使用。
-        </p>
       </section>
       <footer className={styles.footer}>© 2025 Powered by UPPER</footer>
       {toast.visible && <div className={styles.toast}>{toast.message}</div>}
