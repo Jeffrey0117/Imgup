@@ -203,7 +203,17 @@ export default function Home() {
     <div className={styles.container}>
       <div className={styles.wrap}>
         <div className={styles.header}>
-          <h1 className={styles.mainTitle}>圖鴨上床(ImgUP)</h1>
+          <div className={styles.logoSection}>
+            <Image
+              src="/logo-imgup.png"
+              alt="ImgUP Logo"
+              className={styles.logo}
+              width={60}
+              height={60}
+              priority
+            />
+            <h1 className={styles.mainTitle}>圖鴨上床(ImgUP)</h1>
+          </div>
           <div className={styles.titleSection}>
             <h2 className={styles.subTitle}>Drop images → Upload → Markdown</h2>
             <h2 className={styles.subTitle}>輕鬆拖曳你的圖，它就上床了。</h2>

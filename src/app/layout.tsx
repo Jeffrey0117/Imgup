@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: "圖鴨上床(ImgUP) - 免費圖床工具",
   description:
     "圖鴨上床(ImgUP) - 批量上傳圖片並生成 Markdown 連結的免費圖床工具",
+  icons: {
+    icon: "/logo-imgup2.png",
+    shortcut: "/logo-imgup2.png",
+    apple: "/logo-imgup2.png",
+  },
 };
 
 export default function RootLayout({
