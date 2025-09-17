@@ -522,12 +522,13 @@
 @media (max-width: 768px) {
   .container {
     padding: 20px 16px; /* 增加左右 padding */
+    box-sizing: border-box; /* 確保 padding 包含在寬度內 */
   }
 
   .wrap {
-    width: calc(100% - 32px); /* 考慮左右 padding */
+    width: 100%; /* 使用 container 的完整寬度 */
     margin: 0 auto; /* 確保置中 */
-    max-width: calc(100vw - 32px); /* 防止超出螢幕 */
+    max-width: none; /* 移除最大寬度限制，讓 container padding 控制 */
   }
 
   .mainTitle {
@@ -597,12 +598,13 @@
 @media (max-width: 480px) {
   .container {
     padding: 16px 12px; /* 調整左右 padding */
+    box-sizing: border-box; /* 確保 padding 包含在寬度內 */
   }
 
   .wrap {
-    width: calc(100% - 24px); /* 對應 container padding */
+    width: 100%; /* 使用 container 的完整寬度 */
     margin: 0 auto;
-    max-width: calc(100vw - 24px);
+    max-width: none; /* 移除最大寬度限制 */
   }
 
   .logoSection {
@@ -728,12 +730,13 @@
 @media (max-width: 375px) {
   .container {
     padding: 12px 8px; /* 更小的 padding */
+    box-sizing: border-box; /* 確保 padding 包含在寬度內 */
   }
 
   .wrap {
-    width: calc(100% - 16px); /* 對應 container padding */
+    width: 100%; /* 使用 container 的完整寬度 */
     margin: 0 auto;
-    max-width: calc(100vw - 16px);
+    max-width: none; /* 移除最大寬度限制 */
   }
 
   .logoSection {
