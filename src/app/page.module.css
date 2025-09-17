@@ -81,13 +81,7 @@
 }
 
 .logo {
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease;
-}
-
-.logo:hover {
-  transform: scale(1.05);
+  /* 移除所有裝飾樣式，保持簡潔 */
 }
 
 .titleSection {
