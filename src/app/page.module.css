@@ -23,15 +23,31 @@
   border-radius: 18px;
   box-shadow: 0 10px 40px #0008;
   overflow: hidden;
+  position: relative;
+}
+
+.wrap::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #ffd700, #ffed4e, #ffd700, #ffed4e);
+  background-size: 400% 400%;
+  border-radius: 20px;
+  z-index: -1;
+  animation: borderGlow 4s ease-in-out infinite;
 }
 
 .header {
-  padding: 18px 22px;
+  padding: 20px;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
   background: #17181c;
-  border-bottom: 1px solid #2a2d33;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .titleSection {
@@ -45,7 +61,8 @@
   font-weight: 900;
   letter-spacing: 0.8px;
   color: #fff;
-  margin: 0;
+  margin: 0 auto;
+  text-align: center;
   text-shadow: 0 2px 4px #0006;
 }
 
@@ -235,7 +252,7 @@
 
 .output {
   width: 100%;
-  height: 250px;
+  height: 150px;
   background: #0f1115;
   color: #dfe;
   border: 1px solid #2a2d33;
@@ -315,4 +332,39 @@
 
 .deleteBtn:hover {
   background: #ff5252;
+}
+
+.footer {
+  text-align: center;
+  color: #aaa;
+  font-size: 12px;
+  margin-top: 20px;
+  padding: 10px 0;
+}
+
+@keyframes borderGlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 100% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  75% {
+    background-position: 0% 100%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.seoSection {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #ddd;
 }

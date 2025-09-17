@@ -197,14 +197,10 @@ export default function Home() {
     <div className={styles.container}>
       <div className={styles.wrap}>
         <div className={styles.header}>
+          <h1 className={styles.mainTitle}>圖圖上床(ImgUP)</h1>
           <div className={styles.titleSection}>
-            <h1 className={styles.mainTitle}>ImgUP</h1>
             <h2 className={styles.subTitle}>Drop images → Upload → Markdown</h2>
-          </div>
-          <div className={styles.token}>
-            <button onClick={clearAll} className={styles.clearBtn}>
-              Clear
-            </button>
+            <h2 className={styles.subTitle}>輕鬆拖曳你的圖，它就上床了。</h2>
           </div>
         </div>
 
@@ -290,6 +286,9 @@ export default function Home() {
               <button onClick={startUpload} className={styles.primary}>
                 開始上傳
               </button>
+              <button onClick={clearAll} className={styles.primary}>
+                Clear
+              </button>
             </div>
 
             <div className={styles.outputHeader}>
@@ -324,6 +323,27 @@ export default function Home() {
           </div>
         </div>
       </div>
+      <section className={styles.seoSection}>
+        <h2>什麼是圖圖上床(ImgUP)？</h2>
+        <p>
+          圖圖上床(ImgUP)
+          是一個簡單方便的圖片上傳工具，讓你能夠快速將圖片上傳到網路，並生成
+          Markdown 語法和 HTML 標籤，方便你在部落格、文件或網頁中使用。
+        </p>
+        <h3>如何在 Markdown 中插入圖片</h3>
+        <p>
+          要在 Markdown
+          中插入圖片，只需使用以下語法：![替代文字](圖片網址)。圖圖上床會自動為你生成正確的
+          Markdown 語法，你可以直接複製使用。
+        </p>
+        <h3>如何在 HTML 中添加圖片</h3>
+        <p>
+          若你要在 HTML 文件中添加圖片，可以使用 &lt;img&gt; 標籤，語法為
+          &lt;img src="圖片網址" alt="替代文字"
+          /&gt;。圖圖上床也會自動生成完整的 HTML 標籤供你使用。
+        </p>
+      </section>
+      <footer className={styles.footer}>© 2025 Powered by UPPER</footer>
       {toast.visible && <div className={styles.toast}>{toast.message}</div>}
     </div>
   );
