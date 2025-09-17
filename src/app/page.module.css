@@ -520,6 +520,16 @@
 
 /* Tablet Portrait / Large Mobile (481px - 768px) */
 @media (max-width: 768px) {
+  .container {
+    padding: 20px 16px; /* 增加左右 padding */
+  }
+
+  .wrap {
+    width: calc(100% - 32px); /* 考慮左右 padding */
+    margin: 0 auto; /* 確保置中 */
+    max-width: calc(100vw - 32px); /* 防止超出螢幕 */
+  }
+
   .mainTitle {
     font-size: var(--fs-title-tablet);
   }
@@ -544,16 +554,29 @@
 
   .actions {
     flex-wrap: wrap;
+    gap: 12px; /* 增加按鈕間距 */
   }
 
   .primary {
     flex: 1;
     min-width: 120px;
+    text-align: center; /* 按鈕文字置中 */
+  }
+
+  .tokenInput {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .output {
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .seoSection {
     padding: 16px;
     margin: 20px auto;
+    max-width: calc(100% - 32px); /* 與 container padding 一致 */
   }
 
   .accordionHeader {
@@ -573,7 +596,13 @@
 /* Mobile Standard (376px - 480px) */
 @media (max-width: 480px) {
   .container {
-    padding: 16px;
+    padding: 16px 12px; /* 調整左右 padding */
+  }
+
+  .wrap {
+    width: calc(100% - 24px); /* 對應 container padding */
+    margin: 0 auto;
+    max-width: calc(100vw - 24px);
   }
 
   .logoSection {
@@ -589,10 +618,12 @@
 
   .mainTitle {
     font-size: 1.8rem;
+    text-align: center; /* 確保標題置中 */
   }
 
   .subTitle {
     font-size: 1rem;
+    text-align: center; /* 確保副標題置中 */
   }
 
   .main {
@@ -602,6 +633,11 @@
 
   .drop {
     height: var(--drop-height-mobile);
+    margin: 0 auto; /* 確保拖曳區域置中 */
+  }
+
+  .zone {
+    text-align: center; /* 確保拖曳區域文字置中 */
   }
 
   .hint {
@@ -621,20 +657,26 @@
 
   .output {
     height: var(--output-height-mobile);
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .header {
     padding: 12px;
+    text-align: center; /* 確保 header 內容置中 */
   }
 
   .actions {
     flex-direction: column;
     gap: 8px;
+    align-items: center; /* 確保按鈕區域置中 */
   }
 
   .primary {
     width: 100%;
     padding: 12px 16px;
+    text-align: center;
+    max-width: 300px; /* 限制最大寬度 */
   }
 
   .item {
@@ -667,6 +709,8 @@
   .seoSection {
     padding: 12px;
     font-size: 13px;
+    margin: 20px auto;
+    max-width: calc(100% - 24px); /* 與 container padding 一致 */
   }
 
   .accordionHeader {
@@ -682,6 +726,16 @@
 
 /* Mobile Small (up to 375px) */
 @media (max-width: 375px) {
+  .container {
+    padding: 12px 8px; /* 更小的 padding */
+  }
+
+  .wrap {
+    width: calc(100% - 16px); /* 對應 container padding */
+    margin: 0 auto;
+    max-width: calc(100vw - 16px);
+  }
+
   .logoSection {
     gap: 8px;
     margin-bottom: 4px;
@@ -694,19 +748,23 @@
 
   .mainTitle {
     font-size: var(--fs-title-mobile);
+    text-align: center;
   }
 
   .subTitle {
     font-size: var(--fs-subtitle-mobile);
+    text-align: center;
   }
 
   .titleSection {
     gap: 2px;
+    text-align: center; /* 確保整個標題區域置中 */
   }
 
   .zone {
     height: 200px;
     font-size: 14px;
+    text-align: center;
   }
 
   .hint {
@@ -742,6 +800,16 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+
+  .primary {
+    max-width: 280px; /* 在最小螢幕上限制按鈕寬度 */
+  }
+
+  .seoSection {
+    padding: 8px;
+    margin: 16px auto;
+    max-width: calc(100% - 16px); /* 與 container padding 一致 */
   }
 }
 
