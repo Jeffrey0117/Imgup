@@ -2,6 +2,8 @@
 
 import { useState, useRef } from "react";
 import styles from "./page.module.css";
+import Image from "next/image";
+import logoImg from "./logo-imgup.png";
 
 interface UploadItem {
   id: string;
@@ -202,7 +204,7 @@ export default function Home() {
     <div className={styles.container}>
       <div className={styles.wrap}>
         <div className={styles.header}>
-          <h1 className={styles.mainTitle}>圖圖上床(ImgUP)</h1>
+          <h1 className={styles.mainTitle}>圖鴨上床(ImgUP)</h1>
           <div className={styles.titleSection}>
             <h2 className={styles.subTitle}>Drop images → Upload → Markdown</h2>
             <h2 className={styles.subTitle}>輕鬆拖曳你的圖，它就上床了。</h2>
@@ -334,7 +336,7 @@ export default function Home() {
         </div>
       </div>
       <section className={styles.seoSection}>
-        <h1>ImgUP 免費圖床工具介紹</h1>
+        <h1>ImgUP 圖鴨上床-免費圖床工具介紹</h1>
 
         <div className={styles.accordion}>
           <button
