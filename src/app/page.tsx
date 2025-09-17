@@ -229,7 +229,12 @@ export default function Home() {
                 onChange={(e) => e.target.files && addFiles(e.target.files)}
               />
             </div>
-            <div className={styles.hint}>png / jpg / webp… 支援多檔同傳</div>
+            <div className={styles.hint}>
+              <span className={styles.hintFull}>
+                png / jpg / webp… 支援多檔同傳
+              </span>
+              <span className={styles.hintShort}>多檔上傳</span>
+            </div>
           </div>
 
           <div className={styles.rightPanel}>
