@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import styles from "./page.module.css";
 import Image from "next/image";
-import logoImg from "./logo-imgup.png";
 
 interface UploadItem {
   id: string;
