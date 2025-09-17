@@ -28,7 +28,10 @@
 
 .container {
   margin: 0;
-  font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-size: 16px;
+  line-height: 1.5;
+  font-family: "LINESeedTW", system-ui, -apple-system, Segoe UI, Roboto, Arial,
+    sans-serif;
   background: #111;
   color: #eef;
   display: grid;
