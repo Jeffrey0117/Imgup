@@ -34,6 +34,29 @@
   border-bottom: 1px solid #2a2d33;
 }
 
+.titleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mainTitle {
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  color: #fff;
+  margin: 0;
+  text-shadow: 0 2px 4px #0006;
+}
+
+.subTitle {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #aaa;
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
 .brand {
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -132,7 +155,7 @@
 
 .item {
   display: grid;
-  grid-template-columns: 56px 1fr 86px;
+  grid-template-columns: 56px 1fr 86px 30px;
   gap: 10px;
   align-items: center;
   padding: 8px;
@@ -212,7 +235,7 @@
 
 .output {
   width: 100%;
-  min-height: 160px;
+  height: 250px;
   background: #0f1115;
   color: #dfe;
   border: 1px solid #2a2d33;
@@ -220,4 +243,76 @@
   padding: 12px;
   resize: vertical;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  overflow-y: auto;
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ok);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px #0008;
+  z-index: 1000;
+  font-weight: 500;
+  animation: toastSlideIn 0.3s ease-out;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.outputHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.copyBtn {
+  background: #2b2f39;
+  color: #eef;
+  border: 1px solid #3a3f48;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.empty {
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+  padding: 20px;
+  margin: 0;
+}
+
+.deleteBtn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: #ff6b6b;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.deleteBtn:hover {
+  background: #ff5252;
 }
