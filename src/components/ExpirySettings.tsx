@@ -19,16 +19,25 @@ export default function ExpirySettings({
     const now = new Date();
 
     switch (option) {
+      case "5min":
+        expiryDate = new Date(now.getTime() + 5 * 60 * 1000);
+        break;
+      case "10min":
+        expiryDate = new Date(now.getTime() + 10 * 60 * 1000);
+        break;
+      case "30min":
+        expiryDate = new Date(now.getTime() + 30 * 60 * 1000);
+        break;
       case "1hour":
         expiryDate = new Date(now.getTime() + 60 * 60 * 1000);
         break;
       case "1day":
         expiryDate = new Date(now.getTime() + 24 * 60 * 60 * 1000);
         break;
-      case "7days":
-        expiryDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      case "7weeks":
+        expiryDate = new Date(now.getTime() + 7 * 7 * 24 * 60 * 60 * 1000);
         break;
-      case "30days":
+      case "1month":
         expiryDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
         break;
       case "never":
@@ -43,67 +52,20 @@ export default function ExpirySettings({
   return (
     <div className={styles.container}>
       <label className={styles.label}>設定過期時間：</label>
-      <div className={styles.options}>
-        <label className={styles.option}>
-          <input
-            type="radio"
-            name="expiry"
-            value="never"
-            checked={selectedOption === "never"}
-            onChange={() => handleOptionChange("never")}
-            className={styles.radio}
-          />
-          <span>永不過期</span>
-        </label>
-
-        <label className={styles.option}>
-          <input
-            type="radio"
-            name="expiry"
-            value="1hour"
-            checked={selectedOption === "1hour"}
-            onChange={() => handleOptionChange("1hour")}
-            className={styles.radio}
-          />
-          <span>1小時</span>
-        </label>
-
-        <label className={styles.option}>
-          <input
-            type="radio"
-            name="expiry"
-            value="1day"
-            checked={selectedOption === "1day"}
-            onChange={() => handleOptionChange("1day")}
-            className={styles.radio}
-          />
-          <span>1天</span>
-        </label>
-
-        <label className={styles.option}>
-          <input
-            type="radio"
-            name="expiry"
-            value="7days"
-            checked={selectedOption === "7days"}
-            onChange={() => handleOptionChange("7days")}
-            className={styles.radio}
-          />
-          <span>7天</span>
-        </label>
-
-        <label className={styles.option}>
-          <input
-            type="radio"
-            name="expiry"
-            value="30days"
-            checked={selectedOption === "30days"}
-            onChange={() => handleOptionChange("30days")}
-            className={styles.radio}
-          />
-          <span>30天</span>
-        </label>
-      </div>
+      <select
+        value={selectedOption}
+        onChange={(e) => handleOptionChange(e.target.value)}
+        className={styles.select}
+      >
+        <option value="never">永不過期</option>
+        <option value="5min">5分鐘</option>
+        <option value="10min">10分鐘</option>
+        <option value="30min">30分鐘</option>
+        <option value="1hour">1小時</option>
+        <option value="1day">1天</option>
+        <option value="7weeks">7周</option>
+        <option value="1month">一個月</option>
+      </select>
     </div>
   );
 }

@@ -24,9 +24,11 @@ export default function PasswordSettings({
   };
 
   const handlePasswordChange = (newPassword: string) => {
-    setPassword(newPassword);
+    // 只允許數字且限制為4位
+    const numericValue = newPassword.replace(/\D/g, "").slice(0, 4);
+    setPassword(numericValue);
     if (isEnabled) {
-      onPasswordChange(newPassword);
+      onPasswordChange(numericValue);
     }
   };
 
@@ -64,11 +66,14 @@ export default function PasswordSettings({
             type="password"
             value={password}
             onChange={(e) => handlePasswordChange(e.target.value)}
-            placeholder="請輸入密碼"
+            placeholder="請輸入4位數字密碼"
             className={styles.input}
+            maxLength={4}
+            pattern="[0-9]*"
+            inputMode="numeric"
           />
           <div className={styles.hint}>
-            設定密碼後，訪問短網址時需要輸入密碼
+            請輸入4位數字密碼，訪問短網址時需要輸入此密碼
           </div>
         </div>
       )}
