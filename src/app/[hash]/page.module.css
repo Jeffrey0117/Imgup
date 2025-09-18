@@ -1,0 +1,221 @@
+.container {
+  min-height: 100vh;
+  background: #111;
+  color: #eef;
+  font-family: "LINESeedTW", system-ui, -apple-system, Segoe UI, Roboto, Arial,
+    sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 40px;
+  background: #1f2126;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px #0008;
+}
+
+.error h2 {
+  color: #ffa940;
+  margin-bottom: 16px;
+}
+
+.imageContainer {
+  max-width: 800px;
+  width: 100%;
+  background: #1f2126;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 10px 40px #0008;
+  text-align: center;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #fff;
+}
+
+.filename {
+  font-size: 1.1rem;
+  color: #dde;
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+
+.uploadTime {
+  font-size: 0.9rem;
+  color: #999;
+  margin-bottom: 0;
+}
+
+.imageWrapper {
+  margin: 24px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.image {
+  max-width: 100%;
+  max-height: 70vh;
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.actionBtn {
+  background: #2b2f39;
+  color: #eef;
+  border: 1px solid #3a3f48;
+  border-radius: 8px;
+  padding: 10px 16px;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.actionBtn:hover {
+  background: #333842;
+  border-color: #4a4f5a;
+}
+
+.backLink {
+  background: #9b6bff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.backLink:hover {
+  background: #8a5aef;
+}
+
+.passwordForm {
+  text-align: center;
+  padding: 40px;
+  background: #1f2126;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px #0008;
+  max-width: 400px;
+  width: 100%;
+}
+
+.passwordForm h2 {
+  color: #ffa940;
+  margin-bottom: 16px;
+}
+
+.passwordForm form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.passwordInput {
+  background: #0f1115;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px;
+  color: #cfe;
+  font-size: 16px;
+}
+
+.submitBtn {
+  background: #9b6bff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.submitBtn:hover {
+  background: #8a5aef;
+}
+
+.errorText {
+  color: #ff6b6b;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+/* 手機版優化 */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .imageContainer {
+    padding: 20px;
+  }
+
+  .header h1 {
+    font-size: 1.6rem;
+  }
+
+  .filename {
+    font-size: 1rem;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .actionBtn,
+  .backLink {
+    width: 100%;
+    max-width: 200px;
+    text-align: center;
+  }
+
+  .passwordForm {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 12px;
+  }
+
+  .imageContainer {
+    padding: 16px;
+  }
+
+  .header h1 {
+    font-size: 1.4rem;
+  }
+
+  .image {
+    max-height: 60vh;
+  }
+}

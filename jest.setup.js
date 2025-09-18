@@ -28,12 +28,21 @@ Object.defineProperty(URL, "createObjectURL", {
   value: jest.fn(() => "mocked-object-url"),
 });
 
-// Mock navigator.clipboard only if not already defined
-if (!navigator.clipboard) {
-  Object.defineProperty(navigator, "clipboard", {
-    value: {
-      writeText: jest.fn(() => Promise.resolve()),
-    },
-    configurable: true,
-  });
-}
+// Mock navigator.clipboard
+Object.defineProperty(navigator, "clipboard", {
+  value: {
+    writeText: jest.fn(() => Promise.resolve()),
+    readText: jest.fn(() => Promise.resolve("")),
+  },
+  writable: true,
+  configurable: true,
+});
+
+// Also mock for global
+global.navigator = {
+  ...global.navigator,
+  clipboard: {
+    writeText: jest.fn(() => Promise.resolve()),
+    readText: jest.fn(() => Promise.resolve("")),
+  },
+};

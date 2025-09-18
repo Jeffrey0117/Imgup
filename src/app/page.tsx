@@ -3,6 +3,12 @@
 import { useState, useRef } from "react";
 import styles from "./page.module.css";
 import Image from "next/image";
+import DuckAnimation from "../components/DuckAnimation";
+import QRCode from "../components/QRCode";
+import ExpirySettings from "../components/ExpirySettings";
+import PasswordSettings from "../components/PasswordSettings";
+import { generateShortHash } from "../utils/hash";
+import { saveImageMapping, cleanExpiredMappings } from "../utils/storage";
 
 interface UploadItem {
   id: string;
@@ -25,6 +31,11 @@ export default function Home() {
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [currentUploadUrl, setCurrentUploadUrl] = useState("");
+  const [currentShortUrl, setCurrentShortUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [expiryDate, setExpiryDate] = useState<Date | null>(null);
+  const [password, setPassword] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -70,17 +81,63 @@ export default function Home() {
     console.log("開始上傳:", item.file.name);
 
     try {
+      // 開始上傳動畫
+      setIsUploading(true);
+      setUploadProgress(0);
+
+      // 模擬上傳進度
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) return prev;
+          return prev + Math.random() * 15;
+        });
+      }, 200);
+
       // 使用我們的 API 路由，避免 CORS 問題
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
 
+      // 清除進度模擬
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
       console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const result = await response.json();
       console.log("Response result:", result);
 
       if (result.result) {
+        // 生成短網址
+        const hash = generateShortHash(result.result);
+        const baseUrl =
+          typeof window !== "undefined"
+            ? window.location.origin
+            : "http://localhost:3000";
+        const shortUrl = `${baseUrl}/${hash}`;
+
+        // 保存映射關係到 localStorage
+        const mapping = {
+          id: hash,
+          filename: item.file.name,
+          url: result.result,
+          shortUrl: shortUrl,
+          createdAt: new Date(),
+          expiresAt: expiryDate || undefined,
+          password: password || undefined,
+        };
+
+        try {
+          saveImageMapping(mapping);
+        } catch (error) {
+          console.error("保存映射失敗:", error);
+        }
+
         setQueue((prev) => {
           const newQueue = prev.map((q) =>
             q.id === item.id
@@ -106,11 +163,20 @@ export default function Home() {
           return newQueue;
         });
 
-        // 顯示上傳成功彈窗
+        // 延遲關閉動畫，讓使用者看到完成狀態
+        setTimeout(() => {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }, 800);
+
+        // 顯示上傳成功彈窗，使用短網址
         setCurrentUploadUrl(result.result);
+        setCurrentShortUrl(shortUrl);
         setShowModal(true);
       } else {
         console.log("上傳失敗:", result);
+        setIsUploading(false);
+        setUploadProgress(0);
         setQueue((prev) =>
           prev.map((q) =>
             q.id === item.id ? { ...q, status: "error" as const } : q
@@ -119,6 +185,8 @@ export default function Home() {
       }
     } catch (error) {
       console.error("上傳錯誤:", error);
+      setIsUploading(false);
+      setUploadProgress(0);
       setQueue((prev) =>
         prev.map((q) =>
           q.id === item.id ? { ...q, status: "error" as const } : q
@@ -162,14 +230,24 @@ export default function Home() {
     return "";
   };
 
-  const copyMarkdown = () => {
-    navigator.clipboard.writeText(markdown);
-    showToast("Markdown 已複製到剪貼簿");
+  const copyMarkdown = async () => {
+    try {
+      await navigator.clipboard.writeText(markdown);
+      showToast("Markdown 已複製到剪貼簿");
+    } catch (error) {
+      console.error("複製失敗:", error);
+      showToast("複製失敗，請手動選取文字複製");
+    }
   };
 
-  const copyImgTag = () => {
-    navigator.clipboard.writeText(imgTag);
-    showToast("HTML 標籤已複製到剪貼簿");
+  const copyImgTag = async () => {
+    try {
+      await navigator.clipboard.writeText(imgTag);
+      showToast("HTML 標籤已複製到剪貼簿");
+    } catch (error) {
+      console.error("複製失敗:", error);
+      showToast("複製失敗，請手動選取文字複製");
+    }
   };
 
   const showToast = (message: string) => {
@@ -254,6 +332,16 @@ export default function Home() {
             </div>
           </div>
 
+          {/* 鴨子動畫區域 */}
+          {isUploading && (
+            <div className={styles.duckAnimationContainer}>
+              <DuckAnimation
+                isUploading={isUploading}
+                progress={uploadProgress}
+              />
+            </div>
+          )}
+
           <div className={styles.rightPanel}>
             <div className={styles.list}>
               {queue.length === 0 ? (
@@ -303,13 +391,13 @@ export default function Home() {
               )}
             </div>
 
+            {/* 過期時間和密碼設定 */}
+            <div className={styles.settingsSection}>
+              <ExpirySettings onExpiryChange={setExpiryDate} />
+              <PasswordSettings onPasswordChange={setPassword} />
+            </div>
+
             <div className={styles.actions}>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className={styles.primary}
-              >
-                選擇圖片
-              </button>
               <button onClick={startUpload} className={styles.primary}>
                 開始上傳
               </button>
@@ -508,7 +596,12 @@ export default function Home() {
       {showModal && currentUploadUrl && (
         <div
           className={styles.modalOverlay}
-          onClick={() => setShowModal(false)}
+          onClick={(e) => {
+            // 只有點擊背景時才關閉彈窗
+            if (e.target === e.currentTarget) {
+              setShowModal(false);
+            }
+          }}
         >
           <div
             className={styles.modalContent}
@@ -525,24 +618,69 @@ export default function Home() {
             </div>
 
             <div className={styles.modalBody}>
+              {/* QR Code 區域 - 使用短網址 */}
+              <QRCode value={currentShortUrl || currentUploadUrl} size={120} />
+
               <div className={styles.urlContainer}>
+                <label className={styles.urlLabel}>短網址：</label>
                 <input
                   type="text"
-                  value={currentUploadUrl}
+                  value={currentShortUrl || currentUploadUrl}
                   readOnly
                   className={styles.urlInput}
                 />
               </div>
 
-              <button
-                className={styles.copyButton}
-                onClick={() => {
-                  navigator.clipboard.writeText(currentUploadUrl);
-                  showToast("連結已複製到剪貼簿");
-                }}
-              >
-                複製
-              </button>
+              {currentShortUrl && (
+                <div className={styles.urlContainer}>
+                  <label className={styles.urlLabel}>原始連結：</label>
+                  <input
+                    type="text"
+                    value={currentUploadUrl}
+                    readOnly
+                    className={styles.urlInput}
+                    style={{ fontSize: "12px" }}
+                  />
+                </div>
+              )}
+
+              <div className={styles.buttonGroup}>
+                <button
+                  className={styles.copyButton}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(
+                        currentShortUrl || currentUploadUrl
+                      );
+                      setShowModal(false); // 立即關閉彈窗
+                      showToast("短網址已複製到剪貼簿");
+                    } catch (error) {
+                      console.error("複製失敗:", error);
+                      showToast("複製失敗，請手動選取網址複製");
+                    }
+                  }}
+                >
+                  複製短網址
+                </button>
+
+                {currentShortUrl && (
+                  <button
+                    className={styles.copyButtonSecondary}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(currentUploadUrl);
+                        setShowModal(false); // 立即關閉彈窗
+                        showToast("原始連結已複製到剪貼簿");
+                      } catch (error) {
+                        console.error("複製失敗:", error);
+                        showToast("複製失敗，請手動選取網址複製");
+                      }
+                    }}
+                  >
+                    複製原始連結
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

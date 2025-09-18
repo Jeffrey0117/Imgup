@@ -18,6 +18,9 @@ describe("Home Page RWD Tests", () => {
     jest.clearAllMocks();
     // Reset viewport to desktop by default
     setViewport(VIEWPORTS.DESKTOP.width, VIEWPORTS.DESKTOP.height);
+
+    // Reset clipboard mock
+    jest.clearAllMocks();
   });
 
   describe("Mobile Layout (375px)", () => {
@@ -28,11 +31,11 @@ describe("Home Page RWD Tests", () => {
     test("should display single column layout on mobile", () => {
       render(<Home />);
 
-      const container = screen.getByText("圖圖上床(ImgUP)").closest("div");
+      const container = screen.getByText("圖鴨上床(ImgUP)").closest("div");
       expect(container).toBeInTheDocument();
 
       // Check that main title is visible
-      expect(screen.getByText("圖圖上床(ImgUP)")).toBeInTheDocument();
+      expect(screen.getByText("圖鴨上床(ImgUP)")).toBeInTheDocument();
       expect(
         screen.getByText("Drop images → Upload → Markdown")
       ).toBeInTheDocument();
@@ -41,7 +44,7 @@ describe("Home Page RWD Tests", () => {
     test("should have appropriate font sizes for mobile", () => {
       render(<Home />);
 
-      const mainTitle = screen.getByText("圖圖上床(ImgUP)");
+      const mainTitle = screen.getByText("圖鴨上床(ImgUP)");
       const computedStyle = window.getComputedStyle(mainTitle);
 
       // The actual font size will depend on CSS being loaded
@@ -53,7 +56,7 @@ describe("Home Page RWD Tests", () => {
       const user = userEvent.setup();
       render(<Home />);
 
-      const uploadButton = screen.getByText("選擇圖片");
+      const uploadButton = screen.getByText("Drop images here / 或點擊選擇");
       expect(uploadButton).toBeInTheDocument();
 
       // Should be clickable
@@ -84,7 +87,7 @@ describe("Home Page RWD Tests", () => {
       render(<Home />);
 
       // Should still show all main elements
-      expect(screen.getByText("圖圖上床(ImgUP)")).toBeInTheDocument();
+      expect(screen.getByText("圖鴨上床(ImgUP)")).toBeInTheDocument();
       expect(
         screen.getByText("Drop images here / 或點擊選擇")
       ).toBeInTheDocument();
@@ -127,7 +130,7 @@ describe("Home Page RWD Tests", () => {
       render(<Home />);
 
       // Check all main elements are present
-      expect(screen.getByText("圖圖上床(ImgUP)")).toBeInTheDocument();
+      expect(screen.getByText("圖鴨上床(ImgUP)")).toBeInTheDocument();
       expect(
         screen.getByText("Drop images here / 或點擊選擇")
       ).toBeInTheDocument();
@@ -164,7 +167,7 @@ describe("Home Page RWD Tests", () => {
     test("should display action buttons properly", () => {
       render(<Home />);
 
-      expect(screen.getByText("選擇圖片")).toBeInTheDocument();
+      expect(screen.getByText("開始上傳")).toBeInTheDocument();
       expect(screen.getByText("開始上傳")).toBeInTheDocument();
       expect(screen.getByText("Clear")).toBeInTheDocument();
     });
@@ -173,6 +176,16 @@ describe("Home Page RWD Tests", () => {
   describe("Interactive Elements", () => {
     test("should copy markdown to clipboard", async () => {
       const user = userEvent.setup();
+
+      // Create mock clipboard function
+      const mockWriteText = jest.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, "clipboard", {
+        value: {
+          writeText: mockWriteText,
+        },
+        writable: true,
+      });
+
       render(<Home />);
 
       // Add a file first
@@ -189,8 +202,11 @@ describe("Home Page RWD Tests", () => {
 
       fireEvent.change(fileInput);
 
-      // Mock successful upload
+      // Mock successful upload - 需要回應完整的 fetch response
       (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: "OK",
         json: () => Promise.resolve({ result: "https://example.com/test.jpg" }),
       });
 
@@ -198,17 +214,24 @@ describe("Home Page RWD Tests", () => {
       const uploadButton = screen.getByText("開始上傳");
       await user.click(uploadButton);
 
-      // Wait for copy button to appear
-      await waitFor(() => {
-        const copyButton = screen.getByText("複製Markdown");
-        expect(copyButton).toBeInTheDocument();
-      });
+      // Wait for upload to complete and markdown to be generated
+      await waitFor(
+        () => {
+          expect(
+            screen.getByDisplayValue("![](https://example.com/test.jpg)")
+          ).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
 
+      // Now the copy button should be available
       const copyButton = screen.getByText("複製Markdown");
       await user.click(copyButton);
 
       // Verify clipboard was called
-      expect(navigator.clipboard.writeText).toHaveBeenCalled();
+      expect(mockWriteText).toHaveBeenCalledWith(
+        "![](https://example.com/test.jpg)"
+      );
     });
 
     test("should clear all files", async () => {

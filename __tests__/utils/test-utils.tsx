@@ -52,3 +52,13 @@ export const VIEWPORTS = {
 // re-export everything
 export * from "@testing-library/react";
 export { customRender as render };
+
+// Dummy test to satisfy Jest requirement
+describe("Test Utils", () => {
+  test("should export utility functions", () => {
+    expect(setViewport).toBeDefined();
+    expect(createMockFile).toBeDefined();
+    expect(createMockFileList).toBeDefined();
+    expect(VIEWPORTS).toBeDefined();
+  });
+});
