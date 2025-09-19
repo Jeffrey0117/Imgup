@@ -90,10 +90,12 @@ export default function HashPage({ params }: Props) {
           <p>這張圖片受到密碼保護</p>
           <form onSubmit={handlePasswordSubmit}>
             <input
-              type="password"
+              type="text"
               value={passwordInput}
               onChange={(e) => setPasswordInput(e.target.value)}
-              placeholder="請輸入密碼"
+              placeholder="請輸入 4 位數密碼"
+              pattern="[0-9]{4}"
+              maxLength={4}
               className={styles.passwordInput}
               required
             />
