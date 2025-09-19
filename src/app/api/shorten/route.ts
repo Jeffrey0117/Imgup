@@ -13,8 +13,17 @@ console.log("Prisma client 初始化狀態:", {
   VERCEL_ENV: process.env.VERCEL_ENV || "非 Vercel 環境",
 });
 
+// 設定最大 payload 大小：1MB（短網址不需要太大）
+const MAX_PAYLOAD_SIZE = 1 * 1024 * 1024;
+
 export async function POST(request: NextRequest) {
   try {
+    // 檢查請求大小
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && parseInt(contentLength) > MAX_PAYLOAD_SIZE) {
+      return NextResponse.json({ error: "請求資料過大" }, { status: 413 });
+    }
+
     const body = await request.json();
     const { url, filename, expiresAt, password } = body;
 

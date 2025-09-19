@@ -38,23 +38,48 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
+  // 最大檔案大小：4MB (Vercel 免費方案限制)
+  const MAX_FILE_SIZE = 4 * 1024 * 1024;
+
   const addFiles = (files: FileList) => {
     const newItems: UploadItem[] = [];
+    const oversizedFiles: string[] = [];
 
     Array.from(files).forEach((file) => {
       if (file.type.startsWith("image/")) {
-        newItems.push({
-          id: crypto.randomUUID(),
-          file,
-          done: false,
-          url: null,
-          progress: 0,
-          status: "queued",
-        });
+        // 檢查檔案大小
+        if (file.size > MAX_FILE_SIZE) {
+          oversizedFiles.push(`${file.name} (${formatFileSize(file.size)})`);
+        } else {
+          newItems.push({
+            id: crypto.randomUUID(),
+            file,
+            done: false,
+            url: null,
+            progress: 0,
+            status: "queued",
+          });
+        }
       }
     });
 
+    // 如果有檔案超過大小限制，顯示警告
+    if (oversizedFiles.length > 0) {
+      showToast(
+        `以下檔案超過 4MB 限制，無法上傳：\n${oversizedFiles.join("\n")}`
+      );
+    }
+
     setQueue((prev) => [...prev, ...newItems]);
+  };
+
+  // 格式化檔案大小顯示
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -74,10 +99,26 @@ export default function Home() {
   };
 
   const uploadFile = async (item: UploadItem): Promise<void> => {
+    // 再次檢查檔案大小（雙重保險）
+    if (item.file.size > MAX_FILE_SIZE) {
+      showToast(`檔案 ${item.file.name} 超過 4MB 限制，無法上傳`);
+      setQueue((prev) =>
+        prev.map((q) =>
+          q.id === item.id ? { ...q, status: "error" as const } : q
+        )
+      );
+      return;
+    }
+
     const formData = new FormData();
     formData.append("image", item.file, item.file.name);
 
-    console.log("開始上傳:", item.file.name);
+    console.log(
+      "開始上傳:",
+      item.file.name,
+      "大小:",
+      formatFileSize(item.file.size)
+    );
 
     try {
       // 開始上傳動畫並立即顯示彈窗
@@ -106,6 +147,10 @@ export default function Home() {
       console.log("Response status:", response.status);
 
       if (!response.ok) {
+        // 特別處理 413 錯誤（Payload Too Large）
+        if (response.status === 413) {
+          throw new Error("檔案大小超過 Vercel 伺服器限制（最大 4MB）");
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -193,6 +238,21 @@ export default function Home() {
       setIsUploading(false);
       setUploadProgress(0);
       setShowModal(false);
+
+      // 更友善的錯誤訊息
+      if (error instanceof Error) {
+        if (
+          error.message.includes("413") ||
+          error.message.includes("payload")
+        ) {
+          showToast("檔案太大，請選擇小於 4MB 的檔案");
+        } else if (error.message.includes("Failed to fetch")) {
+          showToast("網路連線錯誤，請檢查網路連線後重試");
+        } else {
+          showToast(error.message);
+        }
+      }
+
       setQueue((prev) =>
         prev.map((q) =>
           q.id === item.id ? { ...q, status: "error" as const } : q
@@ -353,6 +413,18 @@ export default function Home() {
                     <div className={styles.meta}>
                       <div className={styles.name} title={item.file.name}>
                         {item.file.name}
+                        <span
+                          style={{
+                            marginLeft: "5px",
+                            fontSize: "0.8em",
+                            color:
+                              item.file.size > MAX_FILE_SIZE
+                                ? "#ff4444"
+                                : "#666",
+                          }}
+                        >
+                          ({formatFileSize(item.file.size)})
+                        </span>
                       </div>
                       <div className={styles.bar}>
                         <span
@@ -394,12 +466,39 @@ export default function Home() {
             </div>
 
             <div className={styles.actions}>
-              <button onClick={startUpload} className={styles.primary}>
+              <button
+                onClick={startUpload}
+                className={styles.primary}
+                disabled={
+                  queue.length === 0 ||
+                  queue.some((item) => item.file.size > MAX_FILE_SIZE)
+                }
+                title={
+                  queue.some((item) => item.file.size > MAX_FILE_SIZE)
+                    ? "有檔案超過 4MB 限制"
+                    : ""
+                }
+              >
                 開始上傳
               </button>
               <button onClick={clearAll} className={styles.primary}>
                 Clear
               </button>
+            </div>
+
+            {/* 檔案大小限制提示 */}
+            <div
+              style={{
+                fontSize: "0.85em",
+                color: "#666",
+                marginTop: "10px",
+                textAlign: "center",
+                padding: "5px",
+                background: "#f5f5f5",
+                borderRadius: "4px",
+              }}
+            >
+              ⓘ 檔案大小限制：最大 4MB（Vercel 免費方案限制）
             </div>
 
             <div className={styles.outputHeader}>
@@ -570,7 +669,7 @@ export default function Home() {
             <p>A: 上傳到 Imgur 的圖片會永久保存，不會過期。</p>
 
             <h4>Q: 有檔案大小限制嗎？</h4>
-            <p>A: 單張圖片最大支援 10MB。</p>
+            <p>A: 由於 Vercel 免費方案限制，單張圖片最大支援 4MB。</p>
 
             <h4>Q: 支援哪些圖片格式？</h4>
             <p>A: 支援 PNG、JPG、GIF、WebP 等常見格式。</p>

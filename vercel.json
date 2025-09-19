@@ -1,15 +1,23 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
   "functions": {
     "src/app/api/upload/route.ts": {
-      "maxDuration": 30
+      "maxDuration": 10,
+      "memory": 512
     },
     "src/app/api/shorten/route.ts": {
+      "maxDuration": 10,
+      "memory": 128
+    },
+    "src/app/api/*/route.ts": {
       "maxDuration": 10
     }
   },
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "VERCEL_FUNCTION_MAX_SIZE": "50mb"
   }
 }
