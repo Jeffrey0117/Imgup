@@ -1,16 +1,24 @@
 // Hash 生成工具
-export function generateShortHash(url: string): string {
+export function generateShortHash(input: string): string {
+  console.log("hash.ts - generateShortHash 輸入:", {
+    input: input,
+    input_length: input.length,
+    input_type: typeof input,
+  });
+
   // 使用簡單的 hash 算法生成短 ID
   const characters =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let hash = 0;
 
   // 簡單的字串 hash
-  for (let i = 0; i < url.length; i++) {
-    const char = url.charCodeAt(i);
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
     hash = (hash << 5) - hash + char;
     hash = hash & hash; // 轉換為 32bit 整數
   }
+
+  console.log("hash.ts - 中間 hash 值:", { intermediate_hash: hash });
 
   // 轉換為正數並生成短 ID
   hash = Math.abs(hash);
@@ -22,7 +30,16 @@ export function generateShortHash(url: string): string {
 
   // 加上時間戳確保唯一性
   const timestamp = Date.now().toString(36);
-  return result + timestamp.slice(-3);
+  const finalHash = result + timestamp.slice(-3);
+
+  console.log("hash.ts - generateShortHash 輸出:", {
+    result_part: result,
+    timestamp_part: timestamp.slice(-3),
+    final_hash: finalHash,
+    timestamp_now: new Date().toISOString(),
+  });
+
+  return finalHash;
 }
 
 export function isValidHash(hash: string): boolean {

@@ -3,53 +3,49 @@
 import { useState, useEffect } from "react";
 import { notFound } from "next/navigation";
 import { isValidHash } from "../../utils/hash";
-import { getImageMapping, cleanExpiredMappings } from "../../utils/storage";
-import type { UploadedImage } from "../../utils/storage";
+import { PrismaClient } from "@prisma/client";
 import styles from "./page.module.css";
+
+const prisma = new PrismaClient();
 
 interface Props {
   params: { hash: string };
 }
 
 export default function HashPage({ params }: Props) {
-  const [mapping, setMapping] = useState<UploadedImage | null>(null);
+  const [mapping, setMapping] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [passwordRequired, setPasswordRequired] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
 
   useEffect(() => {
-    const hash = params.hash;
+    const fetchMapping = async () => {
+      const hash = params.hash;
+      if (!isValidHash(hash)) {
+        setError("無效的連結格式");
+        setLoading(false);
+        return;
+      }
 
-    // 驗證 hash 格式
-    if (!isValidHash(hash)) {
-      setError("無效的連結格式");
-      setLoading(false);
-      return;
-    }
+      try {
+        const res = await fetch(`/api/mapping/${hash}`);
+        if (!res.ok) {
+          throw new Error("找不到對應的圖片或連結已過期");
+        }
+        const data = await res.json();
 
-    // 清理過期的映射
-    cleanExpiredMappings();
-
-    // 獲取映射資料
-    const imageMapping = getImageMapping(hash);
-
-    if (!imageMapping) {
-      setError("找不到對應的圖片或連結已過期");
-      setLoading(false);
-      return;
-    }
-
-    // 檢查是否需要密碼
-    if (imageMapping.password) {
-      setPasswordRequired(true);
-      setMapping(imageMapping);
-      setLoading(false);
-      return;
-    }
-
-    setMapping(imageMapping);
-    setLoading(false);
+        if (data.password) {
+          setPasswordRequired(true);
+        }
+        setMapping(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMapping();
   }, [params.hash]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {

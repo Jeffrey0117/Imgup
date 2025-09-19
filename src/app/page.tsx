@@ -7,8 +7,7 @@ import DuckAnimation from "../components/DuckAnimation";
 import QRCode from "../components/QRCode";
 import ExpirySettings from "../components/ExpirySettings";
 import PasswordSettings from "../components/PasswordSettings";
-import { generateShortHash } from "../utils/hash";
-import { saveImageMapping, cleanExpiredMappings } from "../utils/storage";
+// 移除 generateShortHash，改為使用後端回傳的資料
 
 interface UploadItem {
   id: string;
@@ -81,9 +80,10 @@ export default function Home() {
     console.log("開始上傳:", item.file.name);
 
     try {
-      // 開始上傳動畫
+      // 開始上傳動畫並立即顯示彈窗
       setIsUploading(true);
       setUploadProgress(0);
+      setShowModal(true);
 
       // 模擬上傳進度
       const progressInterval = setInterval(() => {
@@ -113,29 +113,34 @@ export default function Home() {
       console.log("Response result:", result);
 
       if (result.result) {
-        // 生成短網址
-        const hash = generateShortHash(result.result);
-        const baseUrl =
-          typeof window !== "undefined"
-            ? window.location.origin
-            : "http://localhost:3000";
-        const shortUrl = `${baseUrl}/${hash}`;
-
-        // 保存映射關係到 localStorage
-        const mapping = {
-          id: hash,
-          filename: item.file.name,
-          url: result.result,
-          shortUrl: shortUrl,
-          createdAt: new Date(),
-          expiresAt: expiryDate || undefined,
-          password: password || undefined,
-        };
+        // 呼叫 API 將映射存到資料庫並取得短網址
+        let shortUrl = "";
+        let hash = "";
 
         try {
-          saveImageMapping(mapping);
+          const shortenResponse = await fetch("/api/shorten", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              url: result.result,
+              filename: item.file.name,
+              expiresAt: expiryDate || null,
+              password: password || null,
+            }),
+          });
+
+          if (shortenResponse.ok) {
+            const shortenData = await shortenResponse.json();
+            // 使用後端回傳的 shortUrl 和 hash
+            shortUrl = shortenData.shortUrl;
+            hash = shortenData.hash;
+            console.log("使用後端回傳的資料:", {
+              shortUrl: shortUrl,
+              hash: hash,
+            });
+          }
         } catch (error) {
-          console.error("保存映射失敗:", error);
+          console.error("儲存短網址到資料庫失敗:", error);
         }
 
         setQueue((prev) => {
@@ -163,20 +168,20 @@ export default function Home() {
           return newQueue;
         });
 
-        // 延遲關閉動畫，讓使用者看到完成狀態
+        // 設定上傳結果並延遲關閉動畫，給 QR Code 足夠時間生成
+        setCurrentUploadUrl(result.result);
+        setCurrentShortUrl(shortUrl);
+
+        // 讓鴨子繼續跑 2 秒，確保 QR Code 完全準備好再切換
         setTimeout(() => {
           setIsUploading(false);
           setUploadProgress(0);
-        }, 800);
-
-        // 顯示上傳成功彈窗，使用短網址
-        setCurrentUploadUrl(result.result);
-        setCurrentShortUrl(shortUrl);
-        setShowModal(true);
+        }, 2000);
       } else {
         console.log("上傳失敗:", result);
         setIsUploading(false);
         setUploadProgress(0);
+        setShowModal(false);
         setQueue((prev) =>
           prev.map((q) =>
             q.id === item.id ? { ...q, status: "error" as const } : q
@@ -187,6 +192,7 @@ export default function Home() {
       console.error("上傳錯誤:", error);
       setIsUploading(false);
       setUploadProgress(0);
+      setShowModal(false);
       setQueue((prev) =>
         prev.map((q) =>
           q.id === item.id ? { ...q, status: "error" as const } : q
@@ -332,16 +338,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 鴨子動畫區域 */}
-          {isUploading && (
-            <div className={styles.duckAnimationContainer}>
-              <DuckAnimation
-                isUploading={isUploading}
-                progress={uploadProgress}
-              />
-            </div>
-          )}
-
           <div className={styles.rightPanel}>
             <div className={styles.list}>
               {queue.length === 0 ? (
@@ -410,7 +406,7 @@ export default function Home() {
               <p className={styles.mini}>Markdown 輸出：</p>
               {markdown && (
                 <button onClick={copyMarkdown} className={styles.copyBtn}>
-                  複製Markdown
+                  複製
                 </button>
               )}
             </div>
@@ -425,7 +421,7 @@ export default function Home() {
               <p className={styles.mini}>HTML 標籤輸出：</p>
               {imgTag && (
                 <button onClick={copyImgTag} className={styles.copyBtn}>
-                  複製HTML
+                  複製
                 </button>
               )}
             </div>
@@ -618,8 +614,18 @@ export default function Home() {
             </div>
 
             <div className={styles.modalBody}>
-              {/* QR Code 區域 - 使用短網址 */}
-              <QRCode value={currentShortUrl || currentUploadUrl} size={120} />
+              {/* 上傳中顯示鴨子動畫，完成後顯示 QR Code */}
+              {isUploading ? (
+                <DuckAnimation
+                  isUploading={isUploading}
+                  progress={uploadProgress}
+                />
+              ) : (
+                <QRCode
+                  value={currentShortUrl || currentUploadUrl}
+                  size={120}
+                />
+              )}
 
               <div className={styles.urlContainer}>
                 <label className={styles.urlLabel}>短網址：</label>
