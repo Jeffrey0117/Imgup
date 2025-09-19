@@ -38,37 +38,22 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  // 最大檔案大小：4MB (Vercel 免費方案限制)
-  const MAX_FILE_SIZE = 4 * 1024 * 1024;
-
+  // 移除檔案大小限制（因為實際上傳是調用外部 API）
   const addFiles = (files: FileList) => {
     const newItems: UploadItem[] = [];
-    const oversizedFiles: string[] = [];
 
     Array.from(files).forEach((file) => {
       if (file.type.startsWith("image/")) {
-        // 檢查檔案大小
-        if (file.size > MAX_FILE_SIZE) {
-          oversizedFiles.push(`${file.name} (${formatFileSize(file.size)})`);
-        } else {
-          newItems.push({
-            id: crypto.randomUUID(),
-            file,
-            done: false,
-            url: null,
-            progress: 0,
-            status: "queued",
-          });
-        }
+        newItems.push({
+          id: crypto.randomUUID(),
+          file,
+          done: false,
+          url: null,
+          progress: 0,
+          status: "queued",
+        });
       }
     });
-
-    // 如果有檔案超過大小限制，顯示警告
-    if (oversizedFiles.length > 0) {
-      showToast(
-        `以下檔案超過 4MB 限制，無法上傳：\n${oversizedFiles.join("\n")}`
-      );
-    }
 
     setQueue((prev) => [...prev, ...newItems]);
   };
@@ -99,17 +84,6 @@ export default function Home() {
   };
 
   const uploadFile = async (item: UploadItem): Promise<void> => {
-    // 再次檢查檔案大小（雙重保險）
-    if (item.file.size > MAX_FILE_SIZE) {
-      showToast(`檔案 ${item.file.name} 超過 4MB 限制，無法上傳`);
-      setQueue((prev) =>
-        prev.map((q) =>
-          q.id === item.id ? { ...q, status: "error" as const } : q
-        )
-      );
-      return;
-    }
-
     const formData = new FormData();
     formData.append("image", item.file, item.file.name);
 
@@ -121,12 +95,7 @@ export default function Home() {
     );
 
     try {
-      // 開始上傳動畫並立即顯示彈窗
-      setIsUploading(true);
-      setUploadProgress(0);
-      setShowModal(true);
-
-      // 模擬上傳進度
+      // 模擬上傳進度（注意：Modal 已經在 startUpload 中開啟）
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           if (prev >= 90) return prev;
@@ -147,10 +116,6 @@ export default function Home() {
       console.log("Response status:", response.status);
 
       if (!response.ok) {
-        // 特別處理 413 錯誤（Payload Too Large）
-        if (response.status === 413) {
-          throw new Error("檔案大小超過 Vercel 伺服器限制（最大 4MB）");
-        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -179,13 +144,16 @@ export default function Home() {
             // 使用後端回傳的 shortUrl 和 hash
             shortUrl = shortenData.shortUrl;
             hash = shortenData.hash;
-            console.log("使用後端回傳的資料:", {
+            console.log("成功取得短網址:", {
               shortUrl: shortUrl,
               hash: hash,
             });
+          } else {
+            console.error("短網址 API 回應錯誤:", await shortenResponse.text());
           }
         } catch (error) {
           console.error("儲存短網址到資料庫失敗:", error);
+          // 即使短網址失敗，仍顯示原始網址
         }
 
         setQueue((prev) => {
@@ -215,7 +183,8 @@ export default function Home() {
 
         // 設定上傳結果並延遲關閉動畫，給 QR Code 足夠時間生成
         setCurrentUploadUrl(result.result);
-        setCurrentShortUrl(shortUrl);
+        // 確保有短網址才設置，否則使用原始網址
+        setCurrentShortUrl(shortUrl || "");
 
         // 讓鴨子繼續跑 2 秒，確保 QR Code 完全準備好再切換
         setTimeout(() => {
@@ -224,9 +193,10 @@ export default function Home() {
         }, 2000);
       } else {
         console.log("上傳失敗:", result);
+        // 上傳失敗時不要立即關閉 Modal，讓用戶看到錯誤
         setIsUploading(false);
         setUploadProgress(0);
-        setShowModal(false);
+        showToast("上傳失敗，請重試");
         setQueue((prev) =>
           prev.map((q) =>
             q.id === item.id ? { ...q, status: "error" as const } : q
@@ -237,16 +207,10 @@ export default function Home() {
       console.error("上傳錯誤:", error);
       setIsUploading(false);
       setUploadProgress(0);
-      setShowModal(false);
 
       // 更友善的錯誤訊息
       if (error instanceof Error) {
-        if (
-          error.message.includes("413") ||
-          error.message.includes("payload")
-        ) {
-          showToast("檔案太大，請選擇小於 4MB 的檔案");
-        } else if (error.message.includes("Failed to fetch")) {
+        if (error.message.includes("Failed to fetch")) {
           showToast("網路連線錯誤，請檢查網路連線後重試");
         } else {
           showToast(error.message);
@@ -263,6 +227,15 @@ export default function Home() {
 
   const startUpload = async () => {
     const pendingItems = queue.filter((item) => !item.done);
+
+    if (pendingItems.length === 0) return;
+
+    // 立即顯示 Modal 和鴨子動畫
+    setShowModal(true);
+    setIsUploading(true);
+    setUploadProgress(0);
+    setCurrentUploadUrl("");
+    setCurrentShortUrl("");
 
     for (const item of pendingItems) {
       setQueue((prev) =>
@@ -417,10 +390,7 @@ export default function Home() {
                           style={{
                             marginLeft: "5px",
                             fontSize: "0.8em",
-                            color:
-                              item.file.size > MAX_FILE_SIZE
-                                ? "#ff4444"
-                                : "#666",
+                            color: "#666",
                           }}
                         >
                           ({formatFileSize(item.file.size)})
@@ -469,36 +439,13 @@ export default function Home() {
               <button
                 onClick={startUpload}
                 className={styles.primary}
-                disabled={
-                  queue.length === 0 ||
-                  queue.some((item) => item.file.size > MAX_FILE_SIZE)
-                }
-                title={
-                  queue.some((item) => item.file.size > MAX_FILE_SIZE)
-                    ? "有檔案超過 4MB 限制"
-                    : ""
-                }
+                disabled={queue.length === 0}
               >
                 開始上傳
               </button>
               <button onClick={clearAll} className={styles.primary}>
                 Clear
               </button>
-            </div>
-
-            {/* 檔案大小限制提示 */}
-            <div
-              style={{
-                fontSize: "0.85em",
-                color: "#666",
-                marginTop: "10px",
-                textAlign: "center",
-                padding: "5px",
-                background: "#f5f5f5",
-                borderRadius: "4px",
-              }}
-            >
-              ⓘ 檔案大小限制：最大 4MB（Vercel 免費方案限制）
             </div>
 
             <div className={styles.outputHeader}>
@@ -669,7 +616,7 @@ export default function Home() {
             <p>A: 上傳到 Imgur 的圖片會永久保存，不會過期。</p>
 
             <h4>Q: 有檔案大小限制嗎？</h4>
-            <p>A: 由於 Vercel 免費方案限制，單張圖片最大支援 4MB。</p>
+            <p>A: 圖片大小取決於您使用的圖床服務限制。</p>
 
             <h4>Q: 支援哪些圖片格式？</h4>
             <p>A: 支援 PNG、JPG、GIF、WebP 等常見格式。</p>
@@ -687,8 +634,8 @@ export default function Home() {
       <footer className={styles.footer}>© 2025 Powered by UPPER</footer>
       {toast.visible && <div className={styles.toast}>{toast.message}</div>}
 
-      {/* 上傳成功彈窗 */}
-      {showModal && currentUploadUrl && (
+      {/* 上傳彈窗 - 立即顯示 */}
+      {showModal && (
         <div
           className={styles.modalOverlay}
           onClick={(e) => {
@@ -703,7 +650,7 @@ export default function Home() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.modalHeader}>
-              <h3>上傳成功！</h3>
+              <h3>{isUploading ? "上傳中..." : "上傳成功！"}</h3>
               <button
                 className={styles.closeButton}
                 onClick={() => setShowModal(false)}
@@ -726,66 +673,72 @@ export default function Home() {
                 />
               )}
 
-              <div className={styles.urlContainer}>
-                <label className={styles.urlLabel}>短網址：</label>
-                <input
-                  type="text"
-                  value={currentShortUrl || currentUploadUrl}
-                  readOnly
-                  className={styles.urlInput}
-                />
-              </div>
+              {!isUploading && currentUploadUrl && (
+                <>
+                  <div className={styles.urlContainer}>
+                    <label className={styles.urlLabel}>短網址：</label>
+                    <input
+                      type="text"
+                      value={currentShortUrl || currentUploadUrl}
+                      readOnly
+                      className={styles.urlInput}
+                    />
+                  </div>
 
-              {currentShortUrl && (
-                <div className={styles.urlContainer}>
-                  <label className={styles.urlLabel}>原始連結：</label>
-                  <input
-                    type="text"
-                    value={currentUploadUrl}
-                    readOnly
-                    className={styles.urlInput}
-                    style={{ fontSize: "12px" }}
-                  />
-                </div>
+                  {currentShortUrl && (
+                    <div className={styles.urlContainer}>
+                      <label className={styles.urlLabel}>原始連結：</label>
+                      <input
+                        type="text"
+                        value={currentUploadUrl}
+                        readOnly
+                        className={styles.urlInput}
+                        style={{ fontSize: "12px" }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
-              <div className={styles.buttonGroup}>
-                <button
-                  className={styles.copyButton}
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(
-                        currentShortUrl || currentUploadUrl
-                      );
-                      setShowModal(false); // 立即關閉彈窗
-                      showToast("短網址已複製到剪貼簿");
-                    } catch (error) {
-                      console.error("複製失敗:", error);
-                      showToast("複製失敗，請手動選取網址複製");
-                    }
-                  }}
-                >
-                  複製短網址
-                </button>
-
-                {currentShortUrl && (
+              {!isUploading && currentUploadUrl && (
+                <div className={styles.buttonGroup}>
                   <button
-                    className={styles.copyButtonSecondary}
+                    className={styles.copyButton}
                     onClick={async () => {
                       try {
-                        await navigator.clipboard.writeText(currentUploadUrl);
+                        await navigator.clipboard.writeText(
+                          currentShortUrl || currentUploadUrl
+                        );
                         setShowModal(false); // 立即關閉彈窗
-                        showToast("原始連結已複製到剪貼簿");
+                        showToast("短網址已複製到剪貼簿");
                       } catch (error) {
                         console.error("複製失敗:", error);
                         showToast("複製失敗，請手動選取網址複製");
                       }
                     }}
                   >
-                    複製原始連結
+                    複製短網址
                   </button>
-                )}
-              </div>
+
+                  {currentShortUrl && (
+                    <button
+                      className={styles.copyButtonSecondary}
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(currentUploadUrl);
+                          setShowModal(false); // 立即關閉彈窗
+                          showToast("原始連結已複製到剪貼簿");
+                        } catch (error) {
+                          console.error("複製失敗:", error);
+                          showToast("複製失敗，請手動選取網址複製");
+                        }
+                      }}
+                    >
+                      複製原始連結
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

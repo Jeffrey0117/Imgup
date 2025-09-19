@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// 設定最大檔案大小：4MB (Vercel 免費方案限制)
-const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB in bytes
+// 移除檔案大小限制 - 交由外部 API 處理
 
 export async function POST(request: NextRequest) {
   try {
     console.log("API 路由被調用");
-
-    // 檢查請求大小
-    const contentLength = request.headers.get("content-length");
-    if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { status: 0, message: "檔案大小超過限制（最大 4MB）" },
-        { status: 413 }
-      );
-    }
 
     const formData = await request.formData();
     const image = formData.get("image") as File;
@@ -26,22 +16,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { status: 0, message: "Missing image" },
         { status: 400 }
-      );
-    }
-
-    // 檢查檔案大小
-    if (image.size > MAX_FILE_SIZE) {
-      console.log("檔案太大:", image.size);
-      return NextResponse.json(
-        {
-          status: 0,
-          message: `檔案大小超過限制（最大 ${(
-            MAX_FILE_SIZE /
-            1024 /
-            1024
-          ).toFixed(0)}MB）`,
-        },
-        { status: 413 }
       );
     }
 
@@ -101,17 +75,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("Upload error:", error);
-
-    // 特別處理 payload 太大的錯誤
-    if (
-      error instanceof Error &&
-      (error.message.includes("payload") || error.message.includes("413"))
-    ) {
-      return NextResponse.json(
-        { status: 0, message: "檔案大小超過 Vercel 限制（最大 4MB）" },
-        { status: 413 }
-      );
-    }
 
     return NextResponse.json(
       { status: 0, message: "Upload failed" },
