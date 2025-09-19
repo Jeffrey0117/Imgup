@@ -335,7 +335,18 @@ export default function Home() {
               height={60}
               priority
             />
-            <h1 className={styles.mainTitle}>圖鴨上床(ImgUP)</h1>
+            <h1 className={styles.mainTitle}>
+              <img
+                src="/logo-imgup.png"
+                alt="Logo"
+                style={{
+                  display: "inline",
+                  height: "1.2em",
+                  marginRight: "0.3em",
+                }}
+              />
+              圖鴨分享
+            </h1>
           </div>
           <div className={styles.titleSection}>
             <h2 className={styles.subTitle}>Drop images → Upload → Markdown</h2>
