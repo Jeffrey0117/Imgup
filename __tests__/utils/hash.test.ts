@@ -9,8 +9,8 @@ describe("Hash 生成函數測試", () => {
     const hash2 = generateShortHash(url2);
 
     expect(hash1).not.toEqual(hash2);
-    expect(hash1).toHaveLength(11);
-    expect(hash2).toHaveLength(11);
+    expect(hash1).toHaveLength(6);
+    expect(hash2).toHaveLength(6);
   });
 
   test("相同的 URL 應該生成相同的 hash", () => {
@@ -30,12 +30,19 @@ describe("Hash 生成函數測試", () => {
   });
 
   test("isValidHash 應該正確驗證 hash 格式", () => {
-    expect(isValidHash("abc123de")).toBe(true);
-    expect(isValidHash("ABC123DE")).toBe(true);
-    expect(isValidHash("12345678")).toBe(true);
+    // 新格式 5-6 字元
+    expect(isValidHash("abc12")).toBe(true);
+    expect(isValidHash("abc123")).toBe(true);
+    expect(isValidHash("ABC12")).toBe(true);
+    expect(isValidHash("12345")).toBe(true);
+
+    // 舊格式相容性
+    expect(isValidHash("abc123de")).toBe(true); // 8字元
+    expect(isValidHash("abc123de123")).toBe(true); // 11字元
 
     expect(isValidHash("abc")).toBe(false); // 太短
-    expect(isValidHash("abc123de12345")).toBe(false); // 太長 (13字符)
+    expect(isValidHash("abc1234")).toBe(false); // 7字元不支援
+    expect(isValidHash("abc123de12345")).toBe(false); // 太長 (13字元)
     expect(isValidHash("abc-123")).toBe(false); // 包含特殊字符
     expect(isValidHash("")).toBe(false); // 空字符串
   });

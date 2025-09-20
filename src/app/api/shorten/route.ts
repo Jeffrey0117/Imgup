@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateShortHash } from "../../../utils/hash";
+import { generateUniqueHash } from "../../../utils/hash";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -49,10 +49,25 @@ export async function POST(request: NextRequest) {
       url_length: url.length,
       filename_length: filename.length,
     });
-    const hash = generateShortHash(baseString);
+
+    // 防碰撞檢查函數
+    const checkHashExists = async (hash: string): Promise<boolean> => {
+      try {
+        const existing = await prisma.mapping.findUnique({
+          where: { hash },
+        });
+        return !!existing;
+      } catch (error) {
+        console.error("檢查 hash 是否存在時出錯:", error);
+        return false; // 出錯時假設不存在，讓其繼續
+      }
+    };
+
+    const hash = await generateUniqueHash(baseString, checkHashExists);
     console.log("後端 hash 生成結果:", {
       hash: hash,
       baseString: baseString,
+      hash_length: hash.length,
     });
 
     const host = request.headers.get("host");
