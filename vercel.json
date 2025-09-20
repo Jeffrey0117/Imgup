@@ -16,6 +16,12 @@
       "maxDuration": 10
     }
   },
+  "rewrites": [
+    {
+      "source": "/([a-zA-Z0-9_-]{5,11})",
+      "destination": "/api/smart-route/$1"
+    }
+  ],
   "env": {
     "NODE_ENV": "production",
     "VERCEL_FUNCTION_MAX_SIZE": "50mb"
