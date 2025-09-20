@@ -41,6 +41,23 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  // 批次上傳狀態
+  const [batchTotal, setBatchTotal] = useState<number | null>(null);
+  const [batchCompleted, setBatchCompleted] = useState(0);
+  const isBatch = (batchTotal ?? 0) > 1;
+
+  // 依據 queue 自動推導 Markdown 與 HTML，避免競態導致內容為空
+  useEffect(() => {
+    const doneItems = queue.filter((q) => q.done && q.url);
+    const md = doneItems
+      .map((q) => `![${safeAlt(q.file.name)}](${q.url})`)
+      .join("\n");
+    const html = doneItems
+      .map((q) => `<img src="${q.url}" alt="${q.file.name}" />`)
+      .join("\n");
+    setMarkdown(md);
+    setImgTag(html);
+  }, [queue]);
 
   // 防止背景滾動
   useEffect(() => {
@@ -175,8 +192,8 @@ export default function Home() {
           // 即使短網址失敗，仍顯示原始網址
         }
 
-        setQueue((prev) => {
-          const newQueue = prev.map((q) =>
+        setQueue((prev) =>
+          prev.map((q) =>
             q.id === item.id
               ? {
                   ...q,
@@ -187,35 +204,19 @@ export default function Home() {
                   status: "success" as const,
                 }
               : q
-          );
-          // 立即構建 Markdown 和 img 標籤
-          const lines = newQueue
-            .filter((q) => q.done && q.url)
-            .map((q) => `![${safeAlt(q.file.name)}](${q.url})`);
-          setMarkdown(lines.join("\n"));
-
-          const imgLines = newQueue
-            .filter((q) => q.done && q.url)
-            .map((q) => `<img src="${q.url}" alt="${q.file.name}" />`);
-          setImgTag(imgLines.join("\n"));
-          return newQueue;
-        });
+          )
+        );
 
         // 設定上傳結果並延遲關閉動畫，給 QR Code 足夠時間生成
         setCurrentUploadUrl(result.result);
         // 確保有短網址才設置，否則使用原始網址
         setCurrentShortUrl(shortUrl || "");
 
-        // 讓鴨子繼續跑 2 秒，確保 QR Code 完全準備好再切換
-        setTimeout(() => {
-          setIsUploading(false);
-          setUploadProgress(0);
-        }, 2000);
+        // 累計批次上傳成功數（單張也會累計為 1）
+        setBatchCompleted((prev) => prev + 1);
       } else {
         console.log("上傳失敗:", result);
-        // 上傳失敗時不要立即關閉 Modal，讓用戶看到錯誤
-        setIsUploading(false);
-        setUploadProgress(0);
+        // 保持 Modal 開啟，由 startUpload 控制狀態
         showToast("上傳失敗，請重試");
         setQueue((prev) =>
           prev.map((q) =>
@@ -225,8 +226,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error("上傳錯誤:", error);
-      setIsUploading(false);
-      setUploadProgress(0);
+      // 保持 Modal 開啟，由 startUpload 控制狀態
 
       // 更友善的錯誤訊息
       if (error instanceof Error) {
@@ -256,6 +256,9 @@ export default function Home() {
     setUploadProgress(0);
     setCurrentUploadUrl("");
     setCurrentShortUrl("");
+    // 初始化批次狀態
+    setBatchTotal(pendingItems.length);
+    setBatchCompleted(0);
 
     for (const item of pendingItems) {
       setQueue((prev) =>
@@ -267,21 +270,18 @@ export default function Home() {
       await uploadFile(item);
     }
 
-    buildMarkdown();
-  };
-
-  const buildMarkdown = () => {
-    const lines = queue
-      .filter((item) => item.done && item.url)
-      .map((item) => `![${safeAlt(item.file.name)}](${item.url})`);
-
-    setMarkdown(lines.join("\n"));
-
-    const imgLines = queue
-      .filter((item) => item.done && item.url)
-      .map((item) => `<img src="${item.url}" alt="${item.file.name}" />`);
-
-    setImgTag(imgLines.join("\n"));
+    // 批次完成或單張完成後統一切換狀態
+    if (pendingItems.length === 1) {
+      // 單張：讓鴨子繼續跑 2 秒，確保 QR Code 完全準備好再切換
+      setTimeout(() => {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }, 2000);
+    } else {
+      // 批次：完成後直接顯示統計資訊
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
   };
 
   const safeAlt = (name: string) => {
@@ -351,21 +351,7 @@ export default function Home() {
   };
 
   const removeImage = (id: string) => {
-    setQueue((prev) => {
-      const newQueue = prev.filter((item) => item.id !== id);
-      // 更新 Markdown 和 HTML 輸出
-      const lines = newQueue
-        .filter((item) => item.done && item.url)
-        .map((item) => `![${safeAlt(item.file.name)}](${item.url})`);
-      setMarkdown(lines.join("\n"));
-
-      const imgLines = newQueue
-        .filter((item) => item.done && item.url)
-        .map((item) => `<img src="${item.url}" alt="${item.file.name}" />`);
-      setImgTag(imgLines.join("\n"));
-
-      return newQueue;
-    });
+    setQueue((prev) => prev.filter((item) => item.id !== id));
   };
 
   const handleAccordionToggle = (section: string) => {
@@ -436,14 +422,10 @@ export default function Home() {
                     <div className={styles.meta}>
                       <div className={styles.name} title={item.file.name}>
                         {item.file.name}
-                        <span
-                          style={{
-                            marginLeft: "5px",
-                            fontSize: "0.8em",
-                            color: "#666",
-                          }}
-                        >
-                          ({formatFileSize(item.file.size)})
+                      </div>
+                      <div className={styles.fileSize}>
+                        <span className={styles.fileSizeBadge}>
+                          {formatFileSize(item.file.size)}
                         </span>
                       </div>
                       {item.shortUrl && (
@@ -451,22 +433,6 @@ export default function Home() {
                           <span className={styles.shortUrlText}>
                             {item.shortUrl}
                           </span>
-                          <button
-                            className={styles.copyShortUrlBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigator.clipboard.writeText(item.shortUrl!);
-                              const btn = e.currentTarget;
-                              const originalText = btn.textContent;
-                              btn.textContent = "已複製!";
-                              setTimeout(() => {
-                                btn.textContent = originalText;
-                              }, 1500);
-                            }}
-                            title="複製短網址"
-                          >
-                            複製
-                          </button>
                         </div>
                       )}
                       <div className={styles.bar}>
@@ -809,7 +775,13 @@ export default function Home() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.modalHeader}>
-              <h3>{isUploading ? "上傳中..." : "上傳成功！"}</h3>
+              <h3>
+                {isUploading
+                  ? "上傳中..."
+                  : isBatch
+                  ? "批次上傳完成"
+                  : "上傳成功！"}
+              </h3>
               <button
                 className={styles.closeButton}
                 onClick={() => setShowModal(false)}
@@ -819,20 +791,56 @@ export default function Home() {
             </div>
 
             <div className={styles.modalBody}>
-              {/* 上傳中顯示鴨子動畫，完成後顯示 QR Code */}
-              {isUploading ? (
-                <DuckAnimation
-                  isUploading={isUploading}
-                  progress={uploadProgress}
-                />
-              ) : (
-                <QRCode
-                  value={currentShortUrl || currentUploadUrl}
-                  size={120}
-                />
+              {/* 平滑過渡：同時渲染兩個階段，使用不透明度切換 */}
+              <div className={styles.modalBodyStage}>
+                <div
+                  className={`${styles.modalStage} ${
+                    isUploading
+                      ? styles.modalStageVisible
+                      : styles.modalStageHidden
+                  }`}
+                >
+                  <DuckAnimation
+                    isUploading={isUploading}
+                    progress={uploadProgress}
+                  />
+                </div>
+                <div
+                  className={`${styles.modalStage} ${
+                    !isUploading
+                      ? styles.modalStageVisible
+                      : styles.modalStageHidden
+                  }`}
+                >
+                  {!isBatch && (
+                    <QRCode
+                      value={currentShortUrl || currentUploadUrl}
+                      size={120}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* 批次上傳完成後顯示統計資訊（不顯示 QRCode） */}
+              {!isUploading && isBatch && (
+                <>
+                  <div className={styles.urlContainer}>
+                    <label className={styles.urlLabel}>批次上傳完成</label>
+                    <div
+                      className={styles.urlInput}
+                      style={{ display: "flex", alignItems: "center" }}
+                    >
+                      已成功上傳 {batchCompleted} 張圖片
+                    </div>
+                  </div>
+                  <p className={styles.mini} style={{ textAlign: "center" }}>
+                    請至短網址分頁查看所有連結
+                  </p>
+                </>
               )}
 
-              {!isUploading && currentUploadUrl && (
+              {/* 單張上傳完成：顯示 QRCode 與短網址 */}
+              {!isUploading && !isBatch && currentUploadUrl && (
                 <>
                   <div className={styles.urlContainer}>
                     <label className={styles.urlLabel}>短網址：</label>
@@ -846,7 +854,7 @@ export default function Home() {
                 </>
               )}
 
-              {!isUploading && currentUploadUrl && (
+              {!isUploading && !isBatch && currentUploadUrl && (
                 <div className={styles.buttonGroup}>
                   <button
                     className={styles.copyButton}

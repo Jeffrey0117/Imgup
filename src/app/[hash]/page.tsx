@@ -167,7 +167,9 @@ export default function HashPage({ params }: Props) {
           </a>
           <button
             onClick={() => {
-              navigator.clipboard.writeText(mapping.url);
+              const shortUrl =
+                window.location.origin + window.location.pathname;
+              navigator.clipboard.writeText(shortUrl);
               alert("圖片連結已複製到剪貼簿");
             }}
             className={styles.actionBtn}

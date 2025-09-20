@@ -250,6 +250,21 @@
   color: #dde;
 }
 
+.fileSize {
+  margin-top: 6px;
+}
+
+.fileSizeBadge {
+  display: inline-block;
+  background: #0f1115;
+  border: 1px solid var(--accent);
+  color: #cfe;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+}
 .bar {
   height: 6px;
   border-radius: 999px;
@@ -949,6 +964,45 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  align-items: center; /* 水平置中內容，避免視覺跳動 */
+}
+
+/* Modal 內容固定高度舞台，避免切換時高度跳動 */
+.modalBodyStage {
+  position: relative;
+  width: 100%;
+  max-width: 240px; /* 與 QRCode 尺寸對齊，並留白 */
+  height: 200px; /* 固定高度，容納鴨子與 QRCode */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0;
+}
+
+/* 兩個階段 (鴨子/QRCode) 疊在同一舞台，僅切換透明度 */
+.modalStage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  will-change: opacity, transform;
+  pointer-events: none; /* 隱藏時不可互動 */
+}
+
+.modalStageVisible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.modalStageHidden {
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
 }
 
 .urlContainer {
@@ -1071,6 +1125,12 @@
     padding: 10px 20px;
     font-size: 14px;
     width: 100%;
+  }
+
+  /* 手機上舞台略縮小以符合視窗 */
+  .modalBodyStage {
+    max-width: 200px;
+    height: 180px;
   }
 }
 
