@@ -2,7 +2,7 @@
 const { default: fetch } = require("node-fetch");
 
 async function createTestData() {
-  const baseUrl = "http://localhost:3002";
+  const baseUrl = "http://localhost:3001";
 
   console.log("🔧 建立測試資料...\n");
 
@@ -43,7 +43,7 @@ async function testSmartRouting(hash) {
     return;
   }
 
-  const baseUrl = "http://localhost:3002";
+  const baseUrl = "http://localhost:3001";
 
   console.log(`\n🔍 測試智能路由功能 (hash: ${hash})...\n`);
 
