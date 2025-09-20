@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import styles from "./page.module.css";
 import Image from "next/image";
 import DuckAnimation from "../components/DuckAnimation";
@@ -37,6 +37,21 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  // 防止背景滾動
+  useEffect(() => {
+    if (showModal) {
+      // 保存原始的 overflow 樣式
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      // 禁止滾動
+      document.body.style.overflow = "hidden";
+
+      // 清理函數：恢復原始樣式
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [showModal]);
 
   // 移除檔案大小限制（因為實際上傳是調用外部 API）
   const addFiles = (files: FileList) => {

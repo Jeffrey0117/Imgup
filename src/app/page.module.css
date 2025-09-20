@@ -853,6 +853,8 @@
   justify-content: center;
   z-index: 1000;
   animation: modalFadeIn 0.3s ease;
+  padding: 16px;
+  overflow-y: auto;
 }
 
 .modalContent {
@@ -862,10 +864,13 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   max-width: 400px;
   width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
   text-align: center;
   position: relative;
   border: 2px solid #ffd700;
   animation: modalSlideIn 0.3s ease;
+  margin: auto;
 }
 
 .modalHeader {
@@ -1000,12 +1005,19 @@
 
 /* 手機版彈窗調整 */
 @media (max-width: 480px) {
-  .modalContent {
-    padding: 20px;
-    margin: 16px;
+  .modalOverlay {
+    padding: 12px;
   }
 
-  .modalTitle {
+  .modalContent {
+    padding: 20px;
+    width: calc(100% - 24px);
+    max-width: none;
+    max-height: calc(100vh - 24px);
+    margin: 0;
+  }
+
+  .modalHeader h3 {
     font-size: 1.3rem;
   }
 
@@ -1023,6 +1035,23 @@
     padding: 10px 20px;
     font-size: 14px;
     width: 100%;
+  }
+}
+
+/* 手機小螢幕彈窗調整 */
+@media (max-width: 375px) {
+  .modalOverlay {
+    padding: 8px;
+  }
+
+  .modalContent {
+    padding: 16px;
+    width: calc(100% - 16px);
+    max-height: calc(100vh - 16px);
+  }
+
+  .modalHeader h3 {
+    font-size: 1.2rem;
   }
 }
 
