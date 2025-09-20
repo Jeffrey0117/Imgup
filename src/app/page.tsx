@@ -48,14 +48,12 @@ export default function Home() {
   const [activeBatchIds, setActiveBatchIds] = useState<string[]>([]);
   const isBatch = (batchTotal ?? 0) > 1;
 
-  // 依據 queue 自動推導 Markdown 與 HTML，避免競態導致內容為空
+  // 依據 queue 自動推導 Markdown 與 HTML，使用短網址並移除 alt
   useEffect(() => {
-    const doneItems = queue.filter((q) => q.done && q.url);
-    const md = doneItems
-      .map((q) => `![${safeAlt(q.file.name)}](${q.url})`)
-      .join("\n");
+    const doneItems = queue.filter((q) => q.done && (q.shortUrl || q.url));
+    const md = doneItems.map((q) => `![](${q.shortUrl || q.url})`).join("\n");
     const html = doneItems
-      .map((q) => `<img src="${q.url}" alt="${q.file.name}" />`)
+      .map((q) => `<img src="${q.shortUrl || q.url}" />`)
       .join("\n");
     setMarkdown(md);
     setImgTag(html);
