@@ -140,7 +140,6 @@ export default function HashPage({ params }: Props) {
             />
             圖鴨分享
           </h1>
-          <p className={styles.filename}>{mapping.filename}</p>
           <p className={styles.uploadTime}>
             上傳時間: {new Date(mapping.createdAt).toLocaleString("zh-TW")}
           </p>
