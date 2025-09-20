@@ -25,7 +25,7 @@ export default function Home() {
   const [markdown, setMarkdown] = useState("");
   const [imgTag, setImgTag] = useState("");
   const [activeTab, setActiveTab] = useState<"markdown" | "html" | "shorturl">(
-    "markdown"
+    "shorturl"
   );
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({
     message: "",
@@ -526,6 +526,14 @@ export default function Home() {
               <div className={styles.tabHeader}>
                 <button
                   className={`${styles.tabButton} ${
+                    activeTab === "shorturl" ? styles.activeTab : ""
+                  }`}
+                  onClick={() => setActiveTab("shorturl")}
+                >
+                  短網址
+                </button>
+                <button
+                  className={`${styles.tabButton} ${
                     activeTab === "markdown" ? styles.activeTab : ""
                   }`}
                   onClick={() => setActiveTab("markdown")}
@@ -540,18 +548,50 @@ export default function Home() {
                 >
                   HTML
                 </button>
-                <button
-                  className={`${styles.tabButton} ${
-                    activeTab === "shorturl" ? styles.activeTab : ""
-                  }`}
-                  onClick={() => setActiveTab("shorturl")}
-                >
-                  短網址
-                </button>
               </div>
 
               {/* Tab 內容區域 */}
               <div className={styles.tabContent}>
+                {/* 短網址 Tab */}
+                {activeTab === "shorturl" && (
+                  <>
+                    <div className={styles.outputHeader}>
+                      <p className={styles.mini}>短網址列表：</p>
+                      {queue.some((item) => item.shortUrl) && (
+                        <button
+                          onClick={copyAllShortUrls}
+                          className={styles.copyBtn}
+                        >
+                          複製全部
+                        </button>
+                      )}
+                    </div>
+                    <div className={styles.shortUrlList}>
+                      {queue.filter((item) => item.shortUrl).length === 0 ? (
+                        <p className={styles.emptyShortUrl}>尚無短網址</p>
+                      ) : (
+                        queue
+                          .filter((item) => item.shortUrl)
+                          .map((item) => (
+                            <div key={item.id} className={styles.shortUrlItem}>
+                              <span className={styles.shortUrlItemText}>
+                                {item.shortUrl}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  copySingleShortUrl(item.shortUrl!)
+                                }
+                                className={styles.shortUrlCopyBtn}
+                              >
+                                複製
+                              </button>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </>
+                )}
+
                 {/* Markdown Tab */}
                 {activeTab === "markdown" && (
                   <>
@@ -592,46 +632,6 @@ export default function Home() {
                       className={styles.output}
                       placeholder={`完成後會自動列出：\n<img src="https://i.imgur.com/xxxxxxx.jpeg" alt="filename" />`}
                     />
-                  </>
-                )}
-
-                {/* 短網址 Tab */}
-                {activeTab === "shorturl" && (
-                  <>
-                    <div className={styles.outputHeader}>
-                      <p className={styles.mini}>短網址列表：</p>
-                      {queue.some((item) => item.shortUrl) && (
-                        <button
-                          onClick={copyAllShortUrls}
-                          className={styles.copyBtn}
-                        >
-                          複製全部
-                        </button>
-                      )}
-                    </div>
-                    <div className={styles.shortUrlList}>
-                      {queue.filter((item) => item.shortUrl).length === 0 ? (
-                        <p className={styles.emptyShortUrl}>尚無短網址</p>
-                      ) : (
-                        queue
-                          .filter((item) => item.shortUrl)
-                          .map((item) => (
-                            <div key={item.id} className={styles.shortUrlItem}>
-                              <span className={styles.shortUrlItemText}>
-                                {item.shortUrl}
-                              </span>
-                              <button
-                                onClick={() =>
-                                  copySingleShortUrl(item.shortUrl!)
-                                }
-                                className={styles.shortUrlCopyBtn}
-                              >
-                                複製
-                              </button>
-                            </div>
-                          ))
-                      )}
-                    </div>
                   </>
                 )}
               </div>
