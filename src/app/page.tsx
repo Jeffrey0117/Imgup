@@ -684,19 +684,6 @@ export default function Home() {
                       className={styles.urlInput}
                     />
                   </div>
-
-                  {currentShortUrl && (
-                    <div className={styles.urlContainer}>
-                      <label className={styles.urlLabel}>原始連結：</label>
-                      <input
-                        type="text"
-                        value={currentUploadUrl}
-                        readOnly
-                        className={styles.urlInput}
-                        style={{ fontSize: "12px" }}
-                      />
-                    </div>
-                  )}
                 </>
               )}
 
@@ -719,24 +706,6 @@ export default function Home() {
                   >
                     複製短網址
                   </button>
-
-                  {currentShortUrl && (
-                    <button
-                      className={styles.copyButtonSecondary}
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(currentUploadUrl);
-                          setShowModal(false); // 立即關閉彈窗
-                          showToast("原始連結已複製到剪貼簿");
-                        } catch (error) {
-                          console.error("複製失敗:", error);
-                          showToast("複製失敗，請手動選取網址複製");
-                        }
-                      }}
-                    >
-                      複製原始連結
-                    </button>
-                  )}
                 </div>
               )}
             </div>
