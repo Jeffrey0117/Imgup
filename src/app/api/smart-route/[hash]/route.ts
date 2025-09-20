@@ -42,26 +42,12 @@ export async function GET(
     const userAgent = req.headers.get("user-agent") || "";
     const referer = req.headers.get("referer") || "";
 
-    // 智能路由判斷邏輯
-    const isImageRequest =
-      // 直接的圖片請求
-      acceptHeader.includes("image/") ||
-      // img 標籤請求 (通常有 */* accept header)
-      (acceptHeader.includes("*/*") &&
-        (userAgent.includes("Mozilla") ||
-          userAgent.includes("Chrome") ||
-          userAgent.includes("Safari")) &&
-        !acceptHeader.includes("text/html")) ||
-      // 來自 img 標籤的請求通常不會有 text/html
-      (acceptHeader === "*/*" &&
-        !referer.includes("google") &&
-        !referer.includes("facebook"));
+    // 智能路由判斷邏輯 - 簡化且更準確
+    const isBrowserDirectRequest = acceptHeader.includes("text/html");
 
-    const isBrowserDirectRequest =
-      acceptHeader.includes("text/html") &&
-      (userAgent.includes("Mozilla") ||
-        userAgent.includes("Chrome") ||
-        userAgent.includes("Safari"));
+    const isImageRequest =
+      !isBrowserDirectRequest &&
+      (acceptHeader.includes("image/") || acceptHeader === "*/*");
 
     console.log("Smart Route 判斷:", {
       hash,
