@@ -23,18 +23,19 @@ export function generateShortHash(input: string): string {
   // 轉換為正數並生成短 ID
   hash = Math.abs(hash);
   let result = "";
-  for (let i = 0; i < 8; i++) {
+  // 改為只生成 4 個字符
+  for (let i = 0; i < 4; i++) {
     result += characters[hash % characters.length];
     hash = Math.floor(hash / characters.length);
   }
 
-  // 加上時間戳確保唯一性
+  // 加上更短的時間戳確保唯一性（只取最後 2 位）
   const timestamp = Date.now().toString(36);
-  const finalHash = result + timestamp.slice(-3);
+  const finalHash = result + timestamp.slice(-2);
 
   console.log("hash.ts - generateShortHash 輸出:", {
     result_part: result,
-    timestamp_part: timestamp.slice(-3),
+    timestamp_part: timestamp.slice(-2),
     final_hash: finalHash,
     timestamp_now: new Date().toISOString(),
   });
@@ -43,6 +44,6 @@ export function generateShortHash(input: string): string {
 }
 
 export function isValidHash(hash: string): boolean {
-  // 檢查 hash 是否符合格式（8-12個字元，包含字母和數字）
-  return /^[A-Za-z0-9]{8,12}$/.test(hash);
+  // 檢查 hash 是否符合格式（5-8個字元，包含字母和數字）
+  return /^[A-Za-z0-9]{5,8}$/.test(hash);
 }

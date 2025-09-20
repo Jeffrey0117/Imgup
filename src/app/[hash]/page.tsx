@@ -72,7 +72,18 @@ export default function HashPage({ params }: Props) {
     return (
       <div className={styles.container}>
         <div className={styles.error}>
-          <h2>🦆 哎呀！</h2>
+          <h2>
+            <img
+              src="/logo-imgup.png"
+              alt="Logo"
+              style={{
+                display: "inline",
+                height: "1.2em",
+                marginRight: "0.3em",
+              }}
+            />
+            哎呀！
+          </h2>
           <p>{error}</p>
           <a href="/" className={styles.backLink}>
             回到首頁
@@ -117,7 +128,18 @@ export default function HashPage({ params }: Props) {
     <div className={styles.container}>
       <div className={styles.imageContainer}>
         <div className={styles.header}>
-          <h1>🦆 圖鴨分享</h1>
+          <h1>
+            <img
+              src="/logo-imgup.png"
+              alt="Logo"
+              style={{
+                display: "inline",
+                height: "1.2em",
+                marginRight: "0.3em",
+              }}
+            />
+            圖鴨分享
+          </h1>
           <p className={styles.filename}>{mapping.filename}</p>
           <p className={styles.uploadTime}>
             上傳時間: {new Date(mapping.createdAt).toLocaleString("zh-TW")}
