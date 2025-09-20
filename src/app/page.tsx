@@ -44,6 +44,8 @@ export default function Home() {
   // 批次上傳狀態
   const [batchTotal, setBatchTotal] = useState<number | null>(null);
   const [batchCompleted, setBatchCompleted] = useState(0);
+  const [currentItemProgress, setCurrentItemProgress] = useState(0);
+  const [activeBatchIds, setActiveBatchIds] = useState<string[]>([]);
   const isBatch = (batchTotal ?? 0) > 1;
 
   // 依據 queue 自動推導 Markdown 與 HTML，避免競態導致內容為空
@@ -73,6 +75,20 @@ export default function Home() {
       };
     }
   }, [showModal]);
+
+  // 整體批次進度：以本次批次的每張「item.progress」加總計算（支援併發）
+  useEffect(() => {
+    if (!isUploading) return;
+    if (!batchTotal || activeBatchIds.length === 0) return;
+
+    const total = activeBatchIds.length * 100;
+    const sum = queue
+      .filter((q) => activeBatchIds.includes(q.id))
+      .reduce((acc, q) => acc + (q.progress ?? 0), 0);
+
+    const overall = Math.min(100, (sum / total) * 100);
+    setUploadProgress(overall);
+  }, [isUploading, batchTotal, activeBatchIds, queue]);
 
   // 移除檔案大小限制（因為實際上傳是調用外部 API）
   const addFiles = (files: FileList) => {
@@ -130,13 +146,23 @@ export default function Home() {
       formatFileSize(item.file.size)
     );
 
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
     try {
-      // 模擬上傳進度（注意：Modal 已經在 startUpload 中開啟）
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
+      // 模擬單張上傳進度，配合批次總進度換算
+      progressInterval = setInterval(() => {
+        setCurrentItemProgress((prev) => {
           if (prev >= 90) return prev;
-          return prev + Math.random() * 15;
+          return Math.min(90, prev + Math.random() * 15);
         });
+
+        // 同步更新列表中此檔案的進度條
+        setQueue((prev) =>
+          prev.map((q) => {
+            if (q.id !== item.id) return q;
+            const next = Math.min(90, (q.progress ?? 0) + Math.random() * 15);
+            return { ...q, progress: next };
+          })
+        );
       }, 200);
 
       // 使用我們的 API 路由，避免 CORS 問題
@@ -145,9 +171,8 @@ export default function Home() {
         body: formData,
       });
 
-      // 清除進度模擬
-      clearInterval(progressInterval);
-      setUploadProgress(100);
+      // 單張完成，補滿至 100
+      setCurrentItemProgress(100);
 
       console.log("Response status:", response.status);
 
@@ -242,6 +267,10 @@ export default function Home() {
           q.id === item.id ? { ...q, status: "error" as const } : q
         )
       );
+    } finally {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
     }
   };
 
@@ -259,16 +288,38 @@ export default function Home() {
     // 初始化批次狀態
     setBatchTotal(pendingItems.length);
     setBatchCompleted(0);
+    setActiveBatchIds(pendingItems.map((i) => i.id));
 
-    for (const item of pendingItems) {
+    // 受控併發上傳（預設 3）
+    const CONCURRENCY_LIMIT = 3;
+    let index = 0;
+
+    const items = pendingItems;
+
+    const runNext = async () => {
+      const i = index++;
+      if (i >= items.length) return;
+      const item = items[i];
+
       setQueue((prev) =>
         prev.map((q) =>
-          q.id === item.id ? { ...q, status: "uploading" as const } : q
+          q.id === item.id
+            ? { ...q, status: "uploading" as const, progress: 0 }
+            : q
         )
       );
 
+      // 每張開始前將單張進度歸零，讓整體進度平滑遞增
+      setCurrentItemProgress(0);
       await uploadFile(item);
-    }
+      await runNext();
+    };
+
+    const workers = Array.from(
+      { length: Math.min(CONCURRENCY_LIMIT, items.length) },
+      () => runNext()
+    );
+    await Promise.all(workers);
 
     // 批次完成或單張完成後統一切換狀態
     if (pendingItems.length === 1) {
@@ -276,11 +327,13 @@ export default function Home() {
       setTimeout(() => {
         setIsUploading(false);
         setUploadProgress(0);
+        setActiveBatchIds([]);
       }, 2000);
     } else {
       // 批次：完成後直接顯示統計資訊
       setIsUploading(false);
       setUploadProgress(0);
+      setActiveBatchIds([]);
     }
   };
 
@@ -477,12 +530,12 @@ export default function Home() {
             <div className={styles.actions}>
               <button
                 onClick={startUpload}
-                className={styles.primary}
+                className={styles.primaryUpload}
                 disabled={queue.length === 0}
               >
                 開始上傳
               </button>
-              <button onClick={clearAll} className={styles.primary}>
+              <button onClick={clearAll} className={styles.secondaryClear}>
                 Clear
               </button>
             </div>
@@ -559,47 +612,46 @@ export default function Home() {
                 )}
 
                 {/* Markdown Tab */}
-                {activeTab === "markdown" && (
-                  <>
-                    <div className={styles.outputHeader}>
-                      <p className={styles.mini}>Markdown 輸出：</p>
-                      {markdown && (
-                        <button
-                          onClick={copyMarkdown}
-                          className={styles.copyBtn}
-                        >
-                          複製
-                        </button>
-                      )}
-                    </div>
-                    <textarea
-                      value={markdown}
-                      onChange={(e) => setMarkdown(e.target.value)}
-                      className={styles.output}
-                      placeholder="完成後會自動列出：&#10;![filename](https://i.imgur.com/xxxxxxx.jpeg)"
-                    />
-                  </>
-                )}
+                <div
+                  style={{
+                    display: activeTab === "markdown" ? "block" : "none",
+                  }}
+                >
+                  <div className={styles.outputHeader}>
+                    <p className={styles.mini}>Markdown 輸出：</p>
+                    {markdown && (
+                      <button onClick={copyMarkdown} className={styles.copyBtn}>
+                        複製Markdown
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    value={markdown}
+                    onChange={(e) => setMarkdown(e.target.value)}
+                    className={styles.output}
+                    placeholder="完成後會自動列出：&#10;![filename](https://i.imgur.com/xxxxxxx.jpeg)"
+                  />
+                </div>
 
                 {/* HTML Tab */}
-                {activeTab === "html" && (
-                  <>
-                    <div className={styles.outputHeader}>
-                      <p className={styles.mini}>HTML 標籤輸出：</p>
-                      {imgTag && (
-                        <button onClick={copyImgTag} className={styles.copyBtn}>
-                          複製
-                        </button>
-                      )}
-                    </div>
-                    <textarea
-                      value={imgTag}
-                      onChange={(e) => setImgTag(e.target.value)}
-                      className={styles.output}
-                      placeholder={`完成後會自動列出：\n<img src="https://i.imgur.com/xxxxxxx.jpeg" alt="filename" />`}
-                    />
-                  </>
-                )}
+                <div
+                  style={{ display: activeTab === "html" ? "block" : "none" }}
+                >
+                  <div className={styles.outputHeader}>
+                    <p className={styles.mini}>HTML 標籤輸出：</p>
+                    {imgTag && (
+                      <button onClick={copyImgTag} className={styles.copyBtn}>
+                        複製
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    value={imgTag}
+                    onChange={(e) => setImgTag(e.target.value)}
+                    className={styles.output}
+                    placeholder={`完成後會自動列出：\n<img src="https://i.imgur.com/xxxxxxx.jpeg" alt="filename" />`}
+                  />
+                </div>
               </div>
             </div>
           </div>

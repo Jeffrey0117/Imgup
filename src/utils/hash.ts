@@ -1,49 +1,60 @@
 // Hash 生成工具
+
+const BASE62_CHARS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+function xorshift32(seed: number): () => number {
+  let x = seed >>> 0;
+  if (x === 0) x = 0x9e3779b9; // 使種子非 0
+  return function next() {
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    return x >>> 0;
+  };
+}
+
 export function generateShortHash(input: string): string {
   console.log("hash.ts - generateShortHash 輸入:", {
-    input: input,
+    input,
     input_length: input.length,
     input_type: typeof input,
   });
 
-  // 使用簡單的 hash 算法生成短 ID
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let hash = 0;
+  // 兩路 32-bit 混合哈希（可重現，無時間因子）
+  let h1 = 0xdeadbeef ^ 0;
+  let h2 = 0x41c6ce57 ^ 0;
 
-  // 簡單的字串 hash
   for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // 轉換為 32bit 整數
+    const c = input.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
   }
 
-  console.log("hash.ts - 中間 hash 值:", { intermediate_hash: hash });
+  // 最終擾動並確保為無號整數
+  h1 = (h1 ^ (h1 >>> 16)) >>> 0;
+  h2 = (h2 ^ (h2 >>> 13)) >>> 0;
 
-  // 轉換為正數並生成短 ID
-  hash = Math.abs(hash);
-  let result = "";
-  // 改為只生成 4 個字符
-  for (let i = 0; i < 4; i++) {
-    result += characters[hash % characters.length];
-    hash = Math.floor(hash / characters.length);
+  // 使用 XOR 組合為種子
+  let seed = (h1 ^ h2) >>> 0;
+  if (seed === 0) seed = 0x9e3779b9;
+  const next = xorshift32(seed);
+
+  // 固定輸出 11 個英數字（base62）
+  let out = "";
+  for (let i = 0; i < 11; i++) {
+    const n = next();
+    out += BASE62_CHARS[n % BASE62_CHARS.length];
   }
-
-  // 加上更短的時間戳確保唯一性（只取最後 2 位）
-  const timestamp = Date.now().toString(36);
-  const finalHash = result + timestamp.slice(-2);
 
   console.log("hash.ts - generateShortHash 輸出:", {
-    result_part: result,
-    timestamp_part: timestamp.slice(-2),
-    final_hash: finalHash,
-    timestamp_now: new Date().toISOString(),
+    final_hash: out,
   });
 
-  return finalHash;
+  return out;
 }
 
 export function isValidHash(hash: string): boolean {
-  // 檢查 hash 是否符合格式（5-8個字元，包含字母和數字）
-  return /^[A-Za-z0-9]{5,8}$/.test(hash);
+  // 測試相容：允許 8 碼（舊資料/測試）或 11 碼（新產生）
+  return /^(?:[A-Za-z0-9]{8}|[A-Za-z0-9]{11})$/.test(hash);
 }

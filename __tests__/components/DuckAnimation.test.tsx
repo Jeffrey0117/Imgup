@@ -14,9 +14,9 @@ describe("DuckAnimation 組件測試", () => {
   test("當 isUploading 為 true 時應顯示鴨子動畫", () => {
     render(<DuckAnimation isUploading={true} progress={50} />);
 
-    // 應該顯示鴨子動畫 (透過SVG檢查)
-    const svgElement = document.querySelector("svg");
-    expect(svgElement).toBeInTheDocument();
+    // 使用 Next/Image 顯示 PNG 幀，檢查鴨子幀圖是否存在
+    const duckImg = screen.getByAltText(/Duck frame/i);
+    expect(duckImg).toBeInTheDocument();
   });
 
   test("應該顯示正確的進度條", () => {
