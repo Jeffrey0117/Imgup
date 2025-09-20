@@ -258,6 +258,42 @@
   margin-top: 6px;
 }
 
+.shortUrlContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.shortUrlText {
+  font-size: 11px;
+  color: #666;
+  word-break: break-all;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.copyShortUrlBtn {
+  padding: 2px 6px;
+  font-size: 10px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.copyShortUrlBtn:hover {
+  background-color: #45a049;
+}
+
+.copyShortUrlBtn:active {
+  background-color: #3d8b40;
+}
+
 .progress {
   display: block;
   height: 100%;
@@ -1077,5 +1113,210 @@
   .zone:active {
     border-color: #fff;
     background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Tab 系統樣式 */
+.tabContainer {
+  margin-top: 16px;
+}
+
+.tabHeader {
+  display: flex;
+  gap: 0;
+  background: #0f1115;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+  border: 1px solid #2a2d33;
+  border-bottom: none;
+}
+
+.tabButton {
+  flex: 1;
+  padding: 10px 16px;
+  background: #15171d;
+  color: #888;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.tabButton:not(:last-child) {
+  border-right: 1px solid #2a2d33;
+}
+
+.tabButton:hover {
+  background: #1a1c22;
+  color: #aaa;
+}
+
+.tabButton.activeTab {
+  background: #2b2f39;
+  color: #fff;
+  border-bottom: 2px solid var(--accent);
+}
+
+.tabContent {
+  background: #15171d;
+  border: 1px solid #2a2d33;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  padding: 12px;
+  min-height: 180px;
+}
+
+/* 短網址列表樣式 */
+.shortUrlList {
+  background: #0f1115;
+  border: 1px solid #2a2d33;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+.shortUrlItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+  margin-bottom: 4px;
+}
+
+.shortUrlItem:last-child {
+  margin-bottom: 0;
+}
+
+.shortUrlItem:hover {
+  background: #1a1c22;
+}
+
+.shortUrlItemText {
+  flex: 1;
+  color: #cfe;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  word-break: break-all;
+  margin-right: 12px;
+  user-select: text;
+}
+
+.shortUrlCopyBtn {
+  padding: 4px 10px;
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.shortUrlCopyBtn:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
+.shortUrlCopyBtn:active {
+  background: #3d8b40;
+  transform: translateY(0);
+}
+
+.emptyShortUrl {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  padding: 30px;
+  margin: 0;
+}
+
+/* RWD for Tabs */
+@media (max-width: 768px) {
+  .tabButton {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .tabContent {
+    padding: 10px;
+  }
+
+  .shortUrlList {
+    padding: 10px;
+    max-height: 250px;
+  }
+
+  .shortUrlItem {
+    padding: 6px 10px;
+  }
+
+  .shortUrlItemText {
+    font-size: 12px;
+  }
+
+  .shortUrlCopyBtn {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabHeader {
+    border-radius: 8px 8px 0 0;
+  }
+
+  .tabContent {
+    border-radius: 0 0 8px 8px;
+    padding: 8px;
+  }
+
+  .tabButton {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .shortUrlList {
+    padding: 8px;
+    max-height: 200px;
+  }
+
+  .shortUrlItem {
+    padding: 5px 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .shortUrlItemText {
+    font-size: 11px;
+    margin-right: 0;
+  }
+
+  .shortUrlCopyBtn {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 375px) {
+  .tabButton {
+    font-size: 11px;
+    padding: 5px 6px;
+  }
+
+  .shortUrlList {
+    max-height: 180px;
+  }
+
+  .emptyShortUrl {
+    padding: 20px;
+    font-size: 13px;
   }
 }

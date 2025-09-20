@@ -14,6 +14,7 @@ interface UploadItem {
   file: File;
   done: boolean;
   url: string | null;
+  shortUrl?: string;
   progress: number;
   status: "queued" | "uploading" | "success" | "error";
 }
@@ -23,6 +24,9 @@ export default function Home() {
   const [queue, setQueue] = useState<UploadItem[]>([]);
   const [markdown, setMarkdown] = useState("");
   const [imgTag, setImgTag] = useState("");
+  const [activeTab, setActiveTab] = useState<"markdown" | "html" | "shorturl">(
+    "markdown"
+  );
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({
     message: "",
     visible: false,
@@ -178,6 +182,7 @@ export default function Home() {
                   ...q,
                   done: true,
                   url: result.result,
+                  shortUrl: shortUrl || undefined,
                   progress: 100,
                   status: "success" as const,
                 }
@@ -304,6 +309,36 @@ export default function Home() {
     }
   };
 
+  const copyAllShortUrls = async () => {
+    const shortUrls = queue
+      .filter((item) => item.shortUrl)
+      .map((item) => item.shortUrl)
+      .join("\n");
+
+    if (!shortUrls) {
+      showToast("沒有短網址可以複製");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shortUrls);
+      showToast("所有短網址已複製到剪貼簿");
+    } catch (error) {
+      console.error("複製失敗:", error);
+      showToast("複製失敗，請手動選取文字複製");
+    }
+  };
+
+  const copySingleShortUrl = async (shortUrl: string) => {
+    try {
+      await navigator.clipboard.writeText(shortUrl);
+      showToast("短網址已複製到剪貼簿");
+    } catch (error) {
+      console.error("複製失敗:", error);
+      showToast("複製失敗，請手動選取文字複製");
+    }
+  };
+
   const showToast = (message: string) => {
     setToast({ message, visible: true });
     setTimeout(() => setToast({ message: "", visible: false }), 3000); // 3秒後自動消失
@@ -411,6 +446,29 @@ export default function Home() {
                           ({formatFileSize(item.file.size)})
                         </span>
                       </div>
+                      {item.shortUrl && (
+                        <div className={styles.shortUrlContainer}>
+                          <span className={styles.shortUrlText}>
+                            {item.shortUrl}
+                          </span>
+                          <button
+                            className={styles.copyShortUrlBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(item.shortUrl!);
+                              const btn = e.currentTarget;
+                              const originalText = btn.textContent;
+                              btn.textContent = "已複製!";
+                              setTimeout(() => {
+                                btn.textContent = originalText;
+                              }, 1500);
+                            }}
+                            title="複製短網址"
+                          >
+                            複製
+                          </button>
+                        </div>
+                      )}
                       <div className={styles.bar}>
                         <span
                           style={{ width: `${item.progress}%` }}
@@ -463,35 +521,121 @@ export default function Home() {
               </button>
             </div>
 
-            <div className={styles.outputHeader}>
-              <p className={styles.mini}>Markdown 輸出：</p>
-              {markdown && (
-                <button onClick={copyMarkdown} className={styles.copyBtn}>
-                  複製
+            {/* Tab 切換區域 */}
+            <div className={styles.tabContainer}>
+              <div className={styles.tabHeader}>
+                <button
+                  className={`${styles.tabButton} ${
+                    activeTab === "markdown" ? styles.activeTab : ""
+                  }`}
+                  onClick={() => setActiveTab("markdown")}
+                >
+                  Markdown
                 </button>
-              )}
-            </div>
-            <textarea
-              value={markdown}
-              onChange={(e) => setMarkdown(e.target.value)}
-              className={styles.output}
-              placeholder="完成後會自動列出：&#10;![filename](https://i.imgur.com/xxxxxxx.jpeg)"
-            />
+                <button
+                  className={`${styles.tabButton} ${
+                    activeTab === "html" ? styles.activeTab : ""
+                  }`}
+                  onClick={() => setActiveTab("html")}
+                >
+                  HTML
+                </button>
+                <button
+                  className={`${styles.tabButton} ${
+                    activeTab === "shorturl" ? styles.activeTab : ""
+                  }`}
+                  onClick={() => setActiveTab("shorturl")}
+                >
+                  短網址
+                </button>
+              </div>
 
-            <div className={styles.outputHeader}>
-              <p className={styles.mini}>HTML 標籤輸出：</p>
-              {imgTag && (
-                <button onClick={copyImgTag} className={styles.copyBtn}>
-                  複製
-                </button>
-              )}
+              {/* Tab 內容區域 */}
+              <div className={styles.tabContent}>
+                {/* Markdown Tab */}
+                {activeTab === "markdown" && (
+                  <>
+                    <div className={styles.outputHeader}>
+                      <p className={styles.mini}>Markdown 輸出：</p>
+                      {markdown && (
+                        <button
+                          onClick={copyMarkdown}
+                          className={styles.copyBtn}
+                        >
+                          複製
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      value={markdown}
+                      onChange={(e) => setMarkdown(e.target.value)}
+                      className={styles.output}
+                      placeholder="完成後會自動列出：&#10;![filename](https://i.imgur.com/xxxxxxx.jpeg)"
+                    />
+                  </>
+                )}
+
+                {/* HTML Tab */}
+                {activeTab === "html" && (
+                  <>
+                    <div className={styles.outputHeader}>
+                      <p className={styles.mini}>HTML 標籤輸出：</p>
+                      {imgTag && (
+                        <button onClick={copyImgTag} className={styles.copyBtn}>
+                          複製
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      value={imgTag}
+                      onChange={(e) => setImgTag(e.target.value)}
+                      className={styles.output}
+                      placeholder={`完成後會自動列出：\n<img src="https://i.imgur.com/xxxxxxx.jpeg" alt="filename" />`}
+                    />
+                  </>
+                )}
+
+                {/* 短網址 Tab */}
+                {activeTab === "shorturl" && (
+                  <>
+                    <div className={styles.outputHeader}>
+                      <p className={styles.mini}>短網址列表：</p>
+                      {queue.some((item) => item.shortUrl) && (
+                        <button
+                          onClick={copyAllShortUrls}
+                          className={styles.copyBtn}
+                        >
+                          複製全部
+                        </button>
+                      )}
+                    </div>
+                    <div className={styles.shortUrlList}>
+                      {queue.filter((item) => item.shortUrl).length === 0 ? (
+                        <p className={styles.emptyShortUrl}>尚無短網址</p>
+                      ) : (
+                        queue
+                          .filter((item) => item.shortUrl)
+                          .map((item) => (
+                            <div key={item.id} className={styles.shortUrlItem}>
+                              <span className={styles.shortUrlItemText}>
+                                {item.shortUrl}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  copySingleShortUrl(item.shortUrl!)
+                                }
+                                className={styles.shortUrlCopyBtn}
+                              >
+                                複製
+                              </button>
+                            </div>
+                          ))
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-            <textarea
-              value={imgTag}
-              onChange={(e) => setImgTag(e.target.value)}
-              className={styles.output}
-              placeholder={`完成後會自動列出：\n<img src="https://i.imgur.com/xxxxxxx.jpeg" alt="filename" />`}
-            />
           </div>
         </div>
       </div>
