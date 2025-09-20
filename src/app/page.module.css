@@ -359,9 +359,9 @@
       0 0 0 0 rgba(155, 107, 255, 0);
   }
   50% {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 24px rgba(155, 107, 255, 0.35),
-      0 0 0 6px rgba(155, 107, 255, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(155, 107, 255, 0.4),
+      0 0 0 8px rgba(155, 107, 255, 0.1);
   }
   100% {
     transform: translateY(0);
@@ -382,13 +382,35 @@
   letter-spacing: 0.3px;
   box-shadow: 0 6px 14px rgba(155, 107, 255, 0.25);
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-  animation: floatPulse 3.2s ease-in-out infinite;
+  animation: floatPulse 3.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.primaryUpload::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.primaryUpload:hover::before {
+  left: 100%;
 }
 
 .primaryUpload:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.03);
-  box-shadow: 0 12px 30px rgba(155, 107, 255, 0.38);
+  transform: translateY(-3px);
+  filter: brightness(1.05);
+  box-shadow: 0 15px 35px rgba(155, 107, 255, 0.45);
 }
 
 .primaryUpload:disabled {
@@ -396,6 +418,10 @@
   cursor: not-allowed;
   animation: none;
   filter: grayscale(10%);
+}
+
+.primaryUpload:disabled::before {
+  display: none;
 }
 
 .secondaryClear {
@@ -684,14 +710,29 @@
   }
 
   .actions {
-    flex-wrap: wrap;
-    gap: 12px; /* 增加按鈕間距 */
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .primaryUpload {
+    width: 100%;
+    flex: none;
+    min-height: 48px;
+    text-align: center;
+  }
+
+  .secondaryClear {
+    width: 100%;
+    flex: none;
+    min-height: 44px;
+    text-align: center;
   }
 
   .primary {
     flex: 1;
     min-width: 120px;
-    text-align: center; /* 按鈕文字置中 */
+    text-align: center;
   }
 
   .tokenInput {
@@ -800,15 +841,33 @@
 
   .actions {
     flex-direction: column;
-    gap: 8px;
-    align-items: center; /* 確保按鈕區域置中 */
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .primaryUpload {
+    width: 100%;
+    flex: none;
+    min-height: 50px;
+    padding: 14px 18px;
+    text-align: center;
+    font-size: 16px;
+  }
+
+  .secondaryClear {
+    width: 100%;
+    flex: none;
+    min-height: 46px;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 15px;
   }
 
   .primary {
     width: 100%;
     padding: 12px 16px;
     text-align: center;
-    max-width: 300px; /* 限制最大寬度 */
+    max-width: 300px;
   }
 
   .item {
@@ -935,8 +994,20 @@
     gap: 4px;
   }
 
+  .primaryUpload {
+    min-height: 48px;
+    font-size: 15px;
+    padding: 12px 16px;
+  }
+
+  .secondaryClear {
+    min-height: 44px;
+    font-size: 14px;
+    padding: 10px 14px;
+  }
+
   .primary {
-    max-width: 280px; /* 在最小螢幕上限制按鈕寬度 */
+    max-width: 280px;
   }
 
   .seoSection {

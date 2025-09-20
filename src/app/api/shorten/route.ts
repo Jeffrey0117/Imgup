@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         filename,
         url,
         shortUrl,
-        createdAt: new Date(Date.now() + 8 * 60 * 60 * 1000), // UTC+8 台灣時區
+        createdAt: new Date(), // 正確儲存 UTC 時間
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         password: password || null,
       },
