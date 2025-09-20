@@ -4,14 +4,14 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// 添加 debug logs 檢查 Prisma 狀態
-console.log("Prisma client 初始化狀態:", {
-  isConnected: prisma ? true : false,
-  DATABASE_URL: process.env.DATABASE_URL ? "已設定" : "未設定",
-  DATABASE_URL_length: process.env.DATABASE_URL?.length || 0,
-  NODE_ENV: process.env.NODE_ENV,
-  VERCEL_ENV: process.env.VERCEL_ENV || "非 Vercel 環境",
-});
+// 移除敏感 debug logs - 安全修復
+// console.log("Prisma client 初始化狀態:", {
+//   isConnected: prisma ? true : false,
+//   DATABASE_URL: process.env.DATABASE_URL ? "已設定" : "未設定",
+//   DATABASE_URL_length: process.env.DATABASE_URL?.length || 0,
+//   NODE_ENV: process.env.NODE_ENV,
+//   VERCEL_ENV: process.env.VERCEL_ENV || "非 Vercel 環境",
+// });
 
 // 設定最大 payload 大小：1MB（短網址不需要太大）
 const MAX_PAYLOAD_SIZE = 1 * 1024 * 1024;
@@ -27,13 +27,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { url, filename, expiresAt, password } = body;
 
-    console.log("後端收到請求 - 輸入值:", {
-      url: url,
-      filename: filename,
-      expiresAt: expiresAt,
-      password: password,
-      current_time: new Date().toISOString(),
-    });
+    // 移除敏感 debug logs - 安全修復
+    // console.log("後端收到請求 - 輸入值:", {
+    //   url: url,
+    //   filename: filename,
+    //   expiresAt: expiresAt,
+    //   password: password,
+    //   current_time: new Date().toISOString(),
+    // });
 
     if (!url || !filename) {
       return NextResponse.json(
@@ -44,11 +45,12 @@ export async function POST(request: NextRequest) {
 
     // 使用檔名+原始URL一起生成hash，避免不同欄位混淆
     const baseString = url + "|" + filename;
-    console.log("後端 hash 生成準備:", {
-      baseString: baseString,
-      url_length: url.length,
-      filename_length: filename.length,
-    });
+    // 移除敏感 debug logs - 安全修復
+    // console.log("後端 hash 生成準備:", {
+    //   baseString: baseString,
+    //   url_length: url.length,
+    //   filename_length: filename.length,
+    // });
 
     // 防碰撞檢查函數
     const checkHashExists = async (hash: string): Promise<boolean> => {
@@ -64,11 +66,12 @@ export async function POST(request: NextRequest) {
     };
 
     const hash = await generateUniqueHash(baseString, checkHashExists);
-    console.log("後端 hash 生成結果:", {
-      hash: hash,
-      baseString: baseString,
-      hash_length: hash.length,
-    });
+    // 移除敏感 debug logs - 安全修復
+    // console.log("後端 hash 生成結果:", {
+    //   hash: hash,
+    //   baseString: baseString,
+    //   hash_length: hash.length,
+    // });
 
     const host = request.headers.get("host");
     const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
@@ -106,13 +109,11 @@ export async function POST(request: NextRequest) {
       mapping,
     });
   } catch (error) {
+    // 安全修復：移除可能洩露敏感資訊的 debug logs
     console.error("短網址生成錯誤:", {
       error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : undefined,
-      DATABASE_URL: process.env.DATABASE_URL ? "已設定" : "未設定",
       NODE_ENV: process.env.NODE_ENV,
-      VERCEL_ENV: process.env.VERCEL_ENV || "非 Vercel 環境",
     });
 
     // 根據錯誤類型返回更具體的訊息
