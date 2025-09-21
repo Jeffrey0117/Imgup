@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     siteName: "duk.tw",
     images: [
       {
-        url: "/og_image_logo.png",
+        url: "https://storage.meteor.today/image/68cff2bdac843e3fb52e87a6.png",
         width: 1200,
         height: 630,
         alt: "圖鴨上床(duk.tw)–台灣熱門圖床｜免費上傳、圖片空間分享",
