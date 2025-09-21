@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import styles from "./page.module.css";
 
 interface MappingItem {
@@ -168,15 +169,21 @@ export default function AdminDashboard() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>UpImg 管理儀表板</h1>
-        <div>
-          {adminData && (
-            <span
-              style={{ color: "rgba(255, 255, 255, 0.8)", marginRight: "20px" }}
-            >
-              歡迎，{adminData.username}
-            </span>
-          )}
+        <div className={styles.brandLeft}>
+          <Image
+            src="/logo-imgup.png"
+            alt="ImgUP Logo"
+            className={styles.logo}
+            width={36}
+            height={36}
+            priority
+          />
+          <h1 className={styles.title}>
+            ImgUP 管理儀表板 <span className={styles.brandTag}>Admin</span>
+          </h1>
+        </div>
+        <div className={styles.headerRight}>
+          {adminData && <span>歡迎，{adminData.username}</span>}
           <button onClick={handleLogout} className={styles.logoutButton}>
             登出
           </button>
@@ -188,20 +195,32 @@ export default function AdminDashboard() {
           {/* 統計數據卡片 */}
           <div className={styles.statsGrid}>
             <div className={styles.statCard}>
-              <div className={styles.statNumber}>{stats.totalMappings}</div>
-              <div className={styles.statLabel}>總檔案數</div>
+              <div className={styles.statIcon}>📦</div>
+              <div className={styles.statMeta}>
+                <div className={styles.statNumber}>{stats.totalMappings}</div>
+                <div className={styles.statLabel}>總檔案數</div>
+              </div>
             </div>
             <div className={styles.statCard}>
-              <div className={styles.statNumber}>{stats.todayUploads}</div>
-              <div className={styles.statLabel}>今日上傳</div>
+              <div className={styles.statIcon}>📤</div>
+              <div className={styles.statMeta}>
+                <div className={styles.statNumber}>{stats.todayUploads}</div>
+                <div className={styles.statLabel}>今日上傳</div>
+              </div>
             </div>
             <div className={styles.statCard}>
-              <div className={styles.statNumber}>{stats.activeMappings}</div>
-              <div className={styles.statLabel}>活躍檔案</div>
+              <div className={styles.statIcon}>✅</div>
+              <div className={styles.statMeta}>
+                <div className={styles.statNumber}>{stats.activeMappings}</div>
+                <div className={styles.statLabel}>活躍檔案</div>
+              </div>
             </div>
             <div className={styles.statCard}>
-              <div className={styles.statNumber}>{stats.totalViews}</div>
-              <div className={styles.statLabel}>總瀏覽數</div>
+              <div className={styles.statIcon}>👁️</div>
+              <div className={styles.statMeta}>
+                <div className={styles.statNumber}>{stats.totalViews}</div>
+                <div className={styles.statLabel}>總瀏覽數</div>
+              </div>
             </div>
           </div>
 
@@ -210,62 +229,83 @@ export default function AdminDashboard() {
             {/* 最近上傳列表 */}
             <div className={styles.mainPanel}>
               <h2 className={styles.sectionTitle}>最近上傳</h2>
-              <div className={styles.uploadsList}>
-                {stats.recentUploads.map((mapping) => (
-                  <div key={mapping.id} className={styles.uploadItem}>
-                    <div className={styles.uploadHeader}>
-                      <div
-                        className={styles.uploadName}
-                        title={mapping.filename}
-                      >
-                        {mapping.filename}
-                      </div>
-                      <div className={styles.uploadTime}>
-                        {formatTime(mapping.createdAt)}
-                      </div>
-                    </div>
-                    <div className={styles.uploadDetails}>
-                      <div className={styles.uploadInfo}>
-                        {mapping.viewCount} 次瀏覽
-                        {mapping.hasPassword && " • 🔒 已設密碼"}
-                        {mapping.isExpired && " • ⏰ 已過期"}
-                      </div>
-                      <div className={styles.uploadActions}>
-                        <button
-                          onClick={() => handleCopyUrl(mapping.hash)}
-                          className={styles.actionButton}
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>檔名</th>
+                      <th>短鏈</th>
+                      <th>瀏覽</th>
+                      <th>狀態</th>
+                      <th>時間</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.recentUploads.map((mapping) => (
+                      <tr key={mapping.id}>
+                        <td
+                          className={styles.fileName}
+                          data-label="檔名"
+                          title={mapping.filename}
                         >
-                          複製
-                        </button>
-                        <button
-                          onClick={() =>
-                            window.open(`/${mapping.hash}`, "_blank")
-                          }
-                          className={styles.actionButton}
-                        >
-                          預覽
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMapping(mapping.hash)}
-                          className={`${styles.actionButton} ${styles.danger}`}
-                        >
-                          刪除
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {stats.recentUploads.length === 0 && (
-                  <div
-                    style={{
-                      color: "rgba(255, 255, 255, 0.6)",
-                      textAlign: "center",
-                      padding: "20px",
-                    }}
-                  >
-                    暫無上傳記錄
-                  </div>
-                )}
+                          {mapping.filename}
+                        </td>
+                        <td data-label="短鏈">
+                          <a
+                            href={`/${mapping.hash}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={styles.hashLink}
+                          >
+                            /{mapping.hash}
+                          </a>
+                        </td>
+                        <td className={styles.count} data-label="瀏覽">
+                          {mapping.viewCount}
+                        </td>
+                        <td data-label="狀態">
+                          {mapping.hasPassword ? "🔒" : ""}
+                          {mapping.isExpired ? " ⏰" : ""}
+                        </td>
+                        <td data-label="時間">
+                          {formatTime(mapping.createdAt)}
+                        </td>
+                        <td data-label="操作">
+                          <div className={styles.uploadActions}>
+                            <button
+                              onClick={() => handleCopyUrl(mapping.hash)}
+                              className={styles.actionButton}
+                            >
+                              複製
+                            </button>
+                            <button
+                              onClick={() =>
+                                window.open(`/${mapping.hash}`, "_blank")
+                              }
+                              className={styles.actionButton}
+                            >
+                              預覽
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMapping(mapping.hash)}
+                              className={`${styles.actionButton} ${styles.danger}`}
+                            >
+                              刪除
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {stats.recentUploads.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className={styles.emptyRow}>
+                          暫無上傳記錄
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 

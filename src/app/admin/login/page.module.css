@@ -1,7 +1,8 @@
 .container {
   --bg1: #2b2e34;
   --panel: #1f2126;
-  --accent: #9b6bff;
+  --accent: #2d7a2d;
+  --accent-2: #1a4b1a;
   --ok: #3ecf8e;
   --warn: #ffa940;
 
@@ -21,7 +22,7 @@
 .card {
   width: min(400px, 100%);
   background: var(--panel);
-  border-radius: 18px;
+  border-radius: 12px;
   box-shadow: 0 10px 40px #0008;
   overflow: hidden;
   position: relative;
@@ -36,10 +37,10 @@
   bottom: -2px;
   background: linear-gradient(
     45deg,
+    var(--accent-2),
     var(--accent),
-    #ff7a59,
-    var(--accent),
-    #ff7a59
+    var(--accent-2),
+    var(--accent)
   );
   background-size: 400% 400%;
   border-radius: 20px;
@@ -82,15 +83,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(155, 107, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(45, 122, 45, 0.35);
 }
 
 .icon {
   height: 24px;
   width: 24px;
   color: white;
+}
+
+.logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
 }
 
 .title {
@@ -129,7 +136,7 @@
 
 .inputGroup:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(155, 107, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(45, 122, 45, 0.18);
 }
 
 .inputGroup:hover {
@@ -162,14 +169,14 @@
 }
 
 .inputTop {
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
   border-bottom: 1px solid #2a2d33;
 }
 
 .inputBottom {
-  border-bottom-left-radius: 10px;
-  border-bottom-right-radius: 10px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 
 .srOnly {
@@ -221,13 +228,13 @@
   font-weight: 700;
   border-radius: 12px;
   color: #fff;
-  background: linear-gradient(135deg, var(--accent), #ff7a59);
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
   cursor: pointer;
   transition: all 0.2s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-family: inherit;
-  box-shadow: 0 6px 14px rgba(155, 107, 255, 0.25);
+  box-shadow: 0 6px 14px rgba(45, 122, 45, 0.35);
   overflow: hidden;
 }
 
@@ -253,7 +260,7 @@
 
 .submitButton:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(155, 107, 255, 0.45);
+  box-shadow: 0 15px 35px rgba(45, 122, 45, 0.45);
   filter: brightness(1.05);
 }
 
@@ -263,7 +270,7 @@
 
 .submitButton:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(155, 107, 255, 0.3);
+  box-shadow: 0 0 0 3px rgba(45, 122, 45, 0.35);
 }
 
 .submitButton:disabled {

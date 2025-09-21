@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import styles from "./page.module.css";
 
 export default function AdminLoginPage() {
@@ -45,19 +46,14 @@ export default function AdminLoginPage() {
       <div className={styles.card}>
         <div className={styles.header}>
           <div className={styles.iconContainer}>
-            <svg
-              className={styles.icon}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
+            <Image
+              src="/logo-imgup.png"
+              alt="ImgUP Logo"
+              className={styles.logo}
+              width={36}
+              height={36}
+              priority
+            />
           </div>
           <h2 className={styles.title}>管理員登入</h2>
           <p className={styles.subtitle}>請輸入您的管理員帳號資訊</p>
