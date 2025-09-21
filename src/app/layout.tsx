@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "圖鴨上床(duk.tw)–台灣熱門圖床｜免費上傳、圖片空間分享",
     description: "圖鴨上床(duk.tw) - 台灣熱門免費上傳、圖片空間分享",
-    images: ["/og_image_logo.png"],
+    images: ["https://storage.meteor.today/image/68cff2bdac843e3fb52e87a6.png"],
     creator: "@duk_tw",
   },
 };
