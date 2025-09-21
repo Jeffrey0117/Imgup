@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "duk.tw 台灣熱門圖床｜免費上傳、圖片空間分享",
+  title: "圖鴨上床(duk.tw)–台灣熱門圖床｜免費上傳、圖片空間分享",
   description:
     "圖鴨上床(ImgUP) - 批量上傳圖片並生成 Markdown 連結的免費圖床工具",
   icons: {

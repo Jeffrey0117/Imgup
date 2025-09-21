@@ -189,7 +189,7 @@ export async function PUT(request: NextRequest) {
         break;
 
       case "setExpiry":
-        if (expiresAt === null || expiresAt === "") {
+        if (!expiresAt || expiresAt === "") {
           updateData.expiresAt = null;
         } else {
           const dt = new Date(expiresAt);
