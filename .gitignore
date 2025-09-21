@@ -37,3 +37,8 @@ yarn-error.log*
 next-env.d.ts
 node_modules
 node_modules
+
+
+# Documentation files (keep locally only)
+*.md
+!README.md

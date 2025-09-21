@@ -50,17 +50,12 @@ export async function DELETE(
       return NextResponse.json({ error: "找不到該檔案" }, { status: 404 });
     }
 
-    // 軟刪除：標記為已刪除
-    await prisma.mapping.update({
+    // 硬刪除：從資料庫移除該記錄
+    await prisma.mapping.delete({
       where: { hash },
-      data: {
-        isDeleted: true,
-        deletedAt: new Date(),
-        deletedBy: authResult.admin?.id,
-      },
     });
 
-    // 記錄審計日誌
+    // 記錄審計日誌（標記為硬刪除）
     await prisma.auditLog.create({
       data: {
         adminId: authResult.admin!.id,
@@ -70,7 +65,8 @@ export async function DELETE(
         details: {
           hash: mapping.hash,
           filename: mapping.filename,
-          reason: "管理員刪除",
+          hardDelete: true,
+          reason: "管理員硬刪除",
         },
         ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
       },
@@ -78,7 +74,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "檔案已刪除",
+      message: "檔案已永久刪除",
     });
   } catch (error) {
     console.error("刪除檔案失敗:", error);
@@ -144,8 +140,8 @@ export async function GET(
       deletedAt: mapping.deletedAt?.toISOString() || null,
       isExpired: mapping.expiresAt ? mapping.expiresAt < new Date() : false,
       hasPassword: !!mapping.password,
-      // 移除密碼以避免洩露
-      password: undefined,
+      // Admin API 可以回傳實際密碼值
+      password: mapping.password,
       logs: mapping.logs.map((log: any) => ({
         ...log,
         createdAt: log.createdAt.toISOString(),

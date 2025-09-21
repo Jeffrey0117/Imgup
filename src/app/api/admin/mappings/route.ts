@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
 
     // 解析查詢參數
     const { searchParams } = new URL(request.url);
+    const ids = searchParams.get("ids")?.split(",").filter(Boolean) || null; // 批量查詢支援
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const pageSize = Math.min(
       100,
@@ -70,53 +71,77 @@ export async function GET(request: NextRequest) {
     const dateEnd = searchParams.get("dateEnd");
     const status = (searchParams.get("status") as StatusFilter | null) || null; // valid | expired | deleted
     const passwordProtected = parseBool(searchParams.get("passwordProtected")); // true | false | null
+    const minViews = searchParams.get("minViews") ? parseInt(searchParams.get("minViews")!, 10) : null;
+    const maxViews = searchParams.get("maxViews") ? parseInt(searchParams.get("maxViews")!, 10) : null;
+    const fileType = searchParams.get("fileType")?.trim() || "";
 
-    // AND 條件集合
-    const AND: any[] = [];
+    // 當提供 ids 參數時，忽略其他篩選條件，只查詢指定項目
+    let where: any = undefined;
     const now = new Date();
 
-    // 狀態篩選
-    if (status === "deleted") {
-      AND.push({ isDeleted: true });
+    if (ids) {
+      // 批量查詢模式：只查詢指定 ID 的項目
+      where = { id: { in: ids } };
     } else {
-      // 預設不顯示已刪除
-      AND.push({ isDeleted: false });
-      if (status === "valid") {
-        AND.push({
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        });
-      } else if (status === "expired") {
-        AND.push({ expiresAt: { lt: now } });
-      }
-    }
+      // 一般查詢模式：使用所有篩選條件
+      const AND: any[] = [];
 
-    // 檔名搜尋（不分大小寫）
-    if (search) {
-      AND.push({ filename: { contains: search, mode: "insensitive" } });
-    }
-
-    // 日期範圍（createdAt）
-    if (dateStart || dateEnd) {
-      const createdAtRange: any = {};
-      if (dateStart) createdAtRange.gte = new Date(dateStart);
-      if (dateEnd) {
-        const end = new Date(dateEnd);
-        end.setHours(23, 59, 59, 999);
-        createdAtRange.lte = end;
-      }
-      AND.push({ createdAt: createdAtRange });
-    }
-
-    // 密碼保護狀態
-    if (passwordProtected !== null) {
-      if (passwordProtected === true) {
-        AND.push({ password: { not: null } });
+      // 狀態篩選
+      if (status === "deleted") {
+        AND.push({ isDeleted: true });
       } else {
-        AND.push({ OR: [{ password: null }, { password: "" }] });
+        // 預設不顯示已刪除
+        AND.push({ isDeleted: false });
+        if (status === "valid") {
+          AND.push({
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          });
+        } else if (status === "expired") {
+          AND.push({ expiresAt: { lt: now } });
+        }
       }
-    }
 
-    const where = AND.length ? { AND } : undefined;
+      // 檔名搜尋（不分大小寫）
+      if (search) {
+        AND.push({ filename: { contains: search, mode: "insensitive" } });
+      }
+
+      // 日期範圍（createdAt）
+      if (dateStart || dateEnd) {
+        const createdAtRange: any = {};
+        if (dateStart) createdAtRange.gte = new Date(dateStart);
+        if (dateEnd) {
+          const end = new Date(dateEnd);
+          end.setHours(23, 59, 59, 999);
+          createdAtRange.lte = end;
+        }
+        AND.push({ createdAt: createdAtRange });
+      }
+
+      // 密碼保護狀態
+      if (passwordProtected !== null) {
+        if (passwordProtected === true) {
+          AND.push({ password: { not: null } });
+        } else {
+          AND.push({ OR: [{ password: null }, { password: "" }] });
+        }
+      }
+
+      // 瀏覽量範圍篩選
+      if (minViews !== null || maxViews !== null) {
+        const viewCountRange: any = {};
+        if (minViews !== null) viewCountRange.gte = minViews;
+        if (maxViews !== null) viewCountRange.lte = maxViews;
+        AND.push({ viewCount: viewCountRange });
+      }
+
+      // 檔案類型篩選（依副檔名）
+      if (fileType) {
+        AND.push({ filename: { endsWith: `.${fileType}`, mode: "insensitive" } });
+      }
+
+      where = AND.length ? { AND } : undefined;
+    }
 
     // 查詢總數
     const total = await prisma.mapping.count({ where });
@@ -155,21 +180,34 @@ export async function GET(request: NextRequest) {
       deletedAt: m.deletedAt ? m.deletedAt.toISOString() : null,
       isExpired: m.expiresAt ? m.expiresAt < now : false,
       hasPassword: !!m.password,
-      // 不回傳密碼本體
+      password: m.password, // Admin API 可以回傳實際密碼值
     }));
 
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    let pagination;
+    if (ids) {
+      // 批量查詢模式：回傳實際找到的項目數量
+      pagination = {
+        page: 1,
+        pageSize: data.length,
+        total: data.length,
+        totalPages: 1,
+      };
+    } else {
+      // 一般查詢模式：標準分頁
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      pagination = {
+        page,
+        pageSize,
+        total,
+        totalPages,
+      };
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         items: data,
-        pagination: {
-          page,
-          pageSize,
-          total,
-          totalPages,
-        },
+        pagination,
       },
     });
   } catch (error) {

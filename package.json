@@ -19,12 +19,14 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/qrcode": "^1.5.5",
     "bcryptjs": "^3.0.2",
+    "csv-writer": "^1.6.0",
     "jsonwebtoken": "^9.0.2",
     "next": "14.0.0",
     "node-fetch": "^3.3.2",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",

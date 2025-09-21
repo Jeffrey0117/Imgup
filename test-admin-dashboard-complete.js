@@ -56,7 +56,7 @@ async function testCompleteAdminDashboard() {
     console.log("\n2. 🔐 測試管理員登入...");
     const loginResponse = await makeRequest("/api/admin/auth/login", "POST", {
       email: "admin@upimg.local",
-      password: "admin123",
+      password: "Admin123!@#",
     });
 
     if (loginResponse.statusCode !== 200) {
@@ -172,7 +172,7 @@ async function testCompleteAdminDashboard() {
     console.log("\n🌐 訪問管理員儀表板:");
     console.log(`   URL: http://localhost:3001/admin/login`);
     console.log(`   Email: admin@upimg.local`);
-    console.log(`   密碼: admin123`);
+    console.log(`   密碼: Admin123!@#`);
 
     console.log("\n✨ 功能特色:");
     console.log("   📊 即時統計數據顯示");
