@@ -323,7 +323,7 @@ export default function AdminDashboard() {
                   🔄 刷新數據
                 </button>
                 <button
-                  onClick={() => alert("檔案管理功能開發中")}
+                  onClick={() => router.push("/admin/images")}
                   className={styles.quickAction}
                 >
                   📁 管理所有檔案
