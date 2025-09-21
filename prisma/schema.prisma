@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -16,4 +16,113 @@ model Mapping {
   createdAt DateTime @default(now())
   expiresAt DateTime?
   password  String?
+
+  // 新增欄位
+  viewCount Int       @default(0)
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  deletedBy String?
+
+  // 關聯
+  logs      AccessLog[]
+  
+  @@index([createdAt])
+  @@index([isDeleted])
+}
+
+// 管理員模型
+model Admin {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String
+  role          String   @default("moderator")
+
+  // 2FA 設定
+  totpSecret    String?
+  totpEnabled   Boolean  @default(false)
+
+  // 狀態管理
+  isActive      Boolean  @default(true)
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  failedAttempts Int     @default(0)
+  lockedUntil   DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // 關聯
+  sessions      AdminSession[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+  @@index([username])
+}
+
+// 管理員 Session
+model AdminSession {
+  id           String   @id @default(cuid())
+  adminId      String
+  token        String   @unique
+  refreshToken String   @unique
+
+  userAgent    String?
+  ipAddress    String
+
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  admin        Admin    @relation(fields: [adminId], references: [id])
+
+  @@index([token])
+  @@index([adminId])
+}
+
+// 訪問日誌
+model AccessLog {
+  id        String   @id @default(cuid())
+  mappingId String
+
+  ipAddress String
+  userAgent String?
+  referer   String?
+
+  createdAt DateTime @default(now())
+
+  mapping   Mapping  @relation(fields: [mappingId], references: [id])
+
+  @@index([mappingId])
+  @@index([createdAt])
+}
+
+// 審計日誌
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+
+  action    String   // CREATE, UPDATE, DELETE, LOGIN, etc.
+  entity    String   // mapping, admin, system, etc.
+  entityId  String?
+
+  details   Json?    // 詳細變更內容
+  ipAddress String
+
+  createdAt DateTime @default(now())
+
+  admin     Admin    @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+// 系統設定
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
 }
