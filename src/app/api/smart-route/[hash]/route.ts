@@ -66,31 +66,29 @@ export async function GET(
       mappingExtension: (mapping as any).fileExtension,
     });
 
-    // 如果有副檔名且匹配資料庫中的副檔名，優先處理為圖片請求
-    const hasMatchingExtension = extension && (mapping as any).fileExtension === extension;
-
-    if (hasMatchingExtension && mapping.url) {
-      console.log(`Smart Route: 副檔名匹配，直接重定向到圖片: ${mapping.url}`);
+    // 如果帶副檔名：
+    // - 瀏覽器 (text/html) → 轉預覽頁
+    // - 非瀏覽器/圖片請求 → 直出圖片
+    if (extension && mapping.url) {
+      if (isBrowserDirectRequest) {
+        const previewUrl = new URL(`/${hash}/p`, req.url);
+        console.log(`Smart Route: 帶副檔名 + 瀏覽器，轉預覽頁: ${previewUrl.toString()}`);
+        return NextResponse.redirect(previewUrl, { status: 302 });
+      }
+      console.log(`Smart Route: 帶副檔名 + 非瀏覽器，直出圖片: ${mapping.url}`);
       return NextResponse.redirect(mapping.url, { status: 302 });
     }
 
-    // 如果是圖片請求且沒有匹配的副檔名，檢查是否為通用圖片請求
-    if (isImageRequest && mapping.url && !extension) {
-      console.log(`Smart Route: 圖片請求，直接重定向到圖片: ${mapping.url}`);
+    // 無副檔名但為圖片請求 → 直出圖片
+    if (!extension && isImageRequest && mapping.url) {
+      console.log(`Smart Route: 無副檔名 + 圖片請求，直出圖片: ${mapping.url}`);
       return NextResponse.redirect(mapping.url, { status: 302 });
     }
 
-    // 如果是瀏覽器直接請求，重定向到預覽頁面
+    // 其餘瀏覽器請求 → 預覽
     if (isBrowserDirectRequest) {
       const previewUrl = new URL(`/${hash}/p`, req.url);
-      console.log(`Smart Route: 重定向到預覽頁: ${previewUrl.toString()}`);
-      return NextResponse.redirect(previewUrl, { status: 302 });
-    }
-
-    // 如果有副檔名但不匹配，視為預覽頁面請求
-    if (extension && !hasMatchingExtension) {
-      const previewUrl = new URL(`/${hash}/p`, req.url);
-      console.log(`Smart Route: 副檔名不匹配，重定向到預覽頁: ${previewUrl.toString()}`);
+      console.log(`Smart Route: 瀏覽器請求，轉預覽頁: ${previewUrl.toString()}`);
       return NextResponse.redirect(previewUrl, { status: 302 });
     }
 
