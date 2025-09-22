@@ -212,16 +212,25 @@ export async function POST(request: NextRequest) {
 
     // 步驟 14: 儲存到資料庫
     try {
+      // 構造短網址（含副檔名；若無法判定副檔名則不加）
+      const base =
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        (typeof process !== "undefined" && process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : "https://duk.tw");
+      const shortUrl = `${base}/${hash}${fileExtension || ""}`;
+
       await prisma.mapping.create({
         data: {
           hash,
           url: imageUrl,
-          fileExtension: fileExtension || null,
+          
           filename: safeFileName,
+          shortUrl,
           createdAt: new Date(),
         },
       });
-      console.log(`[Upload] Saved mapping to database: ${hash} -> ${imageUrl}`);
+      console.log(`[Upload] Saved mapping to database: ${hash} -> ${imageUrl} (short: ${shortUrl})`);
     } catch (dbError) {
       console.error('[Upload] Database save error:', dbError);
       await logUploadAttempt(clientIP, false, 'Database save failed', userAgent);
