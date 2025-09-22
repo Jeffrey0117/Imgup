@@ -42,3 +42,52 @@ node_modules
 # Documentation files (keep locally only)
 *.md
 !README.md
+
+# Database files
+*.db
+dev.db
+prisma/dev.db
+*.sqlite
+*.sqlite3
+
+# Test and admin scripts with sensitive data
+scripts/check-admins.js
+scripts/update-admin-credentials.js
+scripts/verify-admin-passwords.js
+test-new-admin-login.js
+test-admin-api-password.js
+test-admin-dashboard-complete.js
+test-admin-login-page.js
+test-all-scenarios.js
+test-api-security.js
+test-auth-combinations.js
+test-current-admin-login.js
+test-dashboard-stats.js
+test-final-admin-login.js
+test-login-direct.js
+test-middleware.js
+test-neon-admin.js
+test-smart-route-vercel.js
+test-smart-routing.js
+test-upload-protection-simple.js
+test-upload-protection.js
+admin-login-headers.txt
+admin-login-source*.html
+
+# Sensitive script files
+scripts/*admin*.js
+scripts/*password*.js
+scripts/*credential*.js
+
+# Test files with potential sensitive data
+test-*.js
+*test*.js
+
+# IDE and temporary files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
