@@ -23,7 +23,8 @@ export const config = {
      * 2. /_next (Next.js internals)
      * 3. /_static (inside public)
      * 4. /favicon.ico, /sitemap.xml, /robots.txt (static files)
+     * 5. Paths with extensions (for smart routing to handle image extensions)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.gif|.*\\.webp|.*\\.svg).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.).*)',
   ],
 };

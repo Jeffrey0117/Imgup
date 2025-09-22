@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { isValidHash } from "@/utils/hash";
+import { parseHashedFilename } from "@/utils/file-extension";
 
 const prisma = new PrismaClient();
 
@@ -9,11 +10,16 @@ export async function GET(
   { params }: { params: { hash: string } }
 ) {
   try {
-    const { hash } = params;
+    const { hash: rawHash } = params;
 
-    // 驗證 hash 格式
+    // 解析 hash 和副檔名
+    const { hash, extension } = parseHashedFilename(rawHash);
+
+    console.log("Smart Route 解析:", { rawHash, hash, extension });
+
+    // 驗證 hash 格式（去除副檔名後的 hash）
     if (!isValidHash(hash)) {
-      return NextResponse.redirect(new URL(`/${hash}`, req.url), {
+      return NextResponse.redirect(new URL(`/${rawHash}`, req.url), {
         status: 302,
       });
     }
@@ -25,14 +31,14 @@ export async function GET(
 
     if (!mapping) {
       // 如果映射不存在，重定向到 Next.js 頁面路由處理 404
-      return NextResponse.redirect(new URL(`/${hash}`, req.url), {
+      return NextResponse.redirect(new URL(`/${rawHash}`, req.url), {
         status: 302,
       });
     }
 
     // 檢查是否過期
     if (mapping.expiresAt && new Date(mapping.expiresAt) < new Date()) {
-      return NextResponse.redirect(new URL(`/${hash}`, req.url), {
+      return NextResponse.redirect(new URL(`/${rawHash}`, req.url), {
         status: 302,
       });
     }
@@ -42,7 +48,7 @@ export async function GET(
     const userAgent = req.headers.get("user-agent") || "";
     const referer = req.headers.get("referer") || "";
 
-    // 智能路由判斷邏輯 - 簡化且更準確
+    // 智能路由判斷邏輯
     const isBrowserDirectRequest = acceptHeader.includes("text/html");
 
     const isImageRequest =
@@ -51,16 +57,26 @@ export async function GET(
 
     console.log("Smart Route 判斷:", {
       hash,
+      extension,
       acceptHeader,
       userAgent: userAgent.substring(0, 50),
       referer: referer.substring(0, 50),
       isImageRequest,
       isBrowserDirectRequest,
+      mappingExtension: (mapping as any).fileExtension,
     });
 
-    // 如果是圖片請求，直接重定向到圖片 URL
-    if (isImageRequest && mapping.url) {
-      console.log(`Smart Route: 直接重定向到圖片: ${mapping.url}`);
+    // 如果有副檔名且匹配資料庫中的副檔名，優先處理為圖片請求
+    const hasMatchingExtension = extension && (mapping as any).fileExtension === extension;
+
+    if (hasMatchingExtension && mapping.url) {
+      console.log(`Smart Route: 副檔名匹配，直接重定向到圖片: ${mapping.url}`);
+      return NextResponse.redirect(mapping.url, { status: 302 });
+    }
+
+    // 如果是圖片請求且沒有匹配的副檔名，檢查是否為通用圖片請求
+    if (isImageRequest && mapping.url && !extension) {
+      console.log(`Smart Route: 圖片請求，直接重定向到圖片: ${mapping.url}`);
       return NextResponse.redirect(mapping.url, { status: 302 });
     }
 
@@ -68,6 +84,13 @@ export async function GET(
     if (isBrowserDirectRequest) {
       const previewUrl = new URL(`/${hash}/p`, req.url);
       console.log(`Smart Route: 重定向到預覽頁: ${previewUrl.toString()}`);
+      return NextResponse.redirect(previewUrl, { status: 302 });
+    }
+
+    // 如果有副檔名但不匹配，視為預覽頁面請求
+    if (extension && !hasMatchingExtension) {
+      const previewUrl = new URL(`/${hash}/p`, req.url);
+      console.log(`Smart Route: 副檔名不匹配，重定向到預覽頁: ${previewUrl.toString()}`);
       return NextResponse.redirect(previewUrl, { status: 302 });
     }
 

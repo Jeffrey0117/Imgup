@@ -23,9 +23,12 @@ model Mapping {
   deletedAt DateTime?
   deletedBy String?
 
+  // 副檔名字段 - 支援 PNG, JPG, JPEG, GIF, WEBP, SVG
+  fileExtension String?
+
   // 關聯
   logs      AccessLog[]
-  
+
   @@index([createdAt])
   @@index([isDeleted])
 }
