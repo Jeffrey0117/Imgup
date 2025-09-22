@@ -128,7 +128,9 @@ export function isSuspiciousUserAgent(userAgent: string | null): boolean {
  */
 function cleanupExpiredRecords(): void {
   const now = Date.now();
-  for (const [key, record] of memoryStore.entries()) {
+  // 使用 Array.from 轉換為陣列，避免 TypeScript es5 target 的迭代器問題
+  const entries = Array.from(memoryStore.entries());
+  for (const [key, record] of entries) {
     if (record.resetTime <= now) {
       memoryStore.delete(key);
     }
