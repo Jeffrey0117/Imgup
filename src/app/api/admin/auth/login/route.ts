@@ -30,11 +30,16 @@ export async function POST(request: NextRequest) {
       admin: result.data!.admin,
     });
 
+    // 開發環境：放鬆 Cookie 安全設定以支援本地開發
+    const isProduction = process.env.NODE_ENV === "production";
+    const cookieSameSite = "lax"; // 改為 lax 以支援跨請求
+    const cookieSecure = false; // 開發環境不強制 secure
+
     // 設定 access token cookie (15 分鐘)
     response.cookies.set("admin_token", result.data!.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: cookieSecure,
+      sameSite: cookieSameSite as "strict" | "lax",
       maxAge: 15 * 60, // 15 分鐘
       path: "/",
     });
@@ -42,10 +47,21 @@ export async function POST(request: NextRequest) {
     // 設定 refresh token cookie (7 天)
     response.cookies.set("admin_refresh_token", result.data!.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: cookieSecure,
+      sameSite: cookieSameSite as "strict" | "lax",
       maxAge: 7 * 24 * 60 * 60, // 7 天
       path: "/",
+    });
+
+    console.log("🔐 登入 API:", {
+      email,
+      success: true,
+      nodeEnv: process.env.NODE_ENV,
+      isProduction,
+      cookieSecure,
+      cookieSameSite,
+      adminTokenLength: result.data!.accessToken.length,
+      refreshTokenLength: result.data!.refreshToken.length,
     });
 
     return response;

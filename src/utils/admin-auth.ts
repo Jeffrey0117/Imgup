@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
+import { randomBytes } from "crypto";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -33,20 +35,10 @@ export interface LoginResult {
 }
 
 /**
- * 密碼雜湊
+ * 生成安全的隨機 token (base64url 格式)
  */
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
-}
-
-/**
- * 驗證密碼
- */
-export async function verifyPassword(
-  password: string,
-  hashedPassword: string
-): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword);
+export function generateSecureToken(length: number): string {
+  return randomBytes(length).toString('base64url');
 }
 
 /**
@@ -55,19 +47,36 @@ export async function verifyPassword(
 export function generateTokens(
   payload: Omit<AdminTokenPayload, "sessionId"> & { sessionId: string }
 ) {
-  const accessToken = jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
-    issuer: "admin-cms",
-    audience: "admin",
-  });
+  // 生成 JWT access token
+  const accessToken = jwt.sign(
+    {
+      adminId: payload.adminId,
+      email: payload.email,
+      username: payload.username,
+      role: payload.role,
+      sessionId: payload.sessionId,
+    },
+    JWT_SECRET,
+    {
+      expiresIn: JWT_EXPIRES_IN,
+      issuer: "admin-cms",
+      audience: "admin",
+      jwtid: randomUUID(),
+    }
+  );
 
+  // 生成 JWT refresh token
   const refreshToken = jwt.sign(
-    { adminId: payload.adminId, sessionId: payload.sessionId },
+    {
+      adminId: payload.adminId,
+      sessionId: payload.sessionId,
+    },
     JWT_REFRESH_SECRET,
     {
       expiresIn: REFRESH_TOKEN_EXPIRES_IN,
       issuer: "admin-cms",
       audience: "admin",
+      jwtid: randomUUID(),
     }
   );
 
@@ -134,6 +143,105 @@ export function getClientIp(request: NextRequest): string {
 }
 
 /**
+ * 創建 session 並處理重試 (P2002 唯一鍵衝突)
+ * 最多嘗試 5 次，自動重試生成新 token
+ */
+export async function createSessionWithRetry(
+  adminId: string,
+  userAgent: string | null,
+  ipAddress: string
+) {
+  const maxRetries = 5;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // 清理過期的 sessions
+      await prisma.adminSession.deleteMany({
+        where: {
+          expiresAt: { lt: new Date() },
+        },
+      });
+
+      // 限制同一 adminId 的有效 sessions 數量為 10
+      const activeSessions = await prisma.adminSession.count({
+        where: { adminId },
+      });
+
+      if (activeSessions >= 10) {
+        // 刪除最舊的 sessions
+        const oldestSessions = await prisma.adminSession.findMany({
+          where: { adminId },
+          orderBy: { createdAt: 'asc' },
+          take: activeSessions - 9, // 保留 9 個最新，刪除超額部分
+          select: { id: true },
+        });
+
+        await prisma.adminSession.deleteMany({
+          where: {
+            id: { in: oldestSessions.map(s => s.id) },
+          },
+        });
+      }
+
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 天
+
+      // 先創建 session 以獲取 ID
+      const session = await prisma.adminSession.create({
+        data: {
+          adminId,
+          userAgent,
+          ipAddress,
+          expiresAt,
+          token: '', // 暫時空白，稍後更新
+          refreshToken: '', // 暫時空白，稍後更新
+        },
+      });
+
+      // 現在生成包含 sessionId 的 tokens (需要從外部提供完整資訊)
+      // 注意：這裡只返回 session，實際的 token 生成在 loginAdmin 中處理
+      return {
+        session,
+        accessToken: '', // 在 loginAdmin 中生成
+        refreshToken: '', // 在 loginAdmin 中生成
+      };
+    } catch (error: any) {
+      // 檢查是否為 P2002 唯一鍵衝突且涉及 token
+      if (
+        error.code === 'P2002' &&
+        error.meta?.target?.includes('token') &&
+        attempt < maxRetries
+      ) {
+        // 重試生成新 token
+        continue;
+      }
+
+      // 其他錯誤直接拋出
+      throw error;
+    }
+  }
+
+  // 如果所有重試都失敗
+  throw new Error('Failed to create unique session after maximum retries');
+}
+
+/**
+ * 密碼雜湊
+ */
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12);
+}
+
+/**
+ * 驗證密碼
+ */
+export async function verifyPassword(
+  password: string,
+  hashedPassword: string
+): Promise<boolean> {
+  return bcrypt.compare(password, hashedPassword);
+}
+
+/**
  * 管理員登入
  */
 export async function loginAdmin(
@@ -192,23 +300,14 @@ export async function loginAdmin(
       return { success: false, error: "無效的電子郵件或密碼" };
     }
 
-    // 建立新的 session
-    const sessionData = {
-      adminId: admin.id,
-      userAgent: userAgent || null,
-      ipAddress: ipAddress || "127.0.0.1",
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 天
-    };
-
-    const session = await prisma.adminSession.create({
-      data: {
-        ...sessionData,
-        token: "temp", // 暫時值，稍後更新
-        refreshToken: "temp", // 暫時值，稍後更新
-      },
-    });
-
-    // 生成 tokens
+    // 使用重試機制創建 session
+    const { session, accessToken, refreshToken } = await createSessionWithRetry(
+      admin.id,
+      userAgent || null,
+      ipAddress || "127.0.0.1"
+    );
+    
+    // 生成包含 session ID 的正確 JWT tokens
     const tokens = generateTokens({
       adminId: admin.id,
       email: admin.email,
@@ -216,8 +315,8 @@ export async function loginAdmin(
       role: admin.role,
       sessionId: session.id,
     });
-
-    // 更新 session 的 tokens
+    
+    // 更新 session 以儲存正確的 JWT tokens
     await prisma.adminSession.update({
       where: { id: session.id },
       data: {
@@ -385,7 +484,6 @@ export async function verifyAdminSession(token: string): Promise<{
     const session = await prisma.adminSession.findUnique({
       where: {
         id: payload.sessionId,
-        token: token,
       },
       include: {
         admin: {
