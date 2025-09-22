@@ -172,14 +172,14 @@ export default function AdminDashboard() {
         <div className={styles.brandLeft}>
           <Image
             src="/logo-imgup.png"
-            alt="ImgUP Logo"
+            alt="duk.tw Logo"
             className={styles.logo}
             width={36}
             height={36}
             priority
           />
           <h1 className={styles.title}>
-            ImgUP 管理儀表板 <span className={styles.brandTag}>Admin</span>
+            duk.tw 管理儀表板 <span className={styles.brandTag}>Admin</span>
           </h1>
         </div>
         <div className={styles.headerRight}>

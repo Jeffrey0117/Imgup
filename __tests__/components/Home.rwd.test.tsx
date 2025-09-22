@@ -31,11 +31,11 @@ describe("Home Page RWD Tests", () => {
     test("should display single column layout on mobile", () => {
       render(<Home />);
 
-      const container = screen.getByText("圖鴨上床(ImgUP)").closest("div");
+      const container = screen.getByText("圖鴨上床(duk.tw)").closest("div");
       expect(container).toBeInTheDocument();
 
       // Check that main title is visible
-      expect(screen.getByText("圖鴨上床(ImgUP)")).toBeInTheDocument();
+      expect(screen.getByText("圖鴨上床(duk.tw)")).toBeInTheDocument();
       expect(
         screen.getByText("Drop images → Upload → Markdown")
       ).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe("Home Page RWD Tests", () => {
     test("should have appropriate font sizes for mobile", () => {
       render(<Home />);
 
-      const mainTitle = screen.getByText("圖鴨上床(ImgUP)");
+      const mainTitle = screen.getByText("圖鴨上床(duk.tw)");
       const computedStyle = window.getComputedStyle(mainTitle);
 
       // The actual font size will depend on CSS being loaded
@@ -87,7 +87,7 @@ describe("Home Page RWD Tests", () => {
       render(<Home />);
 
       // Should still show all main elements
-      expect(screen.getByText("圖鴨上床(ImgUP)")).toBeInTheDocument();
+      expect(screen.getByText("圖鴨上床(duk.tw)")).toBeInTheDocument();
       expect(
         screen.getByText("Drop images here / 或點擊選擇")
       ).toBeInTheDocument();
@@ -130,7 +130,7 @@ describe("Home Page RWD Tests", () => {
       render(<Home />);
 
       // Check all main elements are present
-      expect(screen.getByText("圖鴨上床(ImgUP)")).toBeInTheDocument();
+      expect(screen.getByText("圖鴨上床(duk.tw)")).toBeInTheDocument();
       expect(
         screen.getByText("Drop images here / 或點擊選擇")
       ).toBeInTheDocument();

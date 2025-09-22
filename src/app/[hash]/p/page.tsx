@@ -72,7 +72,7 @@ export default function PreviewPage({ params }: Props) {
           <h2>
             <img
               src="/logo-imgup.png"
-              alt="Logo"
+              alt="duk.tw Logo"
               style={{
                 display: "inline",
                 height: "1.2em",
@@ -128,7 +128,7 @@ export default function PreviewPage({ params }: Props) {
           <h1>
             <img
               src="/logo-imgup.png"
-              alt="Logo"
+              alt="duk.tw Logo"
               style={{
                 display: "inline",
                 height: "1.2em",

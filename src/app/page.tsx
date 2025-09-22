@@ -416,13 +416,13 @@ export default function Home() {
           <div className={styles.logoSection}>
             <Image
               src="/logo-imgup.png"
-              alt="ImgUP Logo"
+              alt="duk.tw Logo"
               className={styles.logo}
               width={60}
               height={60}
               priority
             />
-            <h1 className={styles.mainTitle}>圖鴨上床(ImgUP)</h1>
+            <h1 className={styles.mainTitle}>圖鴨上床(duk.tw)</h1>
           </div>
           <div className={styles.titleSection}>
             <h2 className={styles.subTitle}>Drop images → Upload → Markdown</h2>
@@ -656,7 +656,7 @@ export default function Home() {
         </div>
       </div>
       <section className={styles.seoSection}>
-        <h1>ImgUP 圖鴨上床-免費圖床工具介紹</h1>
+        <h1>duk.tw 圖鴨上床-免費圖床工具介紹</h1>
 
         <div className={styles.accordion}>
           <button
@@ -706,7 +706,7 @@ export default function Home() {
             <pre>![替代文字](圖片網址)</pre>
             <p>例如：</p>
             <pre>![我的貓咪](https://i.imgur.com/example.jpg)</pre>
-            <p>ImgUP 會自動為你生成正確的 Markdown 語法，你只需要：</p>
+            <p>duk.tw 會自動為你生成正確的 Markdown 語法，你只需要：</p>
             <ol>
               <li>上傳圖片</li>
               <li>複製 Markdown 輸出區域的內容</li>
@@ -733,9 +733,9 @@ export default function Home() {
             <pre>
               <img src="https://i.imgur.com/example.jpg" alt="我的貓咪" />
             </pre>
-            <p>ImgUP 會自動生成完整的 HTML 標籤，你只需要：</p>
+            <p>duk.tw 會自動生成完整的 HTML 標籤，你只需要：</p>
             <ol>
-              <li>上傳圖片到 ImgUP</li>
+              <li>上傳圖片到 duk.tw</li>
               <li>複製 HTML 標籤輸出區域的內容</li>
               <li>貼到你的 HTML 文件中</li>
             </ol>
@@ -745,14 +745,14 @@ export default function Home() {
             className={styles.accordionHeader}
             onClick={() => handleAccordionToggle("features")}
           >
-            ImgUP 功能與優勢
+            duk.tw 功能與優勢
           </button>
           <div
             className={`${styles.accordionContent} ${
               openAccordion === "features" ? styles.open : ""
             }`}
           >
-            <p>ImgUP 是專為部落客、開發者和內容創作者設計的免費圖床工具：</p>
+            <p>duk.tw 是專為部落客、開發者和內容創作者設計的免費圖床工具：</p>
             <ul>
               <li>
                 <strong>拖曳上傳：</strong>支援拖曳多張圖片快速上傳

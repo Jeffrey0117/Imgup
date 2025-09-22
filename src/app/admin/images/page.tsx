@@ -454,7 +454,7 @@ export default function AdminImagesPage() {
         <div className={styles.brand}>
           <Image
             src="/new_logo_with_text.png"
-            alt="ImgUP Logo"
+            alt="duk.tw Logo"
             className={styles.logo}
             width={36}
             height={36}

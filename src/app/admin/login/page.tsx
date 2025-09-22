@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styles from "./page.module.css";
@@ -11,6 +11,63 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  // DevTools 偵測和警告
+  useEffect(() => {
+    // 偵測 DevTools 開啟
+    let devtools = { open: false };
+    const threshold = 160;
+    let warningShown = false;
+    
+    const checkDevTools = setInterval(() => {
+      if (window.outerHeight - window.innerHeight > threshold ||
+          window.outerWidth - window.innerWidth > threshold) {
+        if (!devtools.open) {
+          devtools.open = true;
+          (window as any).__DEV_TOOLS_OPEN__ = true;
+          
+          if (!warningShown && process.env.NODE_ENV === 'production') {
+            warningShown = true;
+            console.warn(
+              '%c⚠️ 安全警告',
+              'color: red; font-size: 30px; font-weight: bold;',
+              '\n此為管理後台，請勿嘗試未授權存取。\n所有活動都會被記錄。'
+            );
+          }
+        }
+      } else {
+        devtools.open = false;
+        (window as any).__DEV_TOOLS_OPEN__ = false;
+      }
+    }, 500);
+    
+    // 禁用右鍵選單（生產環境）
+    const handleContextMenu = (e: MouseEvent) => {
+      if (process.env.NODE_ENV === 'production') {
+        e.preventDefault();
+      }
+    };
+    
+    // 禁用開發者快捷鍵（生產環境）
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (process.env.NODE_ENV === 'production') {
+        if (e.key === 'F12' ||
+            (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J')) ||
+            (e.ctrlKey && e.key === 'U')) {
+          e.preventDefault();
+        }
+      }
+    };
+    
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      clearInterval(checkDevTools);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +105,7 @@ export default function AdminLoginPage() {
           <div className={styles.iconContainer}>
             <Image
               src="/logo-imgup.png"
-              alt="ImgUP Logo"
+              alt="duk.tw Logo"
               className={styles.logo}
               width={36}
               height={36}
