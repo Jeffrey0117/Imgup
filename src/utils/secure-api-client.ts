@@ -24,7 +24,7 @@ export class SecureApiClient {
     const body = options.body ? JSON.parse(options.body as string) : undefined;
     
     // 生成請求簽名（在實際應用中，密鑰應該安全地傳遞）
-    const signature = this.generateClientSignature(method, path, timestamp, body);
+    const signature = await this.generateClientSignature(method, path, timestamp, body);
     
     // 添加安全標頭
     const headers = new Headers(options.headers);
@@ -57,12 +57,12 @@ export class SecureApiClient {
   /**
    * 客戶端簽名生成（簡化版本）
    */
-  private generateClientSignature(
+  private async generateClientSignature(
     method: string,
     path: string,
     timestamp: number,
     body?: any
-  ): string {
+  ): Promise<string> {
     // 在實際應用中，這應該使用安全的方式獲取密鑰
     // 這裡只是示例
     const payload = `${method}:${path}:${timestamp}:${body ? JSON.stringify(body) : ''}`;
@@ -70,7 +70,7 @@ export class SecureApiClient {
     // 使用簡單的 hash（實際應用需要更安全的方式）
     if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
       // 瀏覽器環境：使用 Web Crypto API
-      return this.browserHash(payload);
+      return await this.browserHash(payload);
     }
     
     // 後備方案：簡單 hash
