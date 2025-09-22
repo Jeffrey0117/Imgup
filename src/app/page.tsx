@@ -182,38 +182,17 @@ export default function Home() {
       console.log("Response result:", result);
 
       if (result.result) {
-        // 呼叫 API 將映射存到資料庫並取得短網址
-        let shortUrl = "";
-        let hash = "";
+        // 直接使用 Upload API 回傳的 hash/extension 組短網址（免再呼叫 /api/shorten）
+        const hash = result.result;
+        const shortUrl = result.extension
+          ? `${window.location.origin}/${hash}${result.extension}`
+          : `${window.location.origin}/${hash}`;
 
-        try {
-          const shortenResponse = await fetch("/api/shorten", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              url: result.result,
-              filename: item.file.name,
-              expiresAt: expiryDate || null,
-              password: password || null,
-            }),
-          });
-
-          if (shortenResponse.ok) {
-            const shortenData = await shortenResponse.json();
-            // 使用後端回傳的 shortUrl 和 hash
-            shortUrl = shortenData.shortUrl;
-            hash = shortenData.hash;
-            console.log("成功取得短網址:", {
-              shortUrl: shortUrl,
-              hash: hash,
-            });
-          } else {
-            console.error("短網址 API 回應錯誤:", await shortenResponse.text());
-          }
-        } catch (error) {
-          console.error("儲存短網址到資料庫失敗:", error);
-          // 即使短網址失敗，仍顯示原始網址
-        }
+        console.log("成功取得短網址:", {
+          shortUrl,
+          hash,
+          extension: result.extension,
+        });
 
         setQueue((prev) =>
           prev.map((q) =>
@@ -221,7 +200,7 @@ export default function Home() {
               ? {
                   ...q,
                   done: true,
-                  url: result.result,
+                  url: result.originalUrl,
                   shortUrl: shortUrl || undefined,
                   progress: 100,
                   status: "success" as const,
@@ -231,9 +210,9 @@ export default function Home() {
         );
 
         // 設定上傳結果並延遲關閉動畫，給 QR Code 足夠時間生成
-        setCurrentUploadUrl(result.result);
+        setCurrentUploadUrl(result.originalUrl);
         // 確保有短網址才設置，否則使用原始網址
-        setCurrentShortUrl(shortUrl || "");
+        setCurrentShortUrl(shortUrl);
 
         // 累計批次上傳成功數（單張也會累計為 1）
         setBatchCompleted((prev) => prev + 1);

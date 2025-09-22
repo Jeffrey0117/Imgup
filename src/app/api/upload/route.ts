@@ -15,6 +15,7 @@ import { detectFileExtensionComprehensive, generateHashedFilename } from '@/util
 
 // 加入資料庫儲存
 import { prisma } from '@/lib/prisma';
+import { generateShortHash, generateUniqueHash } from '@/utils/hash';
 
 // 記錄上傳嘗試（用於監控和分析）
 async function logUploadAttempt(
@@ -176,94 +177,83 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await response.json();
+    console.log(`[Upload] External API result:`, JSON.stringify(result, null, 2));
 
-    // 步驟 11: 處理副檔名並儲存到資料庫
-    try {
-      // 從外部 API 回應中提取 hash 和 url
-      const externalHash = result.hash || result.id;
-      const externalUrl = result.url || result.image_url;
-
-      if (externalHash && externalUrl) {
-        // 檢測檔案副檔名
-        const fileExtension = detectFileExtensionComprehensive(image.type, image.name);
-        console.log(`[Upload] Detected file extension: ${fileExtension} for MIME type: ${image.type}`);
-
-        // 產生新的 hash（如果需要加上副檔名）
-        const finalHash = generateHashedFilename(externalHash, fileExtension);
-        const shortUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://duk.tw'}/${finalHash}`;
-
-        // 儲存到資料庫
-        await prisma.mapping.create({
-          data: {
-            hash: externalHash, // 儲存原始 hash，不包含副檔名
-            filename: safeFileName,
-            url: externalUrl,
-            shortUrl,
-            fileExtension, // 儲存副檔名
-          },
-        });
-
-        console.log(`[Upload] Saved mapping: ${externalHash} -> ${finalHash}`);
-
-        // 修改回傳結果，包含副檔名的 hash
-        const modifiedResult = {
-          ...result,
-          hash: finalHash, // 返回包含副檔名的 hash
-          original_hash: externalHash, // 保留原始 hash 以供參考
-          extension: fileExtension,
-        };
-
-        await logUploadAttempt(clientIP, true, 'Success', userAgent);
-
-        // 記錄效能指標
-        const processingTime = Date.now() - startTime;
-
-        return NextResponse.json(
-          modifiedResult,
-          {
-            status: 200,
-            headers: {
-              'X-Processing-Time': String(processingTime),
-            }
-          }
-        );
-      } else {
-        // 如果外部 API 回應格式不符合預期，降級處理
-        console.warn('[Upload] External API response missing expected fields, falling back');
-        await logUploadAttempt(clientIP, true, 'Success (fallback)', userAgent);
-
-        const processingTime = Date.now() - startTime;
-
-        return NextResponse.json(
-          result,
-          {
-            status: 200,
-            headers: {
-              'X-Processing-Time': String(processingTime),
-              'X-Fallback-Mode': 'true',
-            }
-          }
-        );
-      }
-
-    } catch (dbError) {
-      console.error('[Upload] Database error:', dbError);
-      // 如果資料庫儲存失敗，仍返回外部 API 的原始結果
-      await logUploadAttempt(clientIP, true, 'Success (no db)', userAgent);
-
-      const processingTime = Date.now() - startTime;
-
+    // 記錄成功的上傳
+    await logUploadAttempt(clientIP, true, 'Success', userAgent);
+    // 步驟 11: 從結果中提取圖片 URL
+    const imageUrl = result.result;
+    if (!imageUrl) {
+      await logUploadAttempt(clientIP, false, 'No image URL in response', userAgent);
       return NextResponse.json(
-        result, // 返回原始結果
         {
-          status: 200,
-          headers: {
-            'X-Processing-Time': String(processingTime),
-            'X-Database-Error': 'true',
-          }
-        }
+          status: 0,
+          message: "Upload service returned no image URL",
+        },
+        { status: 500 }
       );
     }
+
+    // 步驟 12: 檢測檔案副檔名
+    const fileExtension = detectFileExtensionComprehensive(image.type, imageUrl);
+    console.log(`[Upload] Detected file extension: ${fileExtension}`);
+
+    // 步驟 13: 生成短 hash
+    const hash = await generateUniqueHash(
+      `${imageUrl}_${Date.now()}`,
+      async (hashToCheck: string) => {
+        const existing = await prisma.mapping.findUnique({
+          where: { hash: hashToCheck }
+        });
+        return existing !== null;
+      }
+    );
+    console.log(`[Upload] Generated hash: ${hash}`);
+
+    // 步驟 14: 儲存到資料庫
+    try {
+      await prisma.mapping.create({
+        data: {
+          hash,
+          url: imageUrl,
+          fileExtension: fileExtension || null,
+          filename: safeFileName,
+          createdAt: new Date(),
+        },
+      });
+      console.log(`[Upload] Saved mapping to database: ${hash} -> ${imageUrl}`);
+    } catch (dbError) {
+      console.error('[Upload] Database save error:', dbError);
+      await logUploadAttempt(clientIP, false, 'Database save failed', userAgent);
+      return NextResponse.json(
+        {
+          status: 0,
+          message: "Failed to save upload record",
+        },
+        { status: 500 }
+      );
+    }
+
+    // 記錄效能指標
+    const processingTime = Date.now() - startTime;
+    if (processingTime > 5000) { // 超過 5 秒視為慢速請求
+      console.warn(`[Upload] Slow request detected: ${processingTime}ms from ${clientIP}`);
+    }
+
+    // 回傳包含 hash 和副檔名的結果
+    return NextResponse.json(
+      {
+        result: hash,
+        extension: fileExtension,
+        originalUrl: imageUrl,
+      },
+      {
+        status: 200,
+        headers: {
+          'X-Processing-Time': String(processingTime),
+        }
+      }
+    );
 
   } catch (error) {
     // 捕獲所有未預期的錯誤
