@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { 
-  uploadRateLimiter, 
+import {
+  uploadRateLimiter,
   getClientIP,
-  isIPBlacklisted 
+  isIPBlacklisted
 } from '@/utils/rate-limit';
-import { 
-  validateFile, 
+import {
+  validateFile,
   validateOrigin,
-  sanitizeFileName 
+  sanitizeFileName
 } from '@/utils/file-validation';
+
+// 加入副檔名處理
+import { detectFileExtensionComprehensive, generateHashedFilename } from '@/utils/file-extension';
+
+// 加入資料庫儲存
+import { prisma } from '@/lib/prisma';
 
 // 記錄上傳嘗試（用於監控和分析）
 async function logUploadAttempt(
-  ip: string, 
-  success: boolean, 
+  ip: string,
+  success: boolean,
   reason?: string,
   userAgent?: string | null
 ) {
@@ -25,7 +31,7 @@ async function logUploadAttempt(
     reason,
     userAgent: userAgent || 'unknown',
   };
-  
+
   // 在生產環境，可以將此日誌發送到監控服務
   if (process.env.NODE_ENV === 'production') {
     console.log('[Upload Attempt]', JSON.stringify(logEntry));
@@ -38,7 +44,7 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const clientIP = getClientIP(request);
   const userAgent = request.headers.get('user-agent');
-  
+
   try {
     // 步驟 1: 檢查 IP 黑名單
     if (isIPBlacklisted(clientIP)) {
@@ -53,7 +59,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResult = await uploadRateLimiter(request);
     if (!rateLimitResult.allowed) {
       await logUploadAttempt(clientIP, false, rateLimitResult.reason, userAgent);
-      
+
       const headers: HeadersInit = {};
       if (rateLimitResult.retryAfter) {
         headers['Retry-After'] = String(rateLimitResult.retryAfter);
@@ -61,7 +67,7 @@ export async function POST(request: NextRequest) {
         headers['X-RateLimit-Remaining'] = '0';
         headers['X-RateLimit-Reset'] = new Date(Date.now() + rateLimitResult.retryAfter * 1000).toISOString();
       }
-      
+
       return NextResponse.json(
         { status: 0, message: rateLimitResult.reason || 'Too many requests' },
         { status: 429, headers }
@@ -170,32 +176,100 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await response.json();
-    
-    // 記錄成功的上傳
-    await logUploadAttempt(clientIP, true, 'Success', userAgent);
-    
-    // 記錄效能指標
-    const processingTime = Date.now() - startTime;
-    if (processingTime > 5000) { // 超過 5 秒視為慢速請求
-      console.warn(`[Upload] Slow request detected: ${processingTime}ms from ${clientIP}`);
-    }
 
-    // 回傳結果，加入處理時間資訊
-    return NextResponse.json(
-      result,
-      { 
-        status: 200,
-        headers: {
-          'X-Processing-Time': String(processingTime),
-        }
+    // 步驟 11: 處理副檔名並儲存到資料庫
+    try {
+      // 從外部 API 回應中提取 hash 和 url
+      const externalHash = result.hash || result.id;
+      const externalUrl = result.url || result.image_url;
+
+      if (externalHash && externalUrl) {
+        // 檢測檔案副檔名
+        const fileExtension = detectFileExtensionComprehensive(image.type, image.name);
+        console.log(`[Upload] Detected file extension: ${fileExtension} for MIME type: ${image.type}`);
+
+        // 產生新的 hash（如果需要加上副檔名）
+        const finalHash = generateHashedFilename(externalHash, fileExtension);
+        const shortUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://duk.tw'}/${finalHash}`;
+
+        // 儲存到資料庫
+        await prisma.mapping.create({
+          data: {
+            hash: externalHash, // 儲存原始 hash，不包含副檔名
+            filename: safeFileName,
+            url: externalUrl,
+            shortUrl,
+            fileExtension, // 儲存副檔名
+          },
+        });
+
+        console.log(`[Upload] Saved mapping: ${externalHash} -> ${finalHash}`);
+
+        // 修改回傳結果，包含副檔名的 hash
+        const modifiedResult = {
+          ...result,
+          hash: finalHash, // 返回包含副檔名的 hash
+          original_hash: externalHash, // 保留原始 hash 以供參考
+          extension: fileExtension,
+        };
+
+        await logUploadAttempt(clientIP, true, 'Success', userAgent);
+
+        // 記錄效能指標
+        const processingTime = Date.now() - startTime;
+
+        return NextResponse.json(
+          modifiedResult,
+          {
+            status: 200,
+            headers: {
+              'X-Processing-Time': String(processingTime),
+            }
+          }
+        );
+      } else {
+        // 如果外部 API 回應格式不符合預期，降級處理
+        console.warn('[Upload] External API response missing expected fields, falling back');
+        await logUploadAttempt(clientIP, true, 'Success (fallback)', userAgent);
+
+        const processingTime = Date.now() - startTime;
+
+        return NextResponse.json(
+          result,
+          {
+            status: 200,
+            headers: {
+              'X-Processing-Time': String(processingTime),
+              'X-Fallback-Mode': 'true',
+            }
+          }
+        );
       }
-    );
+
+    } catch (dbError) {
+      console.error('[Upload] Database error:', dbError);
+      // 如果資料庫儲存失敗，仍返回外部 API 的原始結果
+      await logUploadAttempt(clientIP, true, 'Success (no db)', userAgent);
+
+      const processingTime = Date.now() - startTime;
+
+      return NextResponse.json(
+        result, // 返回原始結果
+        {
+          status: 200,
+          headers: {
+            'X-Processing-Time': String(processingTime),
+            'X-Database-Error': 'true',
+          }
+        }
+      );
+    }
 
   } catch (error) {
     // 捕獲所有未預期的錯誤
     console.error('[Upload] Unexpected error:', error);
     await logUploadAttempt(clientIP, false, 'Internal error', userAgent);
-    
+
     // 不要洩漏錯誤詳情給客戶端
     return NextResponse.json(
       { status: 0, message: "Upload failed" },
@@ -210,7 +284,7 @@ export async function OPTIONS(req: NextRequest) {
   if (!validateOrigin(req)) {
     return new NextResponse(null, { status: 403 });
   }
-  
+
   return new NextResponse(null, {
     status: 200,
     headers: {
