@@ -8,6 +8,7 @@ import QRCode from "../components/QRCode";
 import ExpirySettings from "../components/ExpirySettings";
 import PasswordSettings from "../components/PasswordSettings";
 import TermsModal from "../components/TermsModal";
+import PasteUpload from "../components/PasteUpload";
 // 移除 generateShortHash，改為使用後端回傳的資料
 
 interface UploadItem {
@@ -91,10 +92,11 @@ export default function Home() {
   }, [isUploading, batchTotal, activeBatchIds, queue]);
 
   // 移除檔案大小限制（因為實際上傳是調用外部 API）
-  const addFiles = (files: FileList) => {
+  const addFiles = (files: FileList | File[]) => {
+    const fileArray = Array.isArray(files) ? files : Array.from(files);
     const newItems: UploadItem[] = [];
 
-    Array.from(files).forEach((file) => {
+    fileArray.forEach((file) => {
       if (file.type.startsWith("image/")) {
         newItems.push({
           id: crypto.randomUUID(),
@@ -108,6 +110,11 @@ export default function Home() {
     });
 
     setQueue((prev) => [...prev, ...newItems]);
+
+    // 顯示貼上成功提示
+    if (newItems.length > 0) {
+      showToast(`已添加 ${newItems.length} 張圖片`);
+    }
   };
 
   // 格式化檔案大小顯示
@@ -218,6 +225,22 @@ export default function Home() {
 
         // 累計批次上傳成功數（單張也會累計為 1）
         setBatchCompleted((prev) => prev + 1);
+
+        // 自動複製短網址到剪貼簿
+        if (shortUrl) {
+          try {
+            navigator.clipboard.writeText(shortUrl).then(() => {
+              console.log("短網址已自動複製到剪貼簿:", shortUrl);
+              showToast("圖片上傳成功！短網址已自動複製到剪貼簿");
+            }).catch((error) => {
+              console.error("自動複製失敗:", error);
+              showToast("圖片上傳成功！請手動複製短網址");
+            });
+          } catch (error) {
+            console.error("自動複製失敗:", error);
+            showToast("圖片上傳成功！請手動複製短網址");
+          }
+        }
       } else {
         console.log("上傳失敗:", result);
         // 保持 Modal 開啟，由 startUpload 控制狀態
@@ -430,6 +453,8 @@ export default function Home() {
                 hidden
                 onChange={(e) => e.target.files && addFiles(e.target.files)}
               />
+              {/* 貼上上傳組件 */}
+              <PasteUpload onImagePaste={addFiles} disabled={isUploading} />
             </div>
             <div className={styles.hint}>
               <span className={styles.hintFull}>
