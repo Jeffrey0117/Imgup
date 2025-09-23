@@ -633,7 +633,7 @@ export default function Home() {
                     value={markdown}
                     onChange={(e) => setMarkdown(e.target.value)}
                     className={styles.output}
-                    placeholder="完成後會自動列出：&#10;![filename](https://i.imgur.com/xxxxxxx.jpeg)"
+                    placeholder="完成後會自動列出：&#10;![filename](https://duk.tw/xxxxxxx.jpg)"
                   />
                 </div>
 
@@ -653,7 +653,7 @@ export default function Home() {
                     value={imgTag}
                     onChange={(e) => setImgTag(e.target.value)}
                     className={styles.output}
-                    placeholder={`完成後會自動列出：\n<img src="https://i.imgur.com/xxxxxxx.jpeg" alt="filename" />`}
+                    placeholder={`完成後會自動列出：\n<img src="https://duk.tw/xxxxxxx.jpg" alt="filename" />`}
                   />
                 </div>
               </div>
