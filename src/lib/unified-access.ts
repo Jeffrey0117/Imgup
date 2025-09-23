@@ -1,3 +1,7 @@
+import { createClient, RedisClientType } from 'redis';
+
+// 統一圖片存取入口介面
+// 提供統一的圖片存取邏輯，支援快取、Edge 判斷和智慧路由
 // 統一圖片存取入口介面
 // 提供統一的圖片存取邏輯，支援快取、Edge 判斷和智慧路由
 
@@ -93,6 +97,191 @@ export class MemoryCacheProvider extends AbstractCacheProvider {
     return true;
   }
 
+}
+
+// Redis 快取提供者實作（用於生產環境）
+export class RedisCacheProvider extends AbstractCacheProvider {
+  private client: RedisClientType;
+  private keyPrefix: string;
+  private defaultTTL: number;
+  private isConnected: boolean = false;
+
+  constructor(options: {
+    url?: string;
+    password?: string;
+    db?: number;
+    keyPrefix?: string;
+    defaultTTL?: number;
+  } = {}) {
+    super();
+    this.keyPrefix = options.keyPrefix || 'upimg:';
+    this.defaultTTL = options.defaultTTL || 86400; // 24小時
+
+    // 建立 Redis 客戶端
+    this.client = createClient({
+      url: options.url || process.env.REDIS_URL || 'redis://localhost:6379',
+      password: options.password || process.env.REDIS_PASSWORD || undefined,
+      database: options.db || parseInt(process.env.REDIS_DB || '0'),
+      socket: {
+        connectTimeout: 60000,
+        commandTimeout: 5000,
+        lazyConnect: true,
+      },
+      // 重試邏輯
+      retry_strategy: (options) => {
+        if (options.error && options.error.code === 'ECONNREFUSED') {
+          console.error('Redis connection refused, retrying...');
+          return Math.min(options.attempt * 100, 3000);
+        }
+        if (options.total_retry_time > 1000 * 60 * 60) {
+          console.error('Redis retry time exhausted');
+          return new Error('Retry time exhausted');
+        }
+        if (options.attempt > 10) {
+          console.error('Redis max retry attempts reached');
+          return undefined;
+        }
+        return Math.min(options.attempt * 100, 3000);
+      }
+    });
+
+    // 設定事件監聽
+    this.client.on('error', (err) => {
+      console.error('Redis Client Error:', err);
+      this.isConnected = false;
+    });
+
+    this.client.on('connect', () => {
+      console.log('Redis connected successfully');
+      this.isConnected = true;
+    });
+
+    this.client.on('disconnect', () => {
+      console.log('Redis disconnected');
+      this.isConnected = false;
+    });
+  }
+
+  private getKey(key: string): string {
+    return `${this.keyPrefix}${key}`;
+  }
+
+  async connect(): Promise<void> {
+    if (!this.isConnected) {
+      try {
+        await this.client.connect();
+      } catch (error) {
+        console.error('Failed to connect to Redis:', error);
+        throw error;
+      }
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    if (this.isConnected) {
+      await this.client.disconnect();
+    }
+  }
+
+  async get(key: string): Promise<ImageMapping | null> {
+    try {
+      await this.connect();
+      const data = await this.client.get(this.getKey(key));
+      if (!data) return null;
+
+      return JSON.parse(data);
+    } catch (error) {
+      console.error('Redis get error:', error);
+      // 如果 Redis 不可用，返回 null，讓系統降級到其他快取或資料庫
+      return null;
+    }
+  }
+
+  async set(key: string, value: ImageMapping, ttl?: number): Promise<void> {
+    try {
+      await this.connect();
+      const serializedData = JSON.stringify(value);
+      const effectiveTTL = ttl || this.defaultTTL;
+
+      await this.client.setEx(this.getKey(key), effectiveTTL, serializedData);
+    } catch (error) {
+      console.error('Redis set error:', error);
+      // 如果 Redis 不可用，靜默失敗，不拋出錯誤
+    }
+  }
+
+  async delete(key: string): Promise<void> {
+    try {
+      await this.connect();
+      await this.client.del(this.getKey(key));
+    } catch (error) {
+      console.error('Redis delete error:', error);
+    }
+  }
+
+  async exists(key: string): Promise<boolean> {
+    try {
+      await this.connect();
+      const result = await this.client.exists(this.getKey(key));
+      return result === 1;
+    } catch (error) {
+      console.error('Redis exists error:', error);
+      return false;
+    }
+  }
+
+  async clear(): Promise<void> {
+    try {
+      await this.connect();
+      // 刪除所有以 keyPrefix 開頭的鍵
+      const keys = await this.client.keys(`${this.keyPrefix}*`);
+      if (keys.length > 0) {
+        await this.client.del(keys);
+      }
+    } catch (error) {
+      console.error('Redis clear error:', error);
+    }
+  }
+
+  // 取得快取統計資訊
+  async getStats(): Promise<{
+    connected: boolean;
+    keyCount: number;
+    memoryUsage?: string;
+  }> {
+    try {
+      await this.connect();
+      const keys = await this.client.keys(`${this.keyPrefix}*`);
+      const info = await this.client.info('memory');
+
+      return {
+        connected: this.isConnected,
+        keyCount: keys.length,
+        memoryUsage: info,
+      };
+    } catch (error) {
+      console.error('Redis stats error:', error);
+      return {
+        connected: false,
+        keyCount: 0,
+      };
+    }
+  }
+
+  // 健康檢查
+  async ping(): Promise<boolean> {
+    try {
+      await this.connect();
+      const result = await this.client.ping();
+      return result === 'PONG';
+    } catch (error) {
+      console.error('Redis ping error:', error);
+      return false;
+    }
+  }
+}
+
+// Edge 判斷工具類
   async clear(): Promise<void> {
     this.cache.clear();
   }
@@ -243,6 +432,45 @@ export class UnifiedImageAccess {
     mapping: ImageMapping,
     extension?: string
   ): ImageAccessResponse {
+  private handleRouting(
+    request: ImageAccessRequest,
+    mapping: ImageMapping,
+    extension?: string
+  ): ImageAccessResponse {
+    const edgeResult = EdgeDetector.detectEdge(request);
+
+    console.log('Edge detection result:', edgeResult);
+
+    // 如果帶副檔名：
+    // - 瀏覽器請求 → 轉預覽頁
+    // - 非瀏覽器/圖片請求 → 減少重定向，直接回應圖片
+    if (extension && mapping.url) {
+      if (edgeResult.isBrowserRequest) {
+        const previewUrl = `/${request.hash.replace(/\.[^.]+$/, '')}/p`;
+        return this.createRedirectResponse(previewUrl);
+      }
+      // 對於圖片請求，減少重定向，直接回應
+      return this.createDirectResponse(mapping.url, mapping);
+    }
+
+    // 無副檔名但為圖片請求 → 減少重定向，直接回應圖片
+    if (!extension && edgeResult.isImageRequest && mapping.url) {
+      return this.createDirectResponse(mapping.url, mapping);
+    }
+
+    // 瀏覽器請求 → 預覽頁
+    if (edgeResult.isBrowserRequest) {
+      const previewUrl = `/${request.hash}/p`;
+      return this.createRedirectResponse(previewUrl);
+    }
+
+    // 其他情況（API 請求），回傳 JSON 資料
+    return {
+      type: 'json',
+      data: mapping,
+      statusCode: 200
+    };
+  }
     const edgeResult = EdgeDetector.detectEdge(request);
 
     console.log('Edge detection result:', edgeResult);
@@ -283,6 +511,63 @@ export class UnifiedImageAccess {
       url,
       statusCode: 302
     };
+  private createRedirectResponse(url: string): ImageAccessResponse {
+    return {
+      type: 'redirect',
+      url,
+      statusCode: 302
+    };
+  }
+
+  private createDirectResponse(url: string, mapping: ImageMapping): ImageAccessResponse {
+    // 判斷是否為永久性內容（無過期時間或過期時間很長）
+    const isImmutable = !mapping.expiresAt ||
+      (new Date(mapping.expiresAt).getTime() - Date.now()) > (365 * 24 * 60 * 60 * 1000); // 超過一年
+
+    const headers: Record<string, string> = {};
+
+    if (isImmutable) {
+      // 永久快取：1年
+      headers['Cache-Control'] = 'public, max-age=31536000, immutable';
+    } else {
+      // 有過期時間：快取到過期前
+      const maxAge = Math.max(0, Math.floor((new Date(mapping.expiresAt!).getTime() - Date.now()) / 1000));
+      headers['Cache-Control'] = `public, max-age=${maxAge}`;
+    }
+
+    // 設定內容類型
+    if (mapping.fileExtension) {
+      const contentType = this.getContentType(mapping.fileExtension);
+      if (contentType) {
+        headers['Content-Type'] = contentType;
+      }
+    }
+
+    return {
+      type: 'direct',
+      url,
+      statusCode: 200,
+      headers,
+      cacheControl: headers['Cache-Control']
+    };
+  }
+
+  private getContentType(extension: string): string | undefined {
+    const contentTypes: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'svg': 'image/svg+xml',
+      'bmp': 'image/bmp',
+      'ico': 'image/x-icon',
+      'tiff': 'image/tiff',
+      'tif': 'image/tiff'
+    };
+
+    return contentTypes[extension.toLowerCase()];
+  }
   }
 
   // 快取管理方法
