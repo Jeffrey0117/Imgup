@@ -1,20 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { notFound } from "next/navigation";
 import { isValidHash } from "../../../utils/hash";
 import styles from "../page.module.css";
+
+interface Mapping {
+  hash: string;
+  url: string;
+  filename: string;
+  fileExtension?: string | null;
+  createdAt: string;
+  expiresAt?: string | null;
+  password?: string | null;
+  shortUrl: string;
+}
 
 interface Props {
   params: { hash: string };
 }
 
 export default function PreviewPage({ params }: Props) {
-  const [mapping, setMapping] = useState<any | null>(null);
+  const [mapping, setMapping] = useState<Mapping | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [passwordRequired, setPasswordRequired] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
+  const imageRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     const fetchMapping = async () => {
@@ -121,6 +133,105 @@ export default function PreviewPage({ params }: Props) {
     notFound();
   }
 
+  // 產生代理圖片 URL (隱藏真實地址)
+  const getProxyImageUrl = () => {
+    const extension = mapping?.fileExtension || "";
+    return `${window.location.origin}/${params.hash}${extension}`;
+  };
+
+  // 自訂右鍵選單處理
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => {
+      // 只在圖片元素上攔截右鍵
+      if (imageRef.current && imageRef.current.contains(e.target as Node)) {
+        e.preventDefault();
+        
+        // 創建自訂選單
+        const existingMenu = document.getElementById("custom-context-menu");
+        if (existingMenu) {
+          existingMenu.remove();
+        }
+
+        const menu = document.createElement("div");
+        menu.id = "custom-context-menu";
+        menu.style.cssText = `
+          position: fixed;
+          left: ${e.pageX}px;
+          top: ${e.pageY}px;
+          background: white;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+          padding: 8px 0;
+          z-index: 10000;
+          min-width: 180px;
+        `;
+
+        const proxyUrl = getProxyImageUrl();
+
+        // 在新分頁開啟
+        const openItem = document.createElement("div");
+        openItem.textContent = "在新分頁開啟圖片";
+        openItem.style.cssText = `
+          padding: 8px 16px;
+          cursor: pointer;
+          transition: background 0.2s;
+        `;
+        openItem.onmouseover = () => {
+          openItem.style.background = "#f0f0f0";
+        };
+        openItem.onmouseout = () => {
+          openItem.style.background = "transparent";
+        };
+        openItem.onclick = () => {
+          window.open(proxyUrl, "_blank");
+          menu.remove();
+        };
+
+        // 複製圖片連結
+        const copyItem = document.createElement("div");
+        copyItem.textContent = "複製圖片連結";
+        copyItem.style.cssText = `
+          padding: 8px 16px;
+          cursor: pointer;
+          transition: background 0.2s;
+        `;
+        copyItem.onmouseover = () => {
+          copyItem.style.background = "#f0f0f0";
+        };
+        copyItem.onmouseout = () => {
+          copyItem.style.background = "transparent";
+        };
+        copyItem.onclick = () => {
+          navigator.clipboard.writeText(proxyUrl);
+          alert("圖片連結已複製到剪貼簿");
+          menu.remove();
+        };
+
+        menu.appendChild(openItem);
+        menu.appendChild(copyItem);
+        document.body.appendChild(menu);
+
+        // 點擊其他地方時關閉選單
+        const closeMenu = (e: MouseEvent) => {
+          if (!menu.contains(e.target as Node)) {
+            menu.remove();
+            document.removeEventListener("click", closeMenu);
+          }
+        };
+        setTimeout(() => {
+          document.addEventListener("click", closeMenu);
+        }, 0);
+      }
+    };
+
+    document.addEventListener("contextmenu", handleContextMenu);
+
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+    };
+  }, [mapping, params.hash]);
+
   return (
     <div className={styles.container}>
       <div className={styles.imageContainer}>
@@ -153,43 +264,47 @@ export default function PreviewPage({ params }: Props) {
 
         <div className={styles.imageWrapper}>
           <img
-            src={mapping.url}
+            ref={imageRef}
+            src={getProxyImageUrl()}
             alt={mapping.filename}
             className={styles.image}
             onError={(e) => {
-              setError("圖片載入失敗");
+              // 如果代理失敗，降級到原始 URL (但不顯示給使用者)
+              const img = e.currentTarget as HTMLImageElement;
+              if (!img.dataset.fallback) {
+                img.dataset.fallback = "true";
+                img.src = mapping.url;
+              } else {
+                setError("圖片載入失敗");
+              }
+            }}
+            onDragStart={(e) => {
+              // 防止拖曳時暴露真實 URL
+              e.preventDefault();
             }}
           />
         </div>
 
         <div className={styles.actions}>
-          <a
-            href={mapping.url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => {
+              const proxyUrl = getProxyImageUrl();
+              window.open(proxyUrl, "_blank");
+            }}
             className={styles.actionBtn}
           >
             在新視窗開啟
-          </a>
+          </button>
           <button
             onClick={() => {
-              const shortUrl = `${window.location.origin}/${params.hash}`;
+              const extension = mapping.fileExtension || "";
+              const shortUrl = `${window.location.origin}/${params.hash}${extension}`;
               navigator.clipboard.writeText(shortUrl);
               alert("短網址已複製到剪貼簿");
             }}
             className={styles.actionBtn}
           >
             複製短網址
-          </button>
-          <button
-            onClick={() => {
-              const directUrl = `${window.location.origin}/${params.hash}?direct=true`;
-              navigator.clipboard.writeText(directUrl);
-              alert("圖片直連已複製到剪貼簿");
-            }}
-            className={styles.actionBtn}
-          >
-            複製圖片直連
           </button>
           <a href="/" className={styles.backLink}>
             回到首頁

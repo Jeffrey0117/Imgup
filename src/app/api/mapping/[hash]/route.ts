@@ -11,6 +11,17 @@ export async function GET(
     const { hash } = params;
     const mapping = await prisma.mapping.findUnique({
       where: { hash },
+      select: {
+        id: true,
+        hash: true,
+        filename: true,
+        url: true,
+        shortUrl: true,
+        createdAt: true,
+        expiresAt: true,
+        password: true,
+        fileExtension: true, // 確保包含 fileExtension
+      }
     });
 
     if (!mapping) {
@@ -24,7 +35,10 @@ export async function GET(
 
     // 智能路由邏輯現在由 middleware 處理
     // 此 API 路由現在只負責回傳 JSON 資料
-    console.log("API 路由: 回傳映射資料", { hash });
+    console.log("API 路由: 回傳映射資料", {
+      hash,
+      fileExtension: mapping.fileExtension
+    });
 
     return NextResponse.json(mapping);
   } catch (error) {
