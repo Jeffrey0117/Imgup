@@ -26,11 +26,12 @@ export interface ImageAccessRequest {
 }
 
 export interface ImageAccessResponse {
-  type: 'redirect' | 'json' | 'error' | 'direct';
-  url?: string; // 重定向 URL
+  type: 'redirect' | 'json' | 'error' | 'direct' | 'proxy';
+  url?: string; // 重定向 URL 或代理目標 URL
   data?: any; // JSON 資料
   statusCode?: number; // HTTP 狀態碼
   headers?: Record<string, string>; // 回應標頭
+  stream?: ReadableStream; // 檔案串流 (用於代理)
 }
 
 export interface EdgeDetectionResult {
@@ -118,12 +119,21 @@ export class RedisCacheProvider extends AbstractCacheProvider {
     defaultTTL?: number;
   } = {}) {
     super();
-    this.keyPrefix = options.keyPrefix || 'upimg:';
-    this.defaultTTL = options.defaultTTL || 86400; // 24小時
+    this.keyPrefix = options.keyPrefix || process.env.REDIS_KEY_PREFIX || 'upimg:';
+    this.defaultTTL = options.defaultTTL || parseInt(process.env.REDIS_CACHE_TTL || '86400'); // 24小時
 
-    // 建立 Redis 客戶端
-    this.client = createClient({
-      url: options.url || process.env.REDIS_URL || 'redis://localhost:6379',
+    // 取得 Redis URL 並確認是否為 Upstash（需要 TLS）
+    const redisUrl = options.url || process.env.REDIS_URL || 'redis://localhost:6379';
+    
+    // 如果是 Upstash URL，確保使用 TLS
+    const isUpstash = redisUrl.includes('upstash.io');
+    const finalUrl = isUpstash && redisUrl.startsWith('redis://')
+      ? redisUrl.replace('redis://', 'rediss://')
+      : redisUrl;
+
+    // 建立 Redis 客戶端配置
+    const clientConfig: any = {
+      url: finalUrl,
       password: options.password || process.env.REDIS_PASSWORD || undefined,
       database: options.db || parseInt(process.env.REDIS_DB || '0'),
       socket: {
@@ -145,7 +155,17 @@ export class RedisCacheProvider extends AbstractCacheProvider {
           return delay + jitter;
         }
       }
-    });
+    };
+
+    // 如果是 Upstash，添加 TLS 配置
+    if (isUpstash) {
+      clientConfig.socket.tls = true;
+      clientConfig.socket.rejectUnauthorized = false; // Upstash 需要這個設定
+      console.log('Using Upstash Redis with TLS enabled');
+    }
+
+    // 建立 Redis 客戶端
+    this.client = createClient(clientConfig);
 
     // 設定事件監聽
     this.client.on('error', (err) => {
@@ -295,13 +315,14 @@ export class EdgeDetector {
 
     // 判斷是否為瀏覽器請求
     const isBrowserRequest = accept.includes('text/html') ||
-      userAgent.includes('Mozilla') && !userAgent.includes('curl') && !userAgent.includes('wget');
+      (userAgent.includes('Mozilla') && !userAgent.includes('curl') && !userAgent.includes('wget'));
 
-    // 判斷是否為圖片請求
-    const isImageRequest = !isBrowserRequest && (
+    // 判斷是否為圖片請求（curl 和其他非瀏覽器工具）
+    const isImageRequest = (
+      userAgent.includes('curl') ||
+      userAgent.includes('wget') ||
       accept.includes('image/') ||
-      accept === '*/*' ||
-      accept === ''
+      (!isBrowserRequest && (accept === '*/*' || accept === ''))
     );
 
     // 判斷是否為 API 請求
@@ -430,22 +451,31 @@ export class UnifiedImageAccess {
   ): ImageAccessResponse {
     const edgeResult = EdgeDetector.detectEdge(request);
 
-    console.log('Edge detection result:', edgeResult);
+    console.log('Edge detection result:', {
+      ...edgeResult,
+      hash: request.hash,
+      hasMapping: !!mapping.url
+    });
 
+    // 混合代理模式：根據請求類型動態選擇
+    
     // 如果帶副檔名：
-    // - 瀏覽器請求 → 轉預覽頁
-    // - 非瀏覽器/圖片請求 → 直出圖片
     if (extension && mapping.url) {
+      // 瀏覽器請求 → 轉預覽頁
       if (edgeResult.isBrowserRequest) {
         const previewUrl = `/${request.hash.replace(/\.[^.]+$/, '')}/p`;
         return this.createRedirectResponse(previewUrl);
       }
-      return this.createRedirectResponse(mapping.url);
+      // 非瀏覽器圖片請求 → 直接代理模式 (200 OK + immutable)
+      // 使用直接代理提供更好的快取控制
+      console.log('Using proxy response for extension request');
+      return this.createProxyResponse(mapping);
     }
 
-    // 無副檔名但為圖片請求 → 直出圖片
+    // 無副檔名但為圖片請求 → 快取重定向 (301 + Cache-Control)
     if (!extension && edgeResult.isImageRequest && mapping.url) {
-      return this.createRedirectResponse(mapping.url);
+      console.log('Using cached redirect for image request');
+      return this.createCachedRedirectResponse(mapping.url, mapping);
     }
 
     // 瀏覽器請求 → 預覽頁
@@ -467,6 +497,64 @@ export class UnifiedImageAccess {
       type: 'redirect',
       url,
       statusCode: 302
+    };
+  }
+
+  // 新增：301 永久重定向 + 快取控制標頭
+  private createCachedRedirectResponse(url: string, mapping: ImageMapping): ImageAccessResponse {
+    const headers: Record<string, string> = {};
+    
+    // 判斷是否為永久性內容（無過期時間或過期時間很長）
+    const isImmutable = !mapping.expiresAt ||
+      (new Date(mapping.expiresAt).getTime() - Date.now()) > (365 * 24 * 60 * 60 * 1000); // 超過一年
+
+    if (isImmutable) {
+      // 永久快取：1年
+      headers['Cache-Control'] = 'public, max-age=31536000, immutable';
+    } else {
+      // 有過期時間：快取到過期前
+      const maxAge = Math.max(0, Math.floor((new Date(mapping.expiresAt!).getTime() - Date.now()) / 1000));
+      headers['Cache-Control'] = `public, max-age=${maxAge}`;
+    }
+
+    return {
+      type: 'redirect',
+      url,
+      statusCode: 301, // 301 永久重定向，利用瀏覽器快取
+      headers
+    };
+  }
+
+  // 新增：代理模式回應 (需要在 API 層實作實際的檔案串流)
+  private createProxyResponse(mapping: ImageMapping): ImageAccessResponse {
+    const headers: Record<string, string> = {};
+    
+    // 判斷是否為永久性內容
+    const isImmutable = !mapping.expiresAt ||
+      (new Date(mapping.expiresAt).getTime() - Date.now()) > (365 * 24 * 60 * 60 * 1000);
+
+    if (isImmutable) {
+      // 永久快取：1年
+      headers['Cache-Control'] = 'public, max-age=31536000, immutable';
+    } else {
+      // 有過期時間：快取到過期前
+      const maxAge = Math.max(0, Math.floor((new Date(mapping.expiresAt!).getTime() - Date.now()) / 1000));
+      headers['Cache-Control'] = `public, max-age=${maxAge}`;
+    }
+
+    // 設定內容類型
+    if (mapping.fileExtension) {
+      const contentType = this.getContentType(mapping.fileExtension);
+      if (contentType) {
+        headers['Content-Type'] = contentType;
+      }
+    }
+
+    return {
+      type: 'proxy',
+      url: mapping.url,
+      statusCode: 200,
+      headers
     };
   }
 
@@ -531,5 +619,159 @@ export class UnifiedImageAccess {
   // 設定快取提供者（用於測試或動態切換）
   setCacheProvider(provider: CacheProvider): void {
     this.cacheProvider = provider;
+  }
+}
+
+// 新增：增強的圖片存取服務，支援代理和統計功能
+export class EnhancedImageAccess extends UnifiedImageAccess {
+  private statsProvider?: (hash: string) => Promise<void>;
+
+  constructor(
+    cacheProvider: CacheProvider,
+    dataProvider: (hash: string) => Promise<ImageMapping | null>,
+    statsProvider?: (hash: string) => Promise<void>
+  ) {
+    super(cacheProvider, dataProvider);
+    this.statsProvider = statsProvider;
+  }
+
+  async accessImage(request: ImageAccessRequest): Promise<ImageAccessResponse> {
+    const response = await super.accessImage(request);
+    
+    // 異步記錄統計（不阻塞主流程）
+    if (this.statsProvider && response.type !== 'error') {
+      const { hash: cleanHash } = this.parseHashFilename(request.hash);
+      this.statsProvider(cleanHash).catch(err =>
+        console.error('Stats recording failed:', err)
+      );
+    }
+
+    return response;
+  }
+
+  // 代理圖片內容（實際的串流處理在 API 層實作）
+  async proxyImage(mapping: ImageMapping): Promise<Response> {
+    try {
+      // 獲取原始圖片
+      const imageResponse = await fetch(mapping.url);
+      
+      if (!imageResponse.ok) {
+        throw new Error(`Image fetch failed: ${imageResponse.status}`);
+      }
+
+      // 設定快取標頭
+      const headers = new Headers({
+        'Content-Type': imageResponse.headers.get('Content-Type') || 'image/jpeg',
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Content-Length': imageResponse.headers.get('Content-Length') || '',
+      });
+
+      // 支援 Range requests
+      if (imageResponse.headers.get('Accept-Ranges')) {
+        headers.set('Accept-Ranges', 'bytes');
+      }
+
+      return new Response(imageResponse.body, {
+        status: 200,
+        headers,
+      });
+    } catch (error) {
+      console.error('Proxy image error:', error);
+      // 降級到重定向模式
+      return Response.redirect(mapping.url, 302);
+    }
+  }
+
+  // Helper method to parse hash from filename
+  private parseHashFilename(rawHash: string): { hash: string; extension?: string } {
+    const lastDotIndex = rawHash.lastIndexOf('.');
+    if (lastDotIndex === -1) {
+      return { hash: rawHash };
+    }
+
+    const hash = rawHash.substring(0, lastDotIndex);
+    const extension = rawHash.substring(lastDotIndex + 1).toLowerCase();
+
+    return { hash, extension };
+  }
+}
+
+// 新增：統計管理器（使用 Redis 進行計數）
+export class StatsManager {
+  private redisClient: RedisClientType;
+  private keyPrefix: string;
+
+  constructor(redisClient: RedisClientType, keyPrefix: string = 'upimg:stats:') {
+    this.redisClient = redisClient;
+    this.keyPrefix = keyPrefix;
+  }
+
+  async recordAccess(hash: string): Promise<void> {
+    try {
+      // 使用 Redis 的 INCR 指令進行原子性計數
+      const dailyKey = `${this.keyPrefix}${hash}:daily:${this.getTodayDateString()}`;
+      const totalKey = `${this.keyPrefix}${hash}:total`;
+      
+      await Promise.all([
+        this.redisClient.incr(dailyKey),
+        this.redisClient.incr(totalKey)
+      ]);
+      
+      // 設定每日統計的過期時間（2天後過期）
+      await this.redisClient.expire(dailyKey, 172800);
+    } catch (error) {
+      console.error('Failed to record access stats:', error);
+      // 統計失敗不應影響主要功能
+    }
+  }
+
+  async getStats(hash: string): Promise<{ daily: number; total: number }> {
+    try {
+      const dailyKey = `${this.keyPrefix}${hash}:daily:${this.getTodayDateString()}`;
+      const totalKey = `${this.keyPrefix}${hash}:total`;
+      
+      const [daily, total] = await Promise.all([
+        this.redisClient.get(dailyKey),
+        this.redisClient.get(totalKey)
+      ]);
+      
+      return {
+        daily: parseInt(daily || '0'),
+        total: parseInt(total || '0')
+      };
+    } catch (error) {
+      console.error('Failed to get stats:', error);
+      return { daily: 0, total: 0 };
+    }
+  }
+
+  // 批次同步統計到資料庫（可由定時任務調用）
+  async syncToDatabase(syncFunction: (hash: string, count: number) => Promise<void>): Promise<void> {
+    try {
+      const pattern = `${this.keyPrefix}*:total`;
+      const keys = await this.redisClient.keys(pattern);
+      
+      for (const key of keys) {
+        const hash = this.extractHashFromKey(key);
+        const count = await this.redisClient.get(key);
+        
+        if (hash && count) {
+          await syncFunction(hash, parseInt(count));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to sync stats to database:', error);
+    }
+  }
+
+  private getTodayDateString(): string {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  }
+
+  private extractHashFromKey(key: string): string | null {
+    const regex = new RegExp(`^${this.keyPrefix}(.+):total$`);
+    const match = key.match(regex);
+    return match ? match[1] : null;
   }
 }

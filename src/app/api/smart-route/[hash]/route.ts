@@ -1,13 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { createClient, RedisClientType } from 'redis';
 import {
-  UnifiedImageAccess,
+  EnhancedImageAccess,
+  RedisCacheProvider,
   MemoryCacheProvider,
+  StatsManager,
   ImageAccessRequest,
   ImageMapping
 } from "@/lib/unified-access";
 
 const prisma = new PrismaClient();
+
+// 初始化 Redis 客戶端（用於快取和統計）
+let redisClient: RedisClientType | null = null;
+let cacheProvider: RedisCacheProvider | MemoryCacheProvider;
+let statsManager: StatsManager | null = null;
+
+// 初始化快取提供者
+async function initializeCache() {
+  if (process.env.REDIS_URL) {
+    try {
+      // 取得 Redis URL 並檢查是否為 Upstash
+      const redisUrl = process.env.REDIS_URL;
+      const isUpstash = redisUrl.includes('upstash.io');
+      
+      // 如果是 Upstash，確保使用 TLS（rediss://）
+      const finalUrl = isUpstash && redisUrl.startsWith('redis://')
+        ? redisUrl.replace('redis://', 'rediss://')
+        : redisUrl;
+
+      // 建立 Redis 客戶端配置
+      const clientConfig: any = {
+        url: finalUrl,
+        password: process.env.REDIS_PASSWORD,
+        socket: {
+          connectTimeout: 60000,
+          reconnectStrategy: (retries: number) => {
+            if (retries > 10) return false;
+            const delay = Math.min(retries * 100, 3000);
+            const jitter = Math.floor(Math.random() * 200);
+            return delay + jitter;
+          }
+        }
+      };
+
+      // 如果是 Upstash，添加 TLS 配置
+      if (isUpstash) {
+        clientConfig.socket.tls = true;
+        clientConfig.socket.rejectUnauthorized = false;
+        console.log('Configuring Upstash Redis with TLS...');
+      }
+
+      redisClient = createClient(clientConfig);
+      
+      await redisClient.connect();
+      console.log('Redis 連接成功，使用 Redis 快取');
+      
+      cacheProvider = new RedisCacheProvider({
+        url: process.env.REDIS_URL,
+        password: process.env.REDIS_PASSWORD,
+        keyPrefix: process.env.REDIS_KEY_PREFIX || 'upimg:',
+        defaultTTL: parseInt(process.env.REDIS_CACHE_TTL || '86400') // 24小時
+      });
+      
+      statsManager = new StatsManager(redisClient, 'upimg:stats:');
+    } catch (error) {
+      console.error('Redis 連接失敗，降級到記憶體快取:', error);
+      cacheProvider = new MemoryCacheProvider();
+    }
+  } else {
+    console.log('未設定 Redis，使用記憶體快取');
+    cacheProvider = new MemoryCacheProvider();
+  }
+}
+
+// 初始化快取
+initializeCache();
 
 // 資料來源提供者 - 橋接 Prisma
 const prismaDataProvider = async (hash: string): Promise<ImageMapping | null> => {
@@ -31,15 +100,21 @@ const prismaDataProvider = async (hash: string): Promise<ImageMapping | null> =>
   } catch (error) {
     console.error('Prisma data provider error:', error);
     return null;
-  } finally {
-    await prisma.$disconnect();
   }
 };
 
-// 初始化統一存取服務
-const unifiedAccess = new UnifiedImageAccess(
-  new MemoryCacheProvider(),
-  prismaDataProvider
+// 統計提供者
+const statsProvider = async (hash: string): Promise<void> => {
+  if (statsManager) {
+    await statsManager.recordAccess(hash);
+  }
+};
+
+// 初始化增強的統一存取服務
+const unifiedAccess = new EnhancedImageAccess(
+  cacheProvider || new MemoryCacheProvider(),
+  prismaDataProvider,
+  statsProvider
 );
 
 export async function GET(
@@ -78,10 +153,83 @@ export async function GET(
     switch (response.type) {
       case 'redirect':
         if (response.url) {
-          console.log(`Smart Route 重定向: ${response.url}`);
-          return NextResponse.redirect(new URL(response.url, req.url), {
+          console.log(`Smart Route 重定向 (${response.statusCode}): ${response.url}`);
+          
+          // 手動建立重定向回應以支援自定義標頭
+          const redirectResponse = new NextResponse(null, {
             status: response.statusCode || 302,
+            headers: {
+              'Location': response.url.startsWith('http')
+                ? response.url
+                : new URL(response.url, req.url).toString()
+            }
           });
+          
+          // 添加快取控制標頭
+          if (response.headers) {
+            Object.entries(response.headers).forEach(([key, value]) => {
+              redirectResponse.headers.set(key, value);
+            });
+          }
+          
+          return redirectResponse;
+        }
+        break;
+
+      case 'proxy':
+        // 代理模式：直接回傳圖片內容
+        if (response.url) {
+          console.log('Smart Route 代理模式:', response.url);
+          
+          try {
+            // 獲取圖片內容
+            const imageResponse = await fetch(response.url);
+            
+            if (!imageResponse.ok) {
+              throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+            }
+            
+            // 建立回應標頭
+            const responseHeaders = new Headers();
+            
+            // 加入快取控制標頭
+            if (response.headers) {
+              Object.entries(response.headers).forEach(([key, value]) => {
+                responseHeaders.set(key, value);
+              });
+            }
+            
+            // 確保有 Content-Type
+            if (!responseHeaders.has('Content-Type')) {
+              const contentType = imageResponse.headers.get('Content-Type');
+              if (contentType) {
+                responseHeaders.set('Content-Type', contentType);
+              }
+            }
+            
+            // 傳遞 Content-Length
+            const contentLength = imageResponse.headers.get('Content-Length');
+            if (contentLength) {
+              responseHeaders.set('Content-Length', contentLength);
+            }
+            
+            // 支援 Range requests
+            if (imageResponse.headers.get('Accept-Ranges')) {
+              responseHeaders.set('Accept-Ranges', 'bytes');
+            }
+            
+            // 回傳圖片內容
+            return new NextResponse(imageResponse.body, {
+              status: 200,
+              headers: responseHeaders
+            });
+          } catch (error) {
+            console.error('代理圖片失敗，降級到重定向:', error);
+            // 降級到重定向模式
+            return NextResponse.redirect(new URL(response.url, req.url), {
+              status: 302
+            });
+          }
         }
         break;
 
@@ -113,4 +261,12 @@ export async function GET(
       status: 302,
     });
   }
+}
+
+// 清理函式（在應用關閉時調用）
+export async function cleanup() {
+  if (redisClient) {
+    await redisClient.disconnect();
+  }
+  await prisma.$disconnect();
 }
