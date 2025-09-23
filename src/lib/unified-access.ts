@@ -128,22 +128,22 @@ export class RedisCacheProvider extends AbstractCacheProvider {
       database: options.db || parseInt(process.env.REDIS_DB || '0'),
       socket: {
         connectTimeout: 60000,
-      },
-      // 重試邏輯
-      retry_strategy: (options: any) => {
-        if (options.error && options.error.code === 'ECONNREFUSED') {
-          console.error('Redis connection refused, retrying...');
-          return Math.min(options.attempt * 100, 3000);
+        reconnectStrategy: (retries: number) => {
+          // 檢查重試次數上限
+          if (retries > 10) {
+            console.error('Redis max retry attempts reached');
+            return false;
+          }
+
+          // 線性退避策略，每次重試增加 100ms，最大 3 秒
+          const delay = Math.min(retries * 100, 3000);
+
+          // 添加隨機抖動避免驚群效應
+          const jitter = Math.floor(Math.random() * 200);
+
+          console.log(`Redis reconnect attempt ${retries}, delay: ${delay + jitter}ms`);
+          return delay + jitter;
         }
-        if (options.total_retry_time > 1000 * 60 * 60) {
-          console.error('Redis retry time exhausted');
-          return new Error('Retry time exhausted');
-        }
-        if (options.attempt > 10) {
-          console.error('Redis max retry attempts reached');
-          return undefined;
-        }
-        return Math.min(options.attempt * 100, 3000);
       }
     });
 
