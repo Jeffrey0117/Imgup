@@ -427,7 +427,7 @@ export class UnifiedImageAccess {
     }
   }
 
-  private parseHashFilename(rawHash: string): { hash: string; extension?: string } {
+  protected parseHashFilename(rawHash: string): { hash: string; extension?: string } {
     const lastDotIndex = rawHash.lastIndexOf('.');
     if (lastDotIndex === -1) {
       return { hash: rawHash };
@@ -682,18 +682,6 @@ export class EnhancedImageAccess extends UnifiedImageAccess {
     }
   }
 
-  // Helper method to parse hash from filename
-  private parseHashFilename(rawHash: string): { hash: string; extension?: string } {
-    const lastDotIndex = rawHash.lastIndexOf('.');
-    if (lastDotIndex === -1) {
-      return { hash: rawHash };
-    }
-
-    const hash = rawHash.substring(0, lastDotIndex);
-    const extension = rawHash.substring(lastDotIndex + 1).toLowerCase();
-
-    return { hash, extension };
-  }
 }
 
 // 新增：統計管理器（使用 Redis 進行計數）

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { createClient, RedisClientType } from 'redis';
+import prisma from '@/lib/prisma';
 import {
   EnhancedImageAccess,
   RedisCacheProvider,
@@ -10,11 +10,9 @@ import {
   ImageMapping
 } from "@/lib/unified-access";
 
-const prisma = new PrismaClient();
-
 // 初始化 Redis 客戶端（用於快取和統計）
 let redisClient: RedisClientType | null = null;
-let cacheProvider: RedisCacheProvider | MemoryCacheProvider;
+let cacheProvider: RedisCacheProvider | MemoryCacheProvider = new MemoryCacheProvider();
 let statsManager: StatsManager | null = null;
 
 // 初始化快取提供者
@@ -112,7 +110,7 @@ const statsProvider = async (hash: string): Promise<void> => {
 
 // 初始化增強的統一存取服務
 const unifiedAccess = new EnhancedImageAccess(
-  cacheProvider || new MemoryCacheProvider(),
+  cacheProvider,
   prismaDataProvider,
   statsProvider
 );
@@ -263,10 +261,5 @@ export async function GET(
   }
 }
 
-// 清理函式（在應用關閉時調用）
-export async function cleanup() {
-  if (redisClient) {
-    await redisClient.disconnect();
-  }
-  await prisma.$disconnect();
-}
+// Note: 清理函式已移除，因為 Next.js Route API 不允許自定義導出
+// Prisma 使用單例模式會自動管理連線
