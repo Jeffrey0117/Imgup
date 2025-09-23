@@ -1,0 +1,298 @@
+/* 使用者條款彈窗樣式 */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  overflow-y: auto;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal {
+  background: #1f2126;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border: 2px solid #ffd700;
+  animation: slideIn 0.3s ease;
+  margin: auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: #17181c;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  line-height: 1.2;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  color: #ddd;
+  line-height: 1.6;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.section:last-child {
+  margin-bottom: 0;
+}
+
+.section h3 {
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.section h4 {
+  color: #cfe;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 20px 0 12px 0;
+}
+
+.section p {
+  margin: 12px 0;
+  color: #ddd;
+}
+
+.section ul {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+
+.section li {
+  margin-bottom: 8px;
+  color: #ddd;
+}
+
+.section strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.section hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 24px 0;
+}
+
+.footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: #17181c;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.closeButtonFooter {
+  background: linear-gradient(135deg, #9b6bff, #ff7a59);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(155, 107, 255, 0.3);
+}
+
+.closeButtonFooter:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(155, 107, 255, 0.4);
+}
+
+/* 動畫 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 響應式設計 */
+@media (max-width: 480px) {
+  .overlay {
+    padding: 12px;
+  }
+
+  .modal {
+    padding: 0;
+    max-height: calc(100vh - 24px);
+    width: calc(100% - 24px);
+    max-width: none;
+    margin: 0;
+  }
+
+  .header {
+    padding: 20px;
+  }
+
+  .title {
+    font-size: 1.3rem;
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  .section {
+    margin-bottom: 24px;
+  }
+
+  .section h3 {
+    font-size: 1.1rem;
+  }
+
+  .section h4 {
+    font-size: 1rem;
+  }
+
+  .footer {
+    padding: 12px 20px;
+  }
+
+  .closeButtonFooter {
+    padding: 10px 20px;
+    font-size: 14px;
+    width: 100%;
+  }
+}
+
+@media (max-width: 375px) {
+  .header {
+    padding: 16px;
+  }
+
+  .title {
+    font-size: 1.2rem;
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .footer {
+    padding: 10px 16px;
+  }
+}
+
+/* 觸控優化 */
+@media (hover: none) and (pointer: coarse) {
+  .closeButton,
+  .closeButtonFooter {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* 深色主題優化 */
+@media (prefers-color-scheme: dark) {
+  .modal {
+    background: #1f2126;
+  }
+}
+
+/* 列印樣式 */
+@media print {
+  .overlay {
+    position: static;
+    background: white;
+  }
+
+  .modal {
+    box-shadow: none;
+    border: 1px solid #000;
+    max-width: none;
+    width: 100%;
+  }
+
+  .header {
+    background: white;
+  }
+
+  .title {
+    color: #000;
+  }
+
+  .content {
+    color: #000;
+  }
+
+  .section h3,
+  .section h4 {
+    color: #000;
+  }
+
+  .footer {
+    display: none;
+  }
+}

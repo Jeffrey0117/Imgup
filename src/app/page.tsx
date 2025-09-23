@@ -7,6 +7,7 @@ import DuckAnimation from "../components/DuckAnimation";
 import QRCode from "../components/QRCode";
 import ExpirySettings from "../components/ExpirySettings";
 import PasswordSettings from "../components/PasswordSettings";
+import TermsModal from "../components/TermsModal";
 // 移除 generateShortHash，改為使用後端回傳的資料
 
 interface UploadItem {
@@ -46,6 +47,7 @@ export default function Home() {
   const [batchCompleted, setBatchCompleted] = useState(0);
   const [currentItemProgress, setCurrentItemProgress] = useState(0);
   const [activeBatchIds, setActiveBatchIds] = useState<string[]>([]);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const isBatch = (batchTotal ?? 0) > 1;
 
   // 依據 queue 自動推導 Markdown 與 HTML，使用短網址並移除 alt
@@ -785,7 +787,15 @@ export default function Home() {
           </div>
         </div>
       </section>
-      <footer className={styles.footer}>© 2025 Powered by UPPER</footer>
+      <footer className={styles.footer}>
+        © 2025 Powered by UPPER |{" "}
+        <button
+          className={styles.termsLink}
+          onClick={() => setShowTermsModal(true)}
+        >
+          使用者條款與隱私權政策
+        </button>
+      </footer>
       {toast.visible && <div className={styles.toast}>{toast.message}</div>}
 
       {/* 上傳彈窗 - 立即顯示 */}
@@ -908,6 +918,12 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* 使用者條款模態框 */}
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+      />
     </div>
   );
 }
