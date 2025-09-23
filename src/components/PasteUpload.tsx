@@ -66,14 +66,12 @@ export default function PasteUpload({ onImagePaste, disabled = false }: PasteUpl
       }
     };
 
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('paste', handlePaste);
+    // 監聽全局貼上事件，而不是只在容器內
+    document.addEventListener('paste', handlePaste);
 
-      return () => {
-        container.removeEventListener('paste', handlePaste);
-      };
-    }
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
   }, [onImagePaste, disabled]);
 
   const showPasteFeedback = () => {
