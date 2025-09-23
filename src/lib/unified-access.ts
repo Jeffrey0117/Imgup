@@ -26,7 +26,7 @@ export interface ImageAccessRequest {
 }
 
 export interface ImageAccessResponse {
-  type: 'redirect' | 'json' | 'error';
+  type: 'redirect' | 'json' | 'error' | 'direct';
   url?: string; // 重定向 URL
   data?: any; // JSON 資料
   statusCode?: number; // HTTP 狀態碼
@@ -97,6 +97,10 @@ export class MemoryCacheProvider extends AbstractCacheProvider {
     return true;
   }
 
+  async clear(): Promise<void> {
+    this.cache.clear();
+  }
+
 }
 
 // Redis 快取提供者實作（用於生產環境）
@@ -124,11 +128,9 @@ export class RedisCacheProvider extends AbstractCacheProvider {
       database: options.db || parseInt(process.env.REDIS_DB || '0'),
       socket: {
         connectTimeout: 60000,
-        commandTimeout: 5000,
-        lazyConnect: true,
       },
       // 重試邏輯
-      retry_strategy: (options) => {
+      retry_strategy: (options: any) => {
         if (options.error && options.error.code === 'ECONNREFUSED') {
           console.error('Redis connection refused, retrying...');
           return Math.min(options.attempt * 100, 3000);
@@ -282,12 +284,6 @@ export class RedisCacheProvider extends AbstractCacheProvider {
 }
 
 // Edge 判斷工具類
-  async clear(): Promise<void> {
-    this.cache.clear();
-  }
-}
-
-// Edge 判斷工具類
 export class EdgeDetector {
   static detectEdge(request: ImageAccessRequest): EdgeDetectionResult {
     const { headers, hash } = request;
@@ -432,45 +428,6 @@ export class UnifiedImageAccess {
     mapping: ImageMapping,
     extension?: string
   ): ImageAccessResponse {
-  private handleRouting(
-    request: ImageAccessRequest,
-    mapping: ImageMapping,
-    extension?: string
-  ): ImageAccessResponse {
-    const edgeResult = EdgeDetector.detectEdge(request);
-
-    console.log('Edge detection result:', edgeResult);
-
-    // 如果帶副檔名：
-    // - 瀏覽器請求 → 轉預覽頁
-    // - 非瀏覽器/圖片請求 → 減少重定向，直接回應圖片
-    if (extension && mapping.url) {
-      if (edgeResult.isBrowserRequest) {
-        const previewUrl = `/${request.hash.replace(/\.[^.]+$/, '')}/p`;
-        return this.createRedirectResponse(previewUrl);
-      }
-      // 對於圖片請求，減少重定向，直接回應
-      return this.createDirectResponse(mapping.url, mapping);
-    }
-
-    // 無副檔名但為圖片請求 → 減少重定向，直接回應圖片
-    if (!extension && edgeResult.isImageRequest && mapping.url) {
-      return this.createDirectResponse(mapping.url, mapping);
-    }
-
-    // 瀏覽器請求 → 預覽頁
-    if (edgeResult.isBrowserRequest) {
-      const previewUrl = `/${request.hash}/p`;
-      return this.createRedirectResponse(previewUrl);
-    }
-
-    // 其他情況（API 請求），回傳 JSON 資料
-    return {
-      type: 'json',
-      data: mapping,
-      statusCode: 200
-    };
-  }
     const edgeResult = EdgeDetector.detectEdge(request);
 
     console.log('Edge detection result:', edgeResult);
@@ -511,12 +468,6 @@ export class UnifiedImageAccess {
       url,
       statusCode: 302
     };
-  private createRedirectResponse(url: string): ImageAccessResponse {
-    return {
-      type: 'redirect',
-      url,
-      statusCode: 302
-    };
   }
 
   private createDirectResponse(url: string, mapping: ImageMapping): ImageAccessResponse {
@@ -547,8 +498,7 @@ export class UnifiedImageAccess {
       type: 'direct',
       url,
       statusCode: 200,
-      headers,
-      cacheControl: headers['Cache-Control']
+      headers
     };
   }
 
@@ -567,7 +517,6 @@ export class UnifiedImageAccess {
     };
 
     return contentTypes[extension.toLowerCase()];
-  }
   }
 
   // 快取管理方法
