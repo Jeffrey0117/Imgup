@@ -234,8 +234,8 @@ export class UnifiedImageAccess {
   }
 
   private isValidHash(hash: string): boolean {
-    // 基本的 hash 格式驗證（8-64 個字元，包含字母數字）
-    return /^[a-zA-Z0-9]{8,64}$/.test(hash);
+    // 支援多種長度：5字元以上，包含字母數字
+    return /^[A-Za-z0-9]{5,}$/.test(hash);
   }
 
   private handleRouting(

@@ -40,7 +40,19 @@ export function detectFileExtension(mimeType: string): string | null {
 
 // 從檔案名稱檢測副檔名（如果 MIME type 無法提供）
 export function detectExtensionFromFilename(filename: string): string | null {
-  const lowerFilename = filename.toLowerCase();
+  // 如果是 URL，先提取檔案名稱部分
+  let fileToCheck = filename;
+  if (filename.includes('://') || filename.includes('/')) {
+    // 從 URL 或路徑中提取檔案名稱
+    const urlParts = filename.split(/[/?#]/);
+    // 找到最後一個包含點的元素（通常是真正的檔案名）
+    const fileParts = urlParts.filter(part => part.includes('.'));
+    if (fileParts.length > 0) {
+      fileToCheck = fileParts[fileParts.length - 1];
+    }
+  }
+
+  const lowerFilename = fileToCheck.toLowerCase();
 
   if (lowerFilename.endsWith('.png')) return '.png';
   if (lowerFilename.endsWith('.jpg')) return '.jpg';
