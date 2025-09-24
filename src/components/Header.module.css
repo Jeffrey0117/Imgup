@@ -38,7 +38,14 @@
   opacity: 0.8;
 }
 
+.logoContainer {
+  max-width: 120px;
+  height: auto;
+}
+
 .logo {
+  width: 100%;
+  height: auto;
   border-radius: 8px;
 }
 
@@ -220,6 +227,10 @@
 
   .overlay {
     top: 60px;
+  }
+
+  .logoContainer {
+    max-width: 120px;
   }
 
   .siteName {

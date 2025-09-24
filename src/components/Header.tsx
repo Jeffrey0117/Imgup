@@ -22,14 +22,16 @@ export default function Header() {
         {/* Logo Section */}
         <div className={styles.logoSection}>
           <Link href="/" className={styles.logoLink} onClick={closeMenu}>
-            <Image
-              src="/new_logo_with_text3.png"
-              alt="duk.tw Logo"
-              className={styles.logo}
-              width={120}
-              height={24}
-              priority
-            />
+            <div className={styles.logoContainer}>
+              <Image
+                src="/new_logo_with_text3_resize.png"
+                alt="duk.tw Logo"
+                className={styles.logo}
+                width={497}
+                height={191}
+                priority
+              />
+            </div>
             <span className={styles.siteName}>圖鴨上床</span>
           </Link>
         </div>
