@@ -27,7 +27,8 @@ model Mapping {
   fileExtension String?
 
   // 關聯
-  logs      AccessLog[]
+  logs          AccessLog[]
+  referrerStats ReferrerStats[]
 
   @@index([createdAt])
   @@index([isDeleted])
@@ -91,12 +92,39 @@ model AccessLog {
   userAgent String?
   referer   String?
 
+  // 來源追蹤增強
+  refererDomain String?
+  accessType    String   // direct, referer, api, preview
+  clientType    String   // browser, api, crawler, unknown
+
+  // 地理資訊(可選)
+  country       String?
+  region        String?
+
   createdAt DateTime @default(now())
 
   mapping   Mapping  @relation(fields: [mappingId], references: [id])
 
   @@index([mappingId])
   @@index([createdAt])
+  @@index([refererDomain])
+  @@index([accessType])
+}
+
+model ReferrerStats {
+  id            String   @id @default(cuid())
+  mappingId     String
+  refererDomain String
+  accessCount   Int      @default(0)
+  lastAccessAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  mapping       Mapping  @relation(fields: [mappingId], references: [id])
+
+  @@unique([mappingId, refererDomain])
+  @@index([mappingId])
+  @@index([refererDomain])
+  @@index([accessCount])
 }
 
 // 審計日誌

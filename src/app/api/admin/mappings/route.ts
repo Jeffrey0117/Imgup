@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
     const minViews = searchParams.get("minViews") ? parseInt(searchParams.get("minViews")!, 10) : null;
     const maxViews = searchParams.get("maxViews") ? parseInt(searchParams.get("maxViews")!, 10) : null;
     const fileType = searchParams.get("fileType")?.trim() || "";
+    const includeStats = parseBool(searchParams.get("includeStats")); // 是否包含統計資訊
 
     // 當提供 ids 參數時，忽略其他篩選條件，只查詢指定項目
     let where: any = undefined;

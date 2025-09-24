@@ -22,6 +22,35 @@ interface MappingRow {
   isExpired: boolean;
   hasPassword: boolean;
   password: string | null;
+  // 新增統計欄位
+  referrerStats?: Array<{
+    refererDomain: string;
+    accessCount: number;
+    lastAccessAt: string;
+  }>;
+  logs?: Array<{
+    createdAt: string;
+  }>;
+}
+
+// 統計概覽介面
+interface StatsOverview {
+  summary: {
+    totalViews: number;
+    todayViews: number;
+    redisConnected: boolean;
+    pendingSyncCount: number;
+  };
+  topImages: Array<{
+    hash: string;
+    filename: string;
+    viewCount: number;
+    createdAt: string;
+  }>;
+  topReferrers: Array<{
+    domain: string;
+    count: number;
+  }>;
 }
 
 interface Pagination {
@@ -36,6 +65,11 @@ export default function AdminImagesPage() {
 
   // Auth
   const [authChecked, setAuthChecked] = useState(false);
+
+  // Stats overview state
+  const [statsOverview, setStatsOverview] = useState<StatsOverview | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState("");
 
   // List state
   const [items, setItems] = useState<MappingRow[]>([]);
@@ -81,6 +115,9 @@ export default function AdminImagesPage() {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [selectAllState, setSelectAllState] = useState<"none" | "some" | "all">("none");
 
+  // Real-time stats refresh
+  const [statsInterval, setStatsInterval] = useState<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     // verify admin
     (async () => {
@@ -101,9 +138,21 @@ export default function AdminImagesPage() {
 
   useEffect(() => {
     if (!authChecked) return;
+    loadStatsOverview();
     loadList(1);
     // Clear selection when page loads
     clearSelection();
+
+    // Set up real-time stats refresh (every 30 seconds)
+    const interval = setInterval(() => {
+      loadStatsOverview();
+    }, 30000);
+    setStatsInterval(interval);
+
+    // Cleanup interval on unmount
+    return () => {
+      if (interval) clearInterval(interval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authChecked]);
 
@@ -111,6 +160,7 @@ export default function AdminImagesPage() {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("pageSize", String(pagination.pageSize));
+    params.set("includeStats", "true"); // 啟用統計資訊
 
     if (search.trim()) params.set("search", search.trim());
 
@@ -133,6 +183,28 @@ export default function AdminImagesPage() {
 
     return params.toString();
   };
+
+  async function loadStatsOverview() {
+    try {
+      setStatsLoading(true);
+      setStatsError("");
+
+      const res = await fetch("/api/admin/tracking/stats?overview=true", {
+        credentials: "include",
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "載入統計概覽失敗");
+      }
+
+      setStatsOverview(json.data);
+    } catch (e: any) {
+      setStatsError(e.message || "載入統計概覽失敗");
+    } finally {
+      setStatsLoading(false);
+    }
+  }
 
   async function loadList(page: number) {
     try {
@@ -449,6 +521,32 @@ export default function AdminImagesPage() {
 
   return (
     <div className={styles.container}>
+      {/* Stats Overview Cards */}
+      <div className={styles.statsOverview}>
+        {statsLoading ? (
+          <div className={styles.statsLoading}>載入統計中...</div>
+        ) : statsError ? (
+          <div className={styles.statsError}>{statsError}</div>
+        ) : statsOverview ? (
+          <div className={styles.statsCards}>
+            <div className={styles.statCard}>
+              <div className={styles.statValue}>{statsOverview.summary.totalViews.toLocaleString()}</div>
+              <div className={styles.statLabel}>總瀏覽次數</div>
+            </div>
+            <div className={styles.statCard}>
+              <div className={styles.statValue}>{statsOverview.summary.todayViews.toLocaleString()}</div>
+              <div className={styles.statLabel}>今日瀏覽次數</div>
+            </div>
+            <div className={styles.statCard}>
+              <div className={styles.statValue}>
+                {statsOverview.summary.redisConnected ? "🟢" : "🔴"} {statsOverview.summary.pendingSyncCount}
+              </div>
+              <div className={styles.statLabel}>Redis 狀態 / 待同步</div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.brand}>
@@ -746,6 +844,8 @@ export default function AdminImagesPage() {
                     <th>密碼</th>
                     <th>上傳時間</th>
                     <th>瀏覽次數</th>
+                    <th>來源統計</th>
+                    <th>最後訪問</th>
                     <th>狀態</th>
                     <th>操作</th>
                   </tr>
@@ -753,7 +853,7 @@ export default function AdminImagesPage() {
                 <tbody>
                   {items.length === 0 && (
                     <tr>
-                      <td className={styles.empty} colSpan={10}>
+                      <td className={styles.empty} colSpan={12}>
                         沒有資料
                       </td>
                     </tr>
@@ -822,6 +922,31 @@ export default function AdminImagesPage() {
                         {formatDateTime(row.createdAt)}
                       </td>
                       <td data-label="瀏覽次數">{row.viewCount}</td>
+                      <td data-label="來源統計">
+                        {row.referrerStats && row.referrerStats.length > 0 ? (
+                          <div className={styles.referrerStats}>
+                            {row.referrerStats.slice(0, 3).map((stat, i) => (
+                              <div key={i} className={styles.referrerItem} title={`${stat.refererDomain}: ${stat.accessCount} 次`}>
+                                {stat.refererDomain}: {stat.accessCount}
+                              </div>
+                            ))}
+                            {row.referrerStats.length > 3 && (
+                              <div className={styles.moreReferrers}>
+                                +{row.referrerStats.length - 3} 個來源
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td data-label="最後訪問">
+                        {row.logs && row.logs.length > 0 ? (
+                          formatDateTime(row.logs[0].createdAt)
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td data-label="狀態">
                         {statusTags(row).map((t, i) => (
                           <span
@@ -849,7 +974,7 @@ export default function AdminImagesPage() {
                           <button
                             className={styles.actionButton}
                             onClick={() =>
-                              window.open(`/${row.hash}`, "_blank")
+                              window.open(`/${row.hash}.jpg`, "_blank")
                             }
                           >
                             檢視

@@ -7,8 +7,10 @@ import {
   MemoryCacheProvider,
   StatsManager,
   ImageAccessRequest,
-  ImageMapping
+  ImageMapping,
+  EdgeDetector
 } from "@/lib/unified-access";
+import { trackingService, TrackingData } from "@/lib/tracking-service";
 
 // 初始化 Redis 客戶端（用於快取和統計）
 let redisClient: RedisClientType | null = null;
@@ -119,6 +121,28 @@ const statsProvider = async (hash: string): Promise<void> => {
   }
 };
 
+// 追蹤提供者（整合新的追蹤服務）
+const trackingProvider = async (
+  hash: string,
+  request: ImageAccessRequest,
+  responseType: string
+): Promise<void> => {
+  const edgeResult = EdgeDetector.detectEdge(request);
+  
+  const trackingData: TrackingData = {
+    hash,
+    referer: request.referer,
+    userAgent: request.userAgent,
+    ipAddress: request.ip,
+    accessType: responseType === 'proxy' ? 'direct' :
+               responseType === 'redirect' && request.hash.includes('/p') ? 'preview' :
+               edgeResult.isApiRequest ? 'api' : 'direct',
+    clientType: edgeResult.clientType
+  };
+
+  await trackingService.track(trackingData);
+};
+
 /** 具備超時與重試的抓取工具 */
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -165,7 +189,8 @@ export async function GET(
     const unifiedAccess = new EnhancedImageAccess(
       cacheProvider,
       prismaDataProvider,
-      statsProvider
+      statsProvider,
+      trackingProvider
     );
     
     const { hash: rawHash } = params;
@@ -194,6 +219,7 @@ export async function GET(
 
     // 使用統一介面處理請求
     const response = await unifiedAccess.accessImage(accessRequest);
+
 
     // 根據回應類型處理結果
     switch (response.type) {

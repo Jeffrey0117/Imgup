@@ -625,14 +625,17 @@ export class UnifiedImageAccess {
 // 新增：增強的圖片存取服務，支援代理和統計功能
 export class EnhancedImageAccess extends UnifiedImageAccess {
   private statsProvider?: (hash: string) => Promise<void>;
+  private trackingProvider?: (hash: string, request: ImageAccessRequest, responseType: string) => Promise<void>;
 
   constructor(
     cacheProvider: CacheProvider,
     dataProvider: (hash: string) => Promise<ImageMapping | null>,
-    statsProvider?: (hash: string) => Promise<void>
+    statsProvider?: (hash: string) => Promise<void>,
+    trackingProvider?: (hash: string, request: ImageAccessRequest, responseType: string) => Promise<void>
   ) {
     super(cacheProvider, dataProvider);
     this.statsProvider = statsProvider;
+    this.trackingProvider = trackingProvider;
   }
 
   async accessImage(request: ImageAccessRequest): Promise<ImageAccessResponse> {
@@ -646,7 +649,20 @@ export class EnhancedImageAccess extends UnifiedImageAccess {
       );
     }
 
+    // 異步記錄追蹤資訊（新增的追蹤功能）
+    if (this.trackingProvider && response.type !== 'error') {
+      const { hash: cleanHash } = this.parseHashFilename(request.hash);
+      this.trackingProvider(cleanHash, request, response.type).catch(err =>
+        console.error('Tracking recording failed:', err)
+      );
+    }
+
     return response;
+  }
+
+  // 公開 parseHashFilename 方法供外部使用
+  public parseHashFilename(rawHash: string): { hash: string; extension?: string } {
+    return super.parseHashFilename(rawHash);
   }
 
   // 代理圖片內容（實際的串流處理在 API 層實作）
