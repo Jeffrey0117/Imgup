@@ -144,18 +144,12 @@ export default function PreviewPage({ params }: Props) {
     return `/${params.hash}${extension}`;
   };
 
-  // 自訂右鍵選單處理
+  // 自訂右鍵選單處理 - 只在客戶端執行，不使用依賴項避免 SSR 問題
   useEffect(() => {
     // 確保在客戶端環境執行
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || !mapping) {
       return;
     }
-
-    // 在 useEffect 內部定義函數，避免 Hook 錯誤
-    const getProxyImageUrlInEffect = () => {
-      const extension = mapping?.fileExtension || "";
-      return `${window.location.origin}/${params.hash}${extension}`;
-    };
 
     const handleContextMenu = (e: MouseEvent) => {
       // 只在圖片元素上攔截右鍵
@@ -183,7 +177,9 @@ export default function PreviewPage({ params }: Props) {
           min-width: 180px;
         `;
 
-        const proxyUrl = getProxyImageUrlInEffect();
+        // 在事件處理器內部獲取當前的值
+        const extension = mapping?.fileExtension || "";
+        const proxyUrl = `${window.location.origin}/${params.hash}${extension}`;
 
         // 在新分頁開啟
         const openItem = document.createElement("div");
@@ -246,7 +242,7 @@ export default function PreviewPage({ params }: Props) {
     return () => {
       document.removeEventListener("contextmenu", handleContextMenu);
     };
-  }, [mapping, params.hash]);
+  }); // 移除依賴項，只在 mapping 有值時執行
 
   return (
     <div className={styles.container}>
