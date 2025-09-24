@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "../page.module.css";
 
 export interface Mapping {
@@ -27,17 +27,32 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   const [imageSrc, setImageSrc] = useState<string>("");
   const imageRef = useRef<HTMLImageElement>(null);
 
-  // 僅在客戶端建立代理短鏈，避免在 SSR 階段存取 window
-  useEffect(() => {
-    const extension = mapping?.fileExtension || "";
+  // 規範化副檔名：確保有 dot 且為小寫，若不存在則為空字串
+  const normalizedExt = useMemo(() => {
+    const raw = (mapping?.fileExtension || "").toString().trim();
+    if (!raw) return "";
+    const ext = raw.startsWith(".") ? raw : `.${raw}`;
+    return ext.toLowerCase();
+  }, [mapping?.fileExtension]);
+
+  // 可複製/分享的短網址（一定帶副檔名的版本）
+  const shortUrlWithExt = useMemo(() => {
     try {
       const origin = window.location.origin;
-      const proxyUrl = `${origin}/${hash}${extension}`;
-      setImageSrc(proxyUrl);
+      return `${origin}/${hash}${normalizedExt}`;
+    } catch {
+      return `/${hash}${normalizedExt}`;
+    }
+  }, [hash, normalizedExt]);
+
+  // 僅在客戶端建立代理短鏈，避免在 SSR 階段存取 window
+  useEffect(() => {
+    try {
+      setImageSrc(shortUrlWithExt);
     } catch {
       // 忽略（保持為空字串以避免回退到真實來源）
     }
-  }, [hash, mapping?.fileExtension]);
+  }, [shortUrlWithExt]);
 
   // 右鍵自訂選單（僅在客戶端掛載）
   useEffect(() => {
@@ -198,15 +213,15 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
 
           <div className={styles.actions}>
             <button
-              onClick={() => window.open(imageSrc, "_blank")}
+              onClick={() => window.open(shortUrlWithExt, "_blank")}
               className={styles.actionBtn}
             >
               在新視窗開啟
             </button>
             <button
               onClick={() => {
-                navigator.clipboard.writeText(imageSrc);
-                alert("短網址已複製到剪貼簿");
+                navigator.clipboard.writeText(shortUrlWithExt);
+                alert("短網址已複製到剪貼簿（含副檔名）");
               }}
               className={styles.actionBtn}
             >
