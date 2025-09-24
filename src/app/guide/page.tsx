@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Header from "../../components/Header";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -35,7 +34,6 @@ export const metadata: Metadata = {
 export default function GuidePage() {
   return (
     <div className={styles.container}>
-      <Header />
 
       {/* 側邊導航欄 */}
       <aside className={styles.sidebar}>

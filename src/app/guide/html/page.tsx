@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Header from "../../../components/Header";
 import Breadcrumb from "../../../components/Breadcrumb";
 import styles from "../page.module.css";
 
@@ -36,9 +35,36 @@ export const metadata: Metadata = {
 export default function HtmlGuidePage() {
   return (
     <div className={styles.container}>
-      <Header />
+      {/* 側邊導航欄 */}
+      <aside className={styles.sidebar}>
+        <h3 className={styles.sidebarTitle}>使用指南</h3>
+        <nav>
+          <ul className={styles.sidebarNav}>
+            <li className={styles.sidebarNavItem}>
+              <Link href="/guide" className={styles.sidebarNavLink}>
+                總覽
+              </Link>
+            </li>
+            <li className={styles.sidebarNavItem}>
+              <Link href="/guide/markdown" className={styles.sidebarNavLink}>
+                Markdown 語法教學
+              </Link>
+            </li>
+            <li className={styles.sidebarNavItem}>
+              <Link href="/guide/html" className={`${styles.sidebarNavLink} ${styles.active}`}>
+                HTML 嵌入教學
+              </Link>
+            </li>
+            <li className={styles.sidebarNavItem}>
+              <Link href="/guide/faq" className={styles.sidebarNavLink}>
+                常見問題 FAQ
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      </aside>
 
-      <main className={styles.main}>
+     <main className={`${styles.main} ${styles.mainWithSidebar}`}>
         <div className={styles.content}>
           <Breadcrumb items={[
             { label: "首頁", href: "/" },

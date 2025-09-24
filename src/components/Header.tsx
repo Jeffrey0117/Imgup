@@ -23,11 +23,11 @@ export default function Header() {
         <div className={styles.logoSection}>
           <Link href="/" className={styles.logoLink} onClick={closeMenu}>
             <Image
-              src="/logo-imgup.png"
+              src="/new_logo_with_text3.png"
               alt="duk.tw Logo"
               className={styles.logo}
-              width={40}
-              height={40}
+              width={120}
+              height={24}
               priority
             />
             <span className={styles.siteName}>圖鴨上床</span>
@@ -38,9 +38,9 @@ export default function Header() {
         <nav className={styles.desktopNav}>
           <Link href="/" className={styles.navLink}>首頁</Link>
           <Link href="/features" className={styles.navLink}>功能特色</Link>
-          <Link href="/guide" className={styles.navLink}>使用指南</Link>
           <Link href="/use-cases" className={styles.navLink}>應用案例</Link>
           <Link href="/about" className={styles.navLink}>關於我們</Link>
+          <Link href="/guide" className={styles.navLink}>使用指南</Link>
         </nav>
 
         {/* Mobile Menu Button */}
@@ -56,9 +56,9 @@ export default function Header() {
         <nav className={`${styles.mobileNav} ${isMenuOpen ? styles.open : ''}`}>
           <Link href="/" className={styles.mobileNavLink} onClick={closeMenu}>首頁</Link>
           <Link href="/features" className={styles.mobileNavLink} onClick={closeMenu}>功能特色</Link>
-          <Link href="/guide" className={styles.mobileNavLink} onClick={closeMenu}>使用指南</Link>
           <Link href="/use-cases" className={styles.mobileNavLink} onClick={closeMenu}>應用案例</Link>
           <Link href="/about" className={styles.mobileNavLink} onClick={closeMenu}>關於我們</Link>
+          <Link href="/guide" className={styles.mobileNavLink} onClick={closeMenu}>使用指南</Link>
         </nav>
 
         {/* Mobile Menu Overlay */}

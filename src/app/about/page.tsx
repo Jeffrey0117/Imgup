@@ -1,7 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import Header from "../../components/Header";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -59,7 +58,6 @@ export default function AboutPage() {
           })
         }}
       />
-      <Header />
 
       <main className={styles.main}>
         <div className={styles.content}>
