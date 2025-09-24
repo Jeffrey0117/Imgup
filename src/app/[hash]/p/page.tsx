@@ -151,6 +151,12 @@ export default function PreviewPage({ params }: Props) {
       return;
     }
 
+    // 在 useEffect 內部定義函數，避免 Hook 錯誤
+    const getProxyImageUrlInEffect = () => {
+      const extension = mapping?.fileExtension || "";
+      return `${window.location.origin}/${params.hash}${extension}`;
+    };
+
     const handleContextMenu = (e: MouseEvent) => {
       // 只在圖片元素上攔截右鍵
       if (imageRef.current && imageRef.current.contains(e.target as Node)) {
@@ -177,7 +183,7 @@ export default function PreviewPage({ params }: Props) {
           min-width: 180px;
         `;
 
-        const proxyUrl = getProxyImageUrl();
+        const proxyUrl = getProxyImageUrlInEffect();
 
         // 在新分頁開啟
         const openItem = document.createElement("div");
