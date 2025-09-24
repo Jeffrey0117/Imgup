@@ -1,3 +1,4 @@
+import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "../../components/Header";
@@ -34,8 +35,7 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-  return (
-    <>
+    <div className={styles.container}>
       {/* JSON-LD 結構化資料 - Organization Schema */}
       <script
         type="application/ld+json"
@@ -59,8 +59,6 @@ export default function AboutPage() {
           })
         }}
       />
-      <div className={styles.container}>
-    <div className={styles.container}>
       <Header />
 
       <main className={styles.main}>

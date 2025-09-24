@@ -91,11 +91,11 @@ export async function getPostsByCategory(category: string): Promise<Post[]> {
 export async function getAllCategories(): Promise<string[]> {
   const allPosts = await getAllPosts();
   const categories = allPosts.map(post => post.category);
-  return [...new Set(categories)].filter(Boolean);
+  return Array.from(new Set(categories)).filter(Boolean);
 }
 
 export async function getAllTags(): Promise<string[]> {
   const allPosts = await getAllPosts();
   const allTags = allPosts.flatMap(post => post.tags || []);
-  return [...new Set(allTags)].filter(Boolean);
+  return Array.from(new Set(allTags)).filter(Boolean);
 }

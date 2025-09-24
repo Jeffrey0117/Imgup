@@ -1,7 +1,8 @@
+import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import Header from "../../components/Header";
-import Breadcrumb from "../../components/Breadcrumb";
+import Header from "../../../components/Header";
+import Breadcrumb from "../../../components/Breadcrumb";
 import styles from "../page.module.css";
 
 export const metadata: Metadata = {
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
 
 export default function FaqGuidePage() {
   return (
-    <>
+    <div className={styles.container}>
       {/* JSON-LD 結構化資料 - FAQPage Schema */}
       <script
         type="application/ld+json"
@@ -136,9 +137,6 @@ export default function FaqGuidePage() {
           })
         }}
       />
-      <div className={styles.container}>
-  return (
-    <div className={styles.container}>
       <Header />
 
       <main className={styles.main}>

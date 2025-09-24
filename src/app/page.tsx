@@ -439,9 +439,6 @@ export default function Home() {
         }}
       />
       <div className={styles.wrap}>
-  return (
-    <div className={styles.container}>
-      <div className={styles.wrap}>
         <div className={styles.header}>
           <div className={styles.logoSection}>
             <Image
