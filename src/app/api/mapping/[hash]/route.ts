@@ -34,13 +34,25 @@ export async function GET(
     }
 
     // 智能路由邏輯現在由 middleware 處理
-    // 此 API 路由現在只負責回傳 JSON 資料
+    // 此 API 路由現在只負責回傳 JSON 資料（序列化以避免水合差異）
     console.log("API 路由: 回傳映射資料", {
       hash,
-      fileExtension: mapping.fileExtension
+      fileExtension: mapping.fileExtension ?? null
     });
 
-    return NextResponse.json(mapping);
+    const serialized = {
+      id: mapping.id,
+      hash: mapping.hash,
+      filename: mapping.filename,
+      url: mapping.url,
+      shortUrl: mapping.shortUrl,
+      createdAt: new Date(mapping.createdAt).toISOString(),
+      expiresAt: mapping.expiresAt ? new Date(mapping.expiresAt).toISOString() : null,
+      password: mapping.password ?? null,
+      fileExtension: (mapping as any).fileExtension ?? null,
+    };
+
+    return NextResponse.json(serialized);
   } catch (error) {
     console.error("查詢短網址錯誤:", error);
     return NextResponse.json(
