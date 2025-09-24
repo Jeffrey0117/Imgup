@@ -144,7 +144,7 @@ export default function PreviewPage({ params }: Props) {
     return `/${params.hash}${extension}`;
   };
 
-  // 自訂右鍵選單處理 - 只在客戶端執行，不使用依賴項避免 SSR 問題
+  // 自訂右鍵選單處理 - 只在客戶端執行
   useEffect(() => {
     // 確保在客戶端環境執行
     if (typeof window === 'undefined' || !mapping) {
@@ -242,7 +242,7 @@ export default function PreviewPage({ params }: Props) {
     return () => {
       document.removeEventListener("contextmenu", handleContextMenu);
     };
-  }); // 移除依賴項，只在 mapping 有值時執行
+  }, [mapping, params.hash]); // 添加正確的依賴項
 
   return (
     <div className={styles.container}>
