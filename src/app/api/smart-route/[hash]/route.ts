@@ -14,9 +14,13 @@ import {
 let redisClient: RedisClientType | null = null;
 let cacheProvider: RedisCacheProvider | MemoryCacheProvider = new MemoryCacheProvider();
 let statsManager: StatsManager | null = null;
+let cacheInitialized = false;
+let cacheInitPromise: Promise<void> | null = null;
 
 // 初始化快取提供者
 async function initializeCache() {
+  if (cacheInitialized) return;
+  
   if (process.env.REDIS_URL) {
     try {
       // 取得 Redis URL 並檢查是否為 Upstash
@@ -71,10 +75,17 @@ async function initializeCache() {
     console.log('未設定 Redis，使用記憶體快取');
     cacheProvider = new MemoryCacheProvider();
   }
+  
+  cacheInitialized = true;
 }
 
-// 初始化快取
-initializeCache();
+// 確保快取初始化的函數
+async function ensureCacheInitialized() {
+  if (!cacheInitPromise) {
+    cacheInitPromise = initializeCache();
+  }
+  await cacheInitPromise;
+}
 
 // 資料來源提供者 - 橋接 Prisma
 const prismaDataProvider = async (hash: string): Promise<ImageMapping | null> => {
@@ -108,18 +119,21 @@ const statsProvider = async (hash: string): Promise<void> => {
   }
 };
 
-// 初始化增強的統一存取服務
-const unifiedAccess = new EnhancedImageAccess(
-  cacheProvider,
-  prismaDataProvider,
-  statsProvider
-);
-
 export async function GET(
   req: NextRequest,
   { params }: { params: { hash: string } }
 ) {
   try {
+    // 確保快取已初始化
+    await ensureCacheInitialized();
+    
+    // 初始化增強的統一存取服務
+    const unifiedAccess = new EnhancedImageAccess(
+      cacheProvider,
+      prismaDataProvider,
+      statsProvider
+    );
+    
     const { hash: rawHash } = params;
 
     // 建構統一請求物件
