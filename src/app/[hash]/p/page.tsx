@@ -146,6 +146,11 @@ export default function PreviewPage({ params }: Props) {
 
   // 自訂右鍵選單處理
   useEffect(() => {
+    // 確保在客戶端環境執行
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     const handleContextMenu = (e: MouseEvent) => {
       // 只在圖片元素上攔截右鍵
       if (imageRef.current && imageRef.current.contains(e.target as Node)) {
