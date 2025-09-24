@@ -465,6 +465,8 @@ export default function Home() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onClick={() => fileInputRef.current?.click()}
+            onMouseEnter={() => console.log('Mouse entered drop zone, screen width:', window.innerWidth)}
+            onMouseLeave={() => console.log('Mouse left drop zone')}
           >
             <div className={styles.zone}>
               <div>Drop images here / 或點擊選擇</div>
@@ -488,17 +490,17 @@ export default function Home() {
             {/* Tooltip */}
             <div className={styles.hoverTooltip}>
               <div className={styles.tooltipHeader}>
-                上傳規則說明
+                📋 上傳規則
               </div>
               <div className={styles.tooltipContent}>
                 <div className={styles.tooltipItem}>
-                  <strong>支援格式：</strong> PNG, JPG, WebP
+                  <strong>檔案限制：</strong> JPG、PNG、WebP、GIF 格式，單檔最大 25MB
                 </div>
                 <div className={styles.tooltipItem}>
-                  <strong>檔案大小：</strong> 無限制
+                  <strong>速率限制：</strong> 每分鐘最多上傳 10 張圖片，單日上限 100 張
                 </div>
                 <div className={styles.tooltipItem}>
-                  <strong>上傳方式：</strong> 拖曳或點擊選擇
+                  <strong>違規冷卻機制：</strong> 違規上傳將暫停服務 24 小時，請遵守使用規範
                 </div>
               </div>
             </div>

@@ -10,7 +10,7 @@ interface PasteUploadProps {
 
 export default function PasteUpload({ onImagePaste, disabled = false }: PasteUploadProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0, show: false });
+  const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
     if (disabled) return;
@@ -75,38 +75,6 @@ export default function PasteUpload({ onImagePaste, disabled = false }: PasteUpl
     };
   }, [onImagePaste, disabled]);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    const tooltipWidth = 280;
-    const tooltipHeight = 200;
-    let x = e.clientX + 20;
-    let y = e.clientY - tooltipHeight / 2;
-
-    // 邊界檢查
-    if (x + tooltipWidth > window.innerWidth) x = e.clientX - tooltipWidth - 20;
-    if (y < 0) y = 10;
-    if (y + tooltipHeight > window.innerHeight) y = window.innerHeight - tooltipHeight - 10;
-
-    setTooltipPosition({ x, y, show: true });
-  };
-
-  const handleMouseEnter = (e: React.MouseEvent) => {
-    const tooltipWidth = 280;
-    const tooltipHeight = 200;
-    let x = e.clientX + 20;
-    let y = e.clientY - tooltipHeight / 2;
-
-    // 邊界檢查
-    if (x + tooltipWidth > window.innerWidth) x = e.clientX - tooltipWidth - 20;
-    if (y < 0) y = 10;
-    if (y + tooltipHeight > window.innerHeight) y = window.innerHeight - tooltipHeight - 10;
-
-    setTooltipPosition({ x, y, show: true });
-  };
-
-  const handleMouseLeave = () => {
-    setTooltipPosition(prev => ({ ...prev, show: false }));
-  };
-
   const showPasteFeedback = () => {
     const container = containerRef.current;
     if (!container) return;
@@ -123,42 +91,45 @@ export default function PasteUpload({ onImagePaste, disabled = false }: PasteUpl
     <div
       ref={containerRef}
       className={styles.pasteContainer}
-      onMouseEnter={handleMouseEnter}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
     >
-      <div
-        className={styles.uploadRules}
-        style={{
-          position: 'fixed',
-          left: tooltipPosition.x,
-          top: tooltipPosition.y,
-          opacity: tooltipPosition.show ? 1 : 0,
-          visibility: tooltipPosition.show ? 'visible' : 'hidden',
-          pointerEvents: tooltipPosition.show ? 'auto' : 'none',
-          transition: 'opacity 0.3s ease, visibility 0.3s ease',
-        }}
-      >
-        <div className={styles.tooltipHeader}>上傳規則說明</div>
-        <div className={styles.tooltipContent}>
-          <div className={styles.tooltipItem}>
-            <strong>支援格式：</strong> PNG, JPG, JPEG, WebP, GIF
-          </div>
-          <div className={styles.tooltipItem}>
-            <strong>檔案大小：</strong> 建議單張不超過 10MB
-          </div>
-          <div className={styles.tooltipItem}>
-            <strong>上傳方式：</strong> 拖曳 / 點擊 / 貼上
-          </div>
-          <div className={styles.tooltipItem}>
-            <strong>進階功能：</strong> 到期時間、密碼保護
-          </div>
-        </div>
-      </div>
       <div className={styles.pasteHint}>
-        <div className={styles.hintText}>
+        <div
+          className={styles.hintText}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
           💡 提示：按下 <kbd>Ctrl+V</kbd> 貼上圖片即可快速上傳
         </div>
+        
+        {showTooltip && (
+          <div className={styles.tooltip}>
+            <div className={styles.tooltipContent}>
+              <h4>📋 上傳規則詳細說明</h4>
+              <div className={styles.rulesList}>
+                <div className={styles.ruleItem}>
+                  <span className={styles.ruleIcon}>📁</span>
+                  <span>支援格式：PNG、JPG、JPEG、WebP、GIF、BMP</span>
+                </div>
+                <div className={styles.ruleItem}>
+                  <span className={styles.ruleIcon}>📏</span>
+                  <span>檔案大小：單張最大 20MB</span>
+                </div>
+                <div className={styles.ruleItem}>
+                  <span className={styles.ruleIcon}>🔄</span>
+                  <span>上傳方式：拖曳檔案、點擊選擇、剪貼簿貼上</span>
+                </div>
+                <div className={styles.ruleItem}>
+                  <span className={styles.ruleIcon}>⚡</span>
+                  <span>快捷鍵：Ctrl+V 快速貼上圖片</span>
+                </div>
+                <div className={styles.ruleItem}>
+                  <span className={styles.ruleIcon}>🛡️</span>
+                  <span>自動檢測：檔案類型和大小驗證</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
