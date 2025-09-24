@@ -472,10 +472,10 @@ export class UnifiedImageAccess {
       return this.createProxyResponse(mapping);
     }
 
-    // 無副檔名但為圖片請求 → 快取重定向 (301 + Cache-Control)
+    // 無副檔名但為圖片請求 → 使用代理以避免暴露來源網址
     if (!extension && edgeResult.isImageRequest && mapping.url) {
-      console.log('Using cached redirect for image request');
-      return this.createCachedRedirectResponse(mapping.url, mapping);
+      console.log('Using proxy for image request without extension');
+      return this.createProxyResponse(mapping);
     }
 
     // 瀏覽器請求 → 預覽頁

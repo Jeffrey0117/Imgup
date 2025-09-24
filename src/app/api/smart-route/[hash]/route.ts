@@ -119,6 +119,40 @@ const statsProvider = async (hash: string): Promise<void> => {
   }
 };
 
+/** 具備超時與重試的抓取工具 */
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit & { timeoutMs?: number; retries?: number; backoffMs?: number } = {}
+) {
+  const { timeoutMs = 8000, retries = 2, backoffMs = 300, ...rest } = options;
+  let attempt = 0;
+  let lastErr: any;
+  while (attempt <= retries) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...rest, signal: controller.signal });
+      clearTimeout(timer);
+      if (res.status >= 500 && res.status < 600) {
+        lastErr = new Error(`Upstream ${res.status}`);
+        attempt++;
+        if (attempt <= retries) await sleep(backoffMs * attempt);
+        continue;
+      }
+      return res;
+    } catch (err: any) {
+      clearTimeout(timer);
+      lastErr = err;
+      attempt++;
+      if (attempt <= retries) await sleep(backoffMs * attempt);
+    }
+  }
+  throw lastErr;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { hash: string } }
@@ -189,57 +223,67 @@ export async function GET(
         break;
 
       case 'proxy':
-        // 代理模式：直接回傳圖片內容
+        // 代理模式：直接回傳圖片內容（帶超時與重試），失敗時回傳占位圖避免暴露來源
         if (response.url) {
           console.log('Smart Route 代理模式:', response.url);
-          
           try {
-            // 獲取圖片內容
-            const imageResponse = await fetch(response.url);
-            
+            const imageResponse = await fetchWithRetry(response.url, { timeoutMs: 8000, retries: 2, backoffMs: 300 });
+
             if (!imageResponse.ok) {
               throw new Error(`Failed to fetch image: ${imageResponse.status}`);
             }
-            
-            // 建立回應標頭
+
             const responseHeaders = new Headers();
-            
+
             // 加入快取控制標頭
             if (response.headers) {
               Object.entries(response.headers).forEach(([key, value]) => {
                 responseHeaders.set(key, value);
               });
             }
-            
+
             // 確保有 Content-Type
             if (!responseHeaders.has('Content-Type')) {
               const contentType = imageResponse.headers.get('Content-Type');
-              if (contentType) {
-                responseHeaders.set('Content-Type', contentType);
-              }
+              if (contentType) responseHeaders.set('Content-Type', contentType);
+              else responseHeaders.set('Content-Type', 'image/jpeg');
             }
-            
+
             // 傳遞 Content-Length
             const contentLength = imageResponse.headers.get('Content-Length');
             if (contentLength) {
               responseHeaders.set('Content-Length', contentLength);
             }
-            
-            // 支援 Range requests
+
+            // 支援 Range
             if (imageResponse.headers.get('Accept-Ranges')) {
               responseHeaders.set('Accept-Ranges', 'bytes');
             }
-            
-            // 回傳圖片內容
+
+            // 安全標頭
+            responseHeaders.set('Referrer-Policy', 'no-referrer');
+            responseHeaders.set('X-Content-Type-Options', 'nosniff');
+
             return new NextResponse(imageResponse.body, {
               status: 200,
               headers: responseHeaders
             });
           } catch (error) {
-            console.error('代理圖片失敗，降級到重定向:', error);
-            // 降級到重定向模式
-            return NextResponse.redirect(new URL(response.url, req.url), {
-              status: 302
+            console.error('代理圖片失敗，回傳占位圖避免暴露來源:', error);
+
+            const svg = `
+<svg xmlns='http://www.w3.org/2000/svg' width='120' height='60'>
+  <rect width='100%' height='100%' fill='#f2f2f2'/>
+  <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#999' font-size='12'>image unavailable</text>
+</svg>`;
+            return new NextResponse(svg, {
+              status: 502,
+              headers: {
+                'Content-Type': 'image/svg+xml',
+                'Cache-Control': 'no-store',
+                'Referrer-Policy': 'no-referrer',
+                'X-Content-Type-Options': 'nosniff'
+              }
             });
           }
         }

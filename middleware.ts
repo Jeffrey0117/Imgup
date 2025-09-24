@@ -9,19 +9,8 @@ export function middleware(request: NextRequest) {
     // 讓所有 /admin 路徑正常通過
     return NextResponse.next();
   }
-
-  // 將 /{hash}/p 重寫為 /p?hash={hash}，避免動態 segment 造成 SSR/CSR 水合差異
-  // 例：/fkEtrF/p -> /p?hash=fkEtrF
-  const previewMatch = pathname.match(/^\/([A-Za-z0-9_-]{5,11})\/p$/);
-  if (previewMatch) {
-    const hash = previewMatch[1];
-    const url = request.nextUrl.clone();
-    url.pathname = '/p';
-    url.searchParams.set('hash', hash);
-    return NextResponse.rewrite(url);
-  }
  
-  // 其他路徑正常處理
+  // 其他路徑正常處理（不做任何 rewrite）
   return NextResponse.next();
 }
  

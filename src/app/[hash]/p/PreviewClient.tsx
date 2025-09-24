@@ -23,7 +23,8 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [passwordRequired, setPasswordRequired] = useState(!!mapping.password);
   const [passwordInput, setPasswordInput] = useState("");
-  const [imageSrc, setImageSrc] = useState<string>(mapping.url); // 先用原始 URL，避免 SSR/CSR 不一致
+  // 僅用代理短鏈作為圖片來源，避免任何情況下暴露原始來源
+  const [imageSrc, setImageSrc] = useState<string>("");
   const imageRef = useRef<HTMLImageElement>(null);
 
   // 僅在客戶端建立代理短鏈，避免在 SSR 階段存取 window
@@ -34,7 +35,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
       const proxyUrl = `${origin}/${hash}${extension}`;
       setImageSrc(proxyUrl);
     } catch {
-      // 忽略（保持原始 URL）
+      // 忽略（保持為空字串以避免回退到真實來源）
     }
   }, [hash, mapping?.fileExtension]);
 
@@ -180,12 +181,16 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
               className={styles.image}
               onError={(e) => {
                 const img = e.currentTarget as HTMLImageElement;
-                if (!img.dataset.fallback) {
-                  img.dataset.fallback = "true";
-                  img.src = mapping.url;
-                } else {
-                  setError("圖片載入失敗");
+                if (!img.dataset.failedOnce) {
+                  img.dataset.failedOnce = "true";
+                  // 使用透明占位圖，避免任何情況下落回真實來源 URL
+                  img.src =
+                    "data:image/svg+xml;charset=utf-8," +
+                    encodeURIComponent(
+                      "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='100%' height='100%' fill='transparent'/></svg>"
+                    );
                 }
+                setError("圖片載入失敗");
               }}
               onDragStart={(e) => e.preventDefault()}
             />
