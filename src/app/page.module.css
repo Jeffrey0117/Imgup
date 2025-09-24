@@ -1538,3 +1538,98 @@
     font-size: 13px;
   }
 }
+
+/* Hover Tooltip Styles */
+.hoverTooltip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(17, 17, 17, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 100;
+  min-width: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.drop:hover .hoverTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, -50%) translateY(-10px);
+}
+
+.tooltipHeader {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 10px 10px 0 0;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+}
+
+.tooltipContent {
+  padding: 16px;
+}
+
+.tooltipItem {
+  color: #ddd;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltipItem:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.tooltipItem strong {
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+/* Mobile: Hide tooltip on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .hoverTooltip {
+    display: none;
+  }
+}
+
+/* Tablet: Adjust tooltip position and size */
+@media (max-width: 1024px) {
+  .hoverTooltip {
+    min-width: 240px;
+    transform: translate(-50%, -50%) translateY(-5px);
+  }
+
+  .tooltipHeader {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .tooltipContent {
+    padding: 14px;
+  }
+
+  .tooltipItem {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+}
+
+/* Mobile: Completely hide tooltip */
+@media (max-width: 768px) {
+  .hoverTooltip {
+    display: none;
+  }
+}

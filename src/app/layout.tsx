@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Header from "../components/Header";
+
 export const metadata: Metadata = {
   title: "圖鴨上床(duk.tw)–台灣熱門圖床｜免費上傳、圖片空間分享",
   description:
@@ -43,7 +45,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-Hant" suppressHydrationWarning>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <Header />
+        {children}
+      </body>
     </html>
   );
 }

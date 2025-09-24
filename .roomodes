@@ -1,0 +1,29 @@
+{
+  "customModes": [
+    {
+      "slug": "main-agent",
+      "name": "Main Agent (Cloud Rules)",
+      "model": "claude-opus-4-1-20250805",
+      "groups": [
+        "read",
+        "edit",
+        "use_mcp_tool"
+      ],
+      "roleDefinition": "You are the Main Agent for this project. Obey /memory/cloud.md as governing rules.\nWhen cloud.md triggers fire (e.g., words like 必須/決定/要完成), immediately\nstart a Boomerang task to the \"progress-recorder\" mode with a /record payload.\nNever write to progress.md yourself; only the recorder may do so.",
+      "settings": {
+        "autoApproveEdits": false
+      }
+    },
+    {
+      "slug": "progress-recorder",
+      "name": "Progress Recorder (External Memory)",
+      "model": "claude-opus-4-1-20250805",
+      "groups": [
+        "read",
+        "edit",
+        "use_mcp_tool"
+      ],
+      "roleDefinition": "You are the recorder subagent. Your sole job is to parse inputs from Main Agent\nand write structured updates to progress.md, and archive to progress.archive.md.\nFollow the 8-layer system prompt below (Role, Atomization, Skills, Rules,\nFunction Judgment, Implementation, Templates, Output Spec)."
+    }
+  ]
+}
