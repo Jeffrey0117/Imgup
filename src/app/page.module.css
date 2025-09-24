@@ -1539,7 +1539,8 @@
   }
 }
 
-/* Hover Tooltip Styles */
+/* Hover Tooltip Styles - REMOVED: 靜態 tooltip 已移除，改由動態 tooltip 處理 */
+/*
 .hoverTooltip {
   position: absolute;
   top: 50%;
@@ -1598,14 +1599,12 @@
   font-weight: 600;
 }
 
-/* Mobile: Hide tooltip on touch devices */
 @media (hover: none) and (pointer: coarse) {
   .hoverTooltip {
     display: none;
   }
 }
 
-/* Tablet: Adjust tooltip position and size */
 @media (max-width: 1024px) {
   .hoverTooltip {
     min-width: 240px;
@@ -1627,9 +1626,9 @@
   }
 }
 
-/* Mobile: Completely hide tooltip */
 @media (max-width: 768px) {
   .hoverTooltip {
     display: none;
   }
 }
+*/

@@ -485,24 +485,6 @@ export default function Home() {
               </span>
               <span className={styles.hintShort}>多檔上傳</span>
             </div>
-            {/* 桌面版 Hover 提示 */}
-            <div className={styles.hoverTooltip}>
-              <div className={styles.tooltipHeader}>上傳規則說明</div>
-              <div className={styles.tooltipContent}>
-                <div className={styles.tooltipItem}>
-                  <strong>支援格式：</strong> PNG, JPG, JPEG, WebP, GIF
-                </div>
-                <div className={styles.tooltipItem}>
-                  <strong>檔案大小：</strong> 建議單張不超過 10MB
-                </div>
-                <div className={styles.tooltipItem}>
-                  <strong>上傳方式：</strong> 拖曳 / 點擊 / 貼上
-                </div>
-                <div className={styles.tooltipItem}>
-                  <strong>進階功能：</strong> 到期時間、密碼保護
-                </div>
-              </div>
-            </div>
           </div>
 
           <div className={styles.rightPanel}>
