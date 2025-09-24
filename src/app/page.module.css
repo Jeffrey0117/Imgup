@@ -81,7 +81,7 @@
 }
 
 .logo {
-  /* 移除?�?��?飾樣式�?保�?簡�? */
+  /* 移除?�?��?飾樣式�?保�?簡�? */
 }
 
 .titleSection {
@@ -351,7 +351,7 @@
   cursor: pointer;
 }
 
-/* ?��??�顯?��??�樣�?*/
+/* ?��??�顯?��??�樣�?*/
 @keyframes floatPulse {
   0% {
     transform: translateY(0);
@@ -695,14 +695,14 @@
 /* Tablet Portrait / Large Mobile (481px - 768px) */
 @media (max-width: 768px) {
   .container {
-    padding: 20px 16px; /* 增�?左右 padding */
-    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
+    padding: 20px 16px; /* 增�?左右 padding */
+    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
   }
 
   .wrap {
-    width: 100%; /* 使用 container ?��??�寬�?*/
-    margin: 0 auto; /* 確�?置中 */
-    max-width: none; /* 移除?�大寬度�??��?�?container padding ?�制 */
+    width: 100%; /* 使用 container ?��??�寬�?*/
+    margin: 0 auto; /* 確�?置中 */
+    max-width: none; /* 移除?�大寬度�??��?�?container padding ?�制 */
   }
 
   .mainTitle {
@@ -787,13 +787,13 @@
 @media (max-width: 480px) {
   .container {
     padding: 16px 12px; /* 調整左右 padding */
-    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
+    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
   }
 
   .wrap {
-    width: 100%; /* 使用 container ?��??�寬�?*/
+    width: 100%; /* 使用 container ?��??�寬�?*/
     margin: 0 auto;
-    max-width: none; /* 移除?�大寬度�???*/
+    max-width: none; /* 移除?�大寬度�???*/
   }
 
   .logoSection {
@@ -809,12 +809,12 @@
 
   .mainTitle {
     font-size: 1.8rem;
-    text-align: center; /* 確�?標�?置中 */
+    text-align: center; /* 確�?標�?置中 */
   }
 
   .subTitle {
     font-size: 1rem;
-    text-align: center; /* 確�??��?題置�?*/
+    text-align: center; /* 確�??��?題置�?*/
   }
 
   .main {
@@ -824,11 +824,11 @@
 
   .drop {
     height: var(--drop-height-mobile);
-    margin: 0 auto; /* 確�??�曳?�?�置�?*/
+    margin: 0 auto; /* 確�??�曳?�?�置�?*/
   }
 
   .zone {
-    text-align: center; /* 確�??�曳?�?��?字置�?*/
+    text-align: center; /* 確�??�曳?�?��?字置�?*/
   }
 
   .hint {
@@ -854,7 +854,7 @@
 
   .header {
     padding: 12px;
-    text-align: center; /* 確�? header ?�容置中 */
+    text-align: center; /* 確�? header ?�容置中 */
   }
 
   .actions {
@@ -936,14 +936,14 @@
 /* Mobile Small (up to 375px) */
 @media (max-width: 375px) {
   .container {
-    padding: 12px 8px; /* ?��???padding */
-    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
+    padding: 12px 8px; /* ?��???padding */
+    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
   }
 
   .wrap {
-    width: 100%; /* 使用 container ?��??�寬�?*/
+    width: 100%; /* 使用 container ?��??�寬�?*/
     margin: 0 auto;
-    max-width: none; /* 移除?�大寬度�???*/
+    max-width: none; /* 移除?�大寬度�???*/
   }
 
   .logoSection {
@@ -968,7 +968,7 @@
 
   .titleSection {
     gap: 2px;
-    text-align: center; /* 確�??�個�?題�??�置�?*/
+    text-align: center; /* 確�??�個�?題�??�置�?*/
   }
 
   .zone {
@@ -1035,21 +1035,21 @@
   }
 }
 
-/* 405px 以�?移除 container padding */
+/* 405px 以�?移除 container padding */
 @media (max-width: 405px) {
   .container {
     padding: 0;
   }
 }
 
-/* 480px 以�?移除 drop margin */
+/* 480px 以�?移除 drop margin */
 @media (max-width: 480px) {
   .drop {
     margin: 0;
   }
 }
 
-/* 上傳完畢彈�?�?? */
+/* 上傳完畢彈�?�?? */
 .modalOverlay {
   position: fixed;
   top: 0;
@@ -1122,22 +1122,22 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  align-items: center; /* 水平置中?�容，避?��?覺跳??*/
+  align-items: center; /* 水平置中?�容，避?��?覺跳??*/
 }
 
-/* Modal ?�容?��?高度?�台，避?��??��?高度跳�? */
+/* Modal ?�容?��?高度?�台，避?��??��?高度跳�? */
 .modalBodyStage {
   position: relative;
   width: 100%;
-  max-width: 240px; /* ??QRCode 尺寸對�?，並?�白 */
-  height: 200px; /* ?��?高度，容納鴨子�? QRCode */
+  max-width: 240px; /* ??QRCode 尺寸對�?，並?�白 */
+  height: 200px; /* ?��?高度，容納鴨子�? QRCode */
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 4px 0;
 }
 
-/* ?�個�?�?(鴨�?/QRCode) ?�在?��??�台，�??��??��?�?*/
+/* ?�個�?�?(鴨�?/QRCode) ?�在?��??�台，�??��??��?�?*/
 .modalStage {
   position: absolute;
   inset: 0;
@@ -1148,7 +1148,7 @@
   transform: translateY(8px);
   transition: opacity 0.25s ease, transform 0.25s ease;
   will-change: opacity, transform;
-  pointer-events: none; /* ?��??��??��???*/
+  pointer-events: none; /* ?��??��??��???*/
 }
 
 .modalStageVisible {
@@ -1251,7 +1251,7 @@
   }
 }
 
-/* ?��??��?窗調??*/
+/* ?��??��?窗調??*/
 @media (max-width: 480px) {
   .modalOverlay {
     padding: 12px;
@@ -1285,14 +1285,14 @@
     width: 100%;
   }
 
-  /* ?��?上�??�略縮�?以符?��?�?*/
+  /* ?��?上�??�略縮�?以符?��?�?*/
   .modalBodyStage {
     max-width: 200px;
     height: 180px;
   }
 }
 
-/* ?��?小螢幕�?窗調??*/
+/* ?��?小螢幕�?窗調??*/
 @media (max-width: 375px) {
   .modalOverlay {
     padding: 8px;
@@ -1334,7 +1334,7 @@
   }
 }
 
-/* Tab 系統�?? */
+/* Tab 系統�?? */
 .tabContainer {
   margin-top: 16px;
 }
@@ -1386,7 +1386,7 @@
   min-height: 180px;
 }
 
-/* ?�網?�?�表�?? */
+/* ?�網?�?�表�?? */
 .shortUrlList {
   background: #0f1115;
   border: 1px solid #2a2d33;
@@ -1539,7 +1539,7 @@
   }
 }
 
-/* Hover Tooltip Styles - �V�W��ܪ��R�A tooltip */
+/* Hover Tooltip Styles - �V�W��ܪ��R�A tooltip */
 .hoverTooltip {
   position: absolute;
   bottom: 100%;
@@ -1553,7 +1553,7 @@
   visibility: hidden;
   pointer-events: none;
   transition: all 0.3s ease;
-  z-index: 100;
+  z-index: 999;
   min-width: 280px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
