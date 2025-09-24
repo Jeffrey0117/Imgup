@@ -21,9 +21,7 @@ function initializeRedis() {
   try {
     redis = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100,
       enableReadyCheck: false,
-      maxLoadingTimeout: 1000,
       lazyConnect: true,
       enableOfflineQueue: false,
     });

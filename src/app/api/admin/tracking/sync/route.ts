@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { trackingService } from '@/lib/tracking-service';
-import { verifyAdminSession } from '@/utils/admin-auth';
+import { extractTokenFromRequest, verifyAdminSession } from '@/utils/admin-auth';
 
 /**
  * 追蹤數據同步 API
@@ -12,8 +12,32 @@ import { verifyAdminSession } from '@/utils/admin-auth';
 export async function POST(request: NextRequest) {
   try {
     // 驗證管理員權限
-    const authResult = await verifyAdminSession(request);
-    if (!authResult.success) {
+    let token: string | null = extractTokenFromRequest(request);
+    if (!token) {
+      token = request.cookies.get("admin_token")?.value || null;
+      if (!token) {
+        const cookieHeader = request.headers.get("cookie");
+        if (cookieHeader) {
+          const cookies = cookieHeader.split(";").map((c) => c.trim());
+          for (const cookie of cookies) {
+            if (cookie.startsWith("admin_token=")) {
+              token = cookie.split("=")[1];
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: '未授權存取' },
+        { status: 401 }
+      );
+    }
+
+    const authResult = await verifyAdminSession(token as string);
+    if (!authResult.valid) {
       return NextResponse.json(
         { success: false, error: '未授權存取' },
         { status: 401 }
@@ -52,8 +76,32 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // 驗證管理員權限
-    const authResult = await verifyAdminSession(request);
-    if (!authResult.success) {
+    let token: string | null = extractTokenFromRequest(request);
+    if (!token) {
+      token = request.cookies.get("admin_token")?.value || null;
+      if (!token) {
+        const cookieHeader = request.headers.get("cookie");
+        if (cookieHeader) {
+          const cookies = cookieHeader.split(";").map((c) => c.trim());
+          for (const cookie of cookies) {
+            if (cookie.startsWith("admin_token=")) {
+              token = cookie.split("=")[1];
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: '未授權存取' },
+        { status: 401 }
+      );
+    }
+
+    const authResult = await verifyAdminSession(token as string);
+    if (!authResult.valid) {
       return NextResponse.json(
         { success: false, error: '未授權存取' },
         { status: 401 }
