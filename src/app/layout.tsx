@@ -5,9 +5,9 @@ export const metadata: Metadata = {
   description:
     "圖鴨上床 duk.tw，台灣熱門免費圖床，支援圖片快速上傳，免註冊即可分享，穩定又方便。",
   icons: {
-    icon: "/logo-imgup2.png",
-    shortcut: "/logo-imgup2.png",
-    apple: "/logo-imgup2.png",
+    icon: "/my-icon.ico",
+    shortcut: "/my-icon.ico",
+    apple: "/my-icon.ico",
   },
   openGraph: {
     title: "圖鴨上床(duk.tw)–台灣熱門圖床｜免費上傳、圖片空間分享",
