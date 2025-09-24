@@ -136,7 +136,12 @@ export default function PreviewPage({ params }: Props) {
   // 產生代理圖片 URL (隱藏真實地址)
   const getProxyImageUrl = () => {
     const extension = mapping?.fileExtension || "";
-    return `${window.location.origin}/${params.hash}${extension}`;
+    // 檢查是否在客戶端環境
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/${params.hash}${extension}`;
+    }
+    // 在 SSR 階段返回相對路徑
+    return `/${params.hash}${extension}`;
   };
 
   // 自訂右鍵選單處理
@@ -298,7 +303,9 @@ export default function PreviewPage({ params }: Props) {
           <button
             onClick={() => {
               const extension = mapping.fileExtension || "";
-              const shortUrl = `${window.location.origin}/${params.hash}${extension}`;
+              const shortUrl = typeof window !== 'undefined'
+                ? `${window.location.origin}/${params.hash}${extension}`
+                : `/${params.hash}${extension}`;
               navigator.clipboard.writeText(shortUrl);
               alert("短網址已複製到剪貼簿");
             }}
