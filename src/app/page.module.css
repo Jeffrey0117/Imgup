@@ -81,7 +81,7 @@
 }
 
 .logo {
-  /* 移除所有裝飾樣式，保持簡潔 */
+  /* 移除?�?��?飾樣式�?保�?簡�? */
 }
 
 .titleSection {
@@ -351,7 +351,7 @@
   cursor: pointer;
 }
 
-/* 新的更顯眼按鈕樣式 */
+/* ?��??�顯?��??�樣�?*/
 @keyframes floatPulse {
   0% {
     transform: translateY(0);
@@ -695,14 +695,14 @@
 /* Tablet Portrait / Large Mobile (481px - 768px) */
 @media (max-width: 768px) {
   .container {
-    padding: 20px 16px; /* 增加左右 padding */
-    box-sizing: border-box; /* 確保 padding 包含在寬度內 */
+    padding: 20px 16px; /* 增�?左右 padding */
+    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
   }
 
   .wrap {
-    width: 100%; /* 使用 container 的完整寬度 */
-    margin: 0 auto; /* 確保置中 */
-    max-width: none; /* 移除最大寬度限制，讓 container padding 控制 */
+    width: 100%; /* 使用 container ?��??�寬�?*/
+    margin: 0 auto; /* 確�?置中 */
+    max-width: none; /* 移除?�大寬度�??��?�?container padding ?�制 */
   }
 
   .mainTitle {
@@ -766,7 +766,7 @@
   .seoSection {
     padding: 16px;
     margin: 20px auto;
-    max-width: calc(100% - 32px); /* 與 container padding 一致 */
+    max-width: calc(100% - 32px); /* ??container padding 一??*/
   }
 
   .accordionHeader {
@@ -787,13 +787,13 @@
 @media (max-width: 480px) {
   .container {
     padding: 16px 12px; /* 調整左右 padding */
-    box-sizing: border-box; /* 確保 padding 包含在寬度內 */
+    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
   }
 
   .wrap {
-    width: 100%; /* 使用 container 的完整寬度 */
+    width: 100%; /* 使用 container ?��??�寬�?*/
     margin: 0 auto;
-    max-width: none; /* 移除最大寬度限制 */
+    max-width: none; /* 移除?�大寬度�???*/
   }
 
   .logoSection {
@@ -809,12 +809,12 @@
 
   .mainTitle {
     font-size: 1.8rem;
-    text-align: center; /* 確保標題置中 */
+    text-align: center; /* 確�?標�?置中 */
   }
 
   .subTitle {
     font-size: 1rem;
-    text-align: center; /* 確保副標題置中 */
+    text-align: center; /* 確�??��?題置�?*/
   }
 
   .main {
@@ -824,11 +824,11 @@
 
   .drop {
     height: var(--drop-height-mobile);
-    margin: 0 auto; /* 確保拖曳區域置中 */
+    margin: 0 auto; /* 確�??�曳?�?�置�?*/
   }
 
   .zone {
-    text-align: center; /* 確保拖曳區域文字置中 */
+    text-align: center; /* 確�??�曳?�?��?字置�?*/
   }
 
   .hint {
@@ -854,7 +854,7 @@
 
   .header {
     padding: 12px;
-    text-align: center; /* 確保 header 內容置中 */
+    text-align: center; /* 確�? header ?�容置中 */
   }
 
   .actions {
@@ -919,7 +919,7 @@
     padding: 12px;
     font-size: 13px;
     margin: 20px auto;
-    max-width: calc(100% - 24px); /* 與 container padding 一致 */
+    max-width: calc(100% - 24px); /* ??container padding 一??*/
   }
 
   .accordionHeader {
@@ -936,14 +936,14 @@
 /* Mobile Small (up to 375px) */
 @media (max-width: 375px) {
   .container {
-    padding: 12px 8px; /* 更小的 padding */
-    box-sizing: border-box; /* 確保 padding 包含在寬度內 */
+    padding: 12px 8px; /* ?��???padding */
+    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
   }
 
   .wrap {
-    width: 100%; /* 使用 container 的完整寬度 */
+    width: 100%; /* 使用 container ?��??�寬�?*/
     margin: 0 auto;
-    max-width: none; /* 移除最大寬度限制 */
+    max-width: none; /* 移除?�大寬度�???*/
   }
 
   .logoSection {
@@ -968,7 +968,7 @@
 
   .titleSection {
     gap: 2px;
-    text-align: center; /* 確保整個標題區域置中 */
+    text-align: center; /* 確�??�個�?題�??�置�?*/
   }
 
   .zone {
@@ -1031,25 +1031,25 @@
   .seoSection {
     padding: 8px;
     margin: 16px auto;
-    max-width: calc(100% - 16px); /* 與 container padding 一致 */
+    max-width: calc(100% - 16px); /* ??container padding 一??*/
   }
 }
 
-/* 405px 以下移除 container padding */
+/* 405px 以�?移除 container padding */
 @media (max-width: 405px) {
   .container {
     padding: 0;
   }
 }
 
-/* 480px 以下移除 drop margin */
+/* 480px 以�?移除 drop margin */
 @media (max-width: 480px) {
   .drop {
     margin: 0;
   }
 }
 
-/* 上傳完畢彈窗樣式 */
+/* 上傳完畢彈�?�?? */
 .modalOverlay {
   position: fixed;
   top: 0;
@@ -1122,22 +1122,22 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  align-items: center; /* 水平置中內容，避免視覺跳動 */
+  align-items: center; /* 水平置中?�容，避?��?覺跳??*/
 }
 
-/* Modal 內容固定高度舞台，避免切換時高度跳動 */
+/* Modal ?�容?��?高度?�台，避?��??��?高度跳�? */
 .modalBodyStage {
   position: relative;
   width: 100%;
-  max-width: 240px; /* 與 QRCode 尺寸對齊，並留白 */
-  height: 200px; /* 固定高度，容納鴨子與 QRCode */
+  max-width: 240px; /* ??QRCode 尺寸對�?，並?�白 */
+  height: 200px; /* ?��?高度，容納鴨子�? QRCode */
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 4px 0;
 }
 
-/* 兩個階段 (鴨子/QRCode) 疊在同一舞台，僅切換透明度 */
+/* ?�個�?�?(鴨�?/QRCode) ?�在?��??�台，�??��??��?�?*/
 .modalStage {
   position: absolute;
   inset: 0;
@@ -1148,7 +1148,7 @@
   transform: translateY(8px);
   transition: opacity 0.25s ease, transform 0.25s ease;
   will-change: opacity, transform;
-  pointer-events: none; /* 隱藏時不可互動 */
+  pointer-events: none; /* ?��??��??��???*/
 }
 
 .modalStageVisible {
@@ -1251,7 +1251,7 @@
   }
 }
 
-/* 手機版彈窗調整 */
+/* ?��??��?窗調??*/
 @media (max-width: 480px) {
   .modalOverlay {
     padding: 12px;
@@ -1285,14 +1285,14 @@
     width: 100%;
   }
 
-  /* 手機上舞台略縮小以符合視窗 */
+  /* ?��?上�??�略縮�?以符?��?�?*/
   .modalBodyStage {
     max-width: 200px;
     height: 180px;
   }
 }
 
-/* 手機小螢幕彈窗調整 */
+/* ?��?小螢幕�?窗調??*/
 @media (max-width: 375px) {
   .modalOverlay {
     padding: 8px;
@@ -1334,7 +1334,7 @@
   }
 }
 
-/* Tab 系統樣式 */
+/* Tab 系統�?? */
 .tabContainer {
   margin-top: 16px;
 }
@@ -1386,7 +1386,7 @@
   min-height: 180px;
 }
 
-/* 短網址列表樣式 */
+/* ?�網?�?�表�?? */
 .shortUrlList {
   background: #0f1115;
   border: 1px solid #2a2d33;
@@ -1539,13 +1539,12 @@
   }
 }
 
-/* Hover Tooltip Styles - REMOVED: 靜態 tooltip 已移除，改由動態 tooltip 處理 */
-/*
+/* Hover Tooltip Styles - �V�W��ܪ��R�A tooltip */
 .hoverTooltip {
   position: absolute;
-  top: 50%;
+  bottom: 100%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%) translateY(10px);
   background: rgba(17, 17, 17, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
@@ -1558,12 +1557,13 @@
   min-width: 280px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(10px);
+  margin-bottom: 8px;
 }
 
 .drop:hover .hoverTooltip {
   opacity: 1;
   visibility: visible;
-  transform: translate(-50%, -50%) translateY(-10px);
+  transform: translateX(-50%) translateY(0);
 }
 
 .tooltipHeader {
@@ -1608,7 +1608,6 @@
 @media (max-width: 1024px) {
   .hoverTooltip {
     min-width: 240px;
-    transform: translate(-50%, -50%) translateY(-5px);
   }
 
   .tooltipHeader {
@@ -1631,4 +1630,3 @@
     display: none;
   }
 }
-*/

@@ -485,6 +485,23 @@ export default function Home() {
               </span>
               <span className={styles.hintShort}>多檔上傳</span>
             </div>
+            {/* Tooltip */}
+            <div className={styles.hoverTooltip}>
+              <div className={styles.tooltipHeader}>
+                上傳規則說明
+              </div>
+              <div className={styles.tooltipContent}>
+                <div className={styles.tooltipItem}>
+                  <strong>支援格式：</strong> PNG, JPG, WebP
+                </div>
+                <div className={styles.tooltipItem}>
+                  <strong>檔案大小：</strong> 無限制
+                </div>
+                <div className={styles.tooltipItem}>
+                  <strong>上傳方式：</strong> 拖曳或點擊選擇
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className={styles.rightPanel}>
