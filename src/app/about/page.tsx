@@ -34,6 +34,32 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
+  return (
+    <>
+      {/* JSON-LD 結構化資料 - Organization Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "UPPER",
+            "url": "https://duk.tw",
+            "logo": "https://duk.tw/logo-imgup.png",
+            "description": "提供免費圖床服務的台灣團隊，專為內容創作者和開發者設計",
+            "foundingDate": "2024",
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "email": "contact@duk.tw",
+              "contactType": "customer service"
+            },
+            "sameAs": [
+              "https://twitter.com/duk_tw"
+            ]
+          })
+        }}
+      />
+      <div className={styles.container}>
     <div className={styles.container}>
       <Header />
 

@@ -415,6 +415,32 @@ export default function Home() {
 
   return (
     <div className={styles.container}>
+      {/* JSON-LD 結構化資料 - WebSite Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "duk.tw 圖鴨上床",
+            "description": "免費圖床服務，提供圖片上傳、Markdown生成、短網址等功能",
+            "url": "https://duk.tw",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://duk.tw/search?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "UPPER",
+              "url": "https://duk.tw"
+            }
+          })
+        }}
+      />
+      <div className={styles.wrap}>
+  return (
+    <div className={styles.container}>
       <div className={styles.wrap}>
         <div className={styles.header}>
           <div className={styles.logoSection}>

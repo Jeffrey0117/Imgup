@@ -165,7 +165,7 @@ export default function MarkdownGuidePage() {
               <div className={styles.subSection}>
                 <h3>圖片大小控制</h3>
                 <p>雖然 Markdown 標準語法不支援圖片大小控制，但許多平台提供擴展語法：</p>
-                <pre className={styles.codeBlock}><img src="https://duk.tw/AbCdEf.jpg" width="400" alt="縮小圖片"></pre>
+                <pre className={styles.codeBlock}>&lt;img src="https://duk.tw/AbCdEf.jpg" width="400" alt="縮小圖片"&gt;</pre>
                 <p>建議使用 HTML img 標籤來精確控制圖片尺寸。</p>
               </div>
 

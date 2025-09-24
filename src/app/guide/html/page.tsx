@@ -60,7 +60,7 @@ export default function HtmlGuidePage() {
 
               <div className={styles.subSection}>
                 <h3>基本語法</h3>
-                <p>HTML 中插入圖片最基本的標籤是 <img>：</p>
+                <p>HTML 中插入圖片最基本的標籤是 &lt;img&gt;：</p>
                 <pre className={styles.codeBlock}><img src="圖片網址" alt="替代文字" /></pre>
                 <p>這是最簡單的形式，但實際使用時我們會加入更多屬性來優化體驗。</p>
               </div>
@@ -145,13 +145,13 @@ export default function HtmlGuidePage() {
               <div className={styles.subSection}>
                 <h3>Lazy Loading 實作</h3>
                 <p>在長頁面中使用延遲載入：</p>
-                <pre className={styles.codeBlock}><!-- 在可視區域外的圖片 -->
-<img src="https://duk.tw/LazyImg.jpg" alt="延遲載入圖片"
-     loading="lazy" />
+                <pre className={styles.codeBlock}>&lt;!-- 在可視區域外的圖片 --&gt;
+&lt;img src="https://duk.tw/LazyImg.jpg" alt="延遲載入圖片"
+     loading="lazy" /&gt;
 
-<!-- 重要的首屏圖片 -->
-<img src="https://duk.tw/Important.jpg" alt="重要圖片"
-     loading="eager" /></pre>
+&lt;!-- 重要的首屏圖片 --&gt;
+&lt;img src="https://duk.tw/Important.jpg" alt="重要圖片"
+     loading="eager" /&gt;</pre>
               </div>
 
               <div className={styles.subSection}>

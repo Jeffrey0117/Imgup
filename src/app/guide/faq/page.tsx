@@ -35,6 +35,109 @@ export const metadata: Metadata = {
 
 export default function FaqGuidePage() {
   return (
+    <>
+      {/* JSON-LD 結構化資料 - FAQPage Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "什麼是圖床？為什麼需要圖床？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "圖床（Image Hosting）是專門用來儲存和分享圖片的網路服務。傳統方式將圖片直接放在網站空間中會佔用大量頻寬和儲存空間，還可能影響網站載入速度。使用圖床可以將圖片集中管理，並利用 CDN 加速讓圖片載入更快。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "duk.tw 是免費的嗎？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "是的！duk.tw 提供完全免費的圖床服務，無需註冊帳號即可使用。不過為了防止濫用，我們可能會對極端大量使用進行限制。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "需要註冊帳號才能使用嗎？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "不需要！duk.tw 採用零註冊設計，你可以直接開啟網站開始上傳圖片。這讓使用體驗更加流暢便捷。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "一次可以上傳多少張圖片？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "duk.tw 支援批量上傳，你可以一次選擇和上傳多張圖片。系統會自動處理這些圖片，並為每張圖片生成對應的短網址。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "有檔案大小限制嗎？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "雖然我們沒有設定嚴格的檔案大小上限，但建議單張圖片不要超過 10MB。過大的檔案會影響上傳速度，也可能造成瀏覽器的效能問題。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "上傳後會得到什麼？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "上傳完成後你會獲得：• 短網址：如 https://duk.tw/AbCdEf.jpg • Markdown 語法：![圖片描述](https://duk.tw/AbCdEf.jpg) • HTML 標籤：<img src=\"https://duk.tw/AbCdEf.jpg\" alt=\"圖片描述\" />"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "短網址會過期嗎？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "我們不會主動刪除任何圖片，所有上傳的圖片都會永久保存。當然，如果你有特殊需求，也可以設定到期時間讓圖片自動刪除。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "如何設定圖片到期時間？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "在上傳前，你可以設定圖片的保留期限。 duk.tw 提供小時、天或月為單位，讓你靈活控制圖片的保存時間。過期後圖片會自動刪除。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "支援密碼保護嗎？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "是的！你可以為上傳的圖片設定存取密碼。訪問者需要輸入正確密碼才能查看圖片內容，這為你的圖片提供了額外的安全保護。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "我的圖片安全嗎？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "我們非常重視用戶隱私和資料安全：• 使用 HTTPS 加密傳輸 • 圖片儲存在可靠的第三方服務 • 不會追蹤或記錄個人資訊 • 除非法律要求，否則不會查看圖片內容"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "會收集我的個人資料嗎？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "不會！duk.tw 採用零註冊設計，我們不會收集任何個人資料，包括 IP 位址、瀏覽器資訊等。我們只處理你上傳的圖片檔案。"
+                }
+              }
+            ]
+          })
+        }}
+      />
+      <div className={styles.container}>
+  return (
     <div className={styles.container}>
       <Header />
 
