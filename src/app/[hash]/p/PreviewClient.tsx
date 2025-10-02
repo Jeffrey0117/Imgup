@@ -221,7 +221,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
             <button
               onClick={() => {
                 navigator.clipboard.writeText(shortUrlWithExt);
-                alert("短網址已複製到剪貼簿（含副檔名）");
+                alert("已複製");
               }}
               className={styles.actionBtn}
             >
