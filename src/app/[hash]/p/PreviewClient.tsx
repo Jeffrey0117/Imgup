@@ -93,7 +93,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     }
   }, [hash, normalizedExt]);
 
-  // 不帶副檔名的短網址（作為圖片載入的回退方案）
+  // 不帶副檔名的短網址（圖片載入回退）
   const shortUrlNoExt = useMemo(() => {
     try {
       const origin = window.location.origin;
@@ -103,14 +103,42 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     }
   }, [hash]);
 
-  // 僅在客戶端建立代理短鏈，避免在 SSR 階段存取 window
+
+  // 僅在客戶端預載圖，再決定實際使用的 URL（先帶副檔名，失敗再用不帶副檔名）
   useEffect(() => {
-    try {
+    if (!shortUrlWithExt || !shortUrlNoExt) return;
+
+    let cancelled = false;
+
+    const tryPreload = (url: string) =>
+      new Promise<boolean>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now(); // 防止快取干擾
+      });
+
+    (async () => {
+      const okExt = await tryPreload(shortUrlWithExt);
+      if (cancelled) return;
+      if (okExt) {
+        setImageSrc(shortUrlWithExt);
+        return;
+      }
+      const okNoExt = await tryPreload(shortUrlNoExt);
+      if (cancelled) return;
+      if (okNoExt) {
+        setImageSrc(shortUrlNoExt);
+        return;
+      }
+      // 兩者都失敗，交由 onError 顯示占位圖與錯誤
       setImageSrc(shortUrlWithExt);
-    } catch {
-      // 忽略（保持為空字串以避免回退到真實來源）
-    }
-  }, [shortUrlWithExt]);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shortUrlWithExt, shortUrlNoExt]);
 
   // 右鍵自訂選單（僅在客戶端掛載）
   useEffect(() => {
