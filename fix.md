@@ -115,6 +115,28 @@ providers: Array.from(new Set(backupUrls.backups.map(b => b.provider)))
 - fix: 預覽頁複製短網址包含副檔名、toast 顯示「已複製」
 # 預覽頁「複製短網址未帶副檔名」問題分析與修正方案
 
+新增：手機端（/hash/p）圖片載入失敗，但桌機正常 的差異分析與對策
+- 現象
+  - 範例：https://duk.tw/vphB76/p 在手機載入圖片失敗；桌機正常顯示
+- 可能原因（依優先序）
+  1) 行動瀏覽器對快取/重導較嚴格，首次以「帶副檔名短鏈」請求命中 404 被快取，後續不重試
+  2) 個別 hash 僅支援 /hash（無副檔名）才能命中智慧路由；桌機上曾命中快取，手機為首次請求
+  3) 行動 UA 的 Accept/Content-Type 差異導致後端路由行為不同（例如 webp 協商）
+  4) iOS Safari 對 onError/fallback 時機與資源快取行為較嚴格，導致未觸發回退或回退仍被快取 404
+- 決策
+  - 前端在設定 src 前，先以 Image 預載測試 URL 是否可用（避免直接掛 src 觸發 404 快取）
+  - 測試順序：帶副檔名 → 不帶副檔名；均失敗才顯示占位圖與錯誤
+  - 加上時間戳查詢參數避免 404 快取干擾（_t=Date.now）
+  - onError 仍保留一次性回退保險
+- 實作
+  - 預載檢查邏輯新增於 [`PreviewClient.tsx`](src/app/[hash]/p/PreviewClient.tsx:96)
+  - 新增 `shortUrlNoExt` 回退 URL（[`PreviewClient.tsx`](src/app/[hash]/p/PreviewClient.tsx:86)）
+  - onError 中保留「帶副檔名 → 無副檔名」一次回退（[`PreviewClient.tsx`](src/app/[hash]/p/PreviewClient.tsx:245)）
+- 進一步建議（後端）
+  - 後端對同一 hash 同時支援 /hash 與 /hash.ext，回應 200 並正確 Content-Type
+  - 對 404 禁止過久快取（Cache-Control: no-store 或短 TTL）
+  - 若使用重導，確保行動 UA 上 redirection/HEAD/GET 一致
+
 附註：/hash/p 預覽頁圖片載入失敗原因與修正
 - 現象：如 https://duk.tw/QhoXtc/p 顯示「圖片載入失敗」
 - 可能原因：
@@ -157,3 +179,52 @@ providers: Array.from(new Set(backupUrls.backups.map(b => b.provider)))
 實作項目
 - 調整 [`PreviewClient.tsx`](src/app/[hash]/p/PreviewClient.tsx:30) 的 `normalizedExt` 計算，加入多層 fallback 與白名單
 - 保留現有「已複製」提示
+# 手機與部分頁面「先破圖、數秒後才出現圖片」分析與對策
+
+案例
+- 例：`https://duk.tw/3v3T1v/p` 頁面載入初期先出現破圖圖示，約數秒後才顯示圖片。
+
+根因分析
+1) 初始 img src 空字串造成瀏覽器先顯示破圖
+   - 現況：`imageSrc` 初始值為空字串 ""，React 仍會渲染 `<img src="">`，大多數瀏覽器直接顯示破圖占位。
+   - 我們之後才用預載完成的實際 URL（帶副檔名或不帶）去 `setImageSrc`，因此在這段空窗期看到破圖。
+
+2) 預載策略引入額外延遲
+   - 我們為了避免 404 快取與行動端差異，對「帶副檔名」與「不帶副檔名」各做一次預載測試，且附加 `_t=Date.now()` 破快取參數。
+   - 這會多一次 DNS/TLS/HEAD/GET 的等待，導致「決定 src 前」的時間拉長。
+
+3) 404 → 回退二次測試，延遲疊加
+   - 若帶副檔名回 404，再嘗試不帶副檔名，會再追加一次網路等待。若網路/伺服器延遲明顯，體感就像「先破圖、過幾秒才出現」。
+
+4) 行動端網路特性疊加
+   - 行動網路、3G/4G 切換、DNS 快取不一致、TLS Session 不共用等，都會讓首次請求更慢，放大上述延遲。
+
+對策（前端）
+- 目標：在決定最終 src 前，頁面不要渲染 `<img>`，而是顯示「載入中占位」或骨架，避免破圖。
+- 具體作法：
+  1) 將 `imageSrc` 初值改為 `null`（或 `undefined`），在未決定時不渲染 `<img>` 元素，改渲染一個 placeholder 區塊（例如固定高度/比例的灰色底或 spinner）。
+  2) 預載測試完成後，再一次性設定 `imageSrc` 為可用 URL（帶副檔名優先，不通則不帶），再渲染 `<img>`。
+  3) onError 還是保留一次性回退（若預載與實際載入行為不一致時仍可救援）。
+  4) 針對預載的 `_t=Date.now()`：在帶副檔名首次測試時可先不加破快取參數，若失敗再在不帶副檔名上加 `_t` 測試，降低「成功路徑」延遲。
+- 預期效果：
+  - 初始不會看到破圖，而是乾淨的載入占位，決定好 URL 後再一次性顯示圖片，避免「破圖→幾秒後才出現」的不佳體驗。
+
+對策（後端建議）
+- 讓 `/hash` 與 `/hash.ext` 都能 200 成功並回正確 Content-Type（路由兼容）。
+- 對 404 設置不快取（`Cache-Control: no-store` 或極短 TTL），避免行動端把 404 強快取。
+- 若使用重導，確保行動端 UA 下 HEAD/GET 一致性良好，避免 HEAD 200 但 GET 慢或 30x 影響體感。
+
+實作計畫（前端改動）
+- 調整 `PreviewClient.tsx`：
+  - `const [imageSrc, setImageSrc] = useState<string | null>(null);`
+  - 未決定 URL 前渲染占位（不渲染 `<img>`）
+  - 預載策略：帶副檔名 → 不帶副檔名（僅在第二次才加 `_t`）
+  - 測試成功才 setImageSrc，並渲染 `<img>`
+  - onError 保留一次回退保險（極端情況）
+- 這是非破壞式改動，不影響「複製短網址（含副檔名）」功能。
+
+執行順序
+1) 調整 `imageSrc` 初始值與條件渲染，加入載入占位
+2) 優化預載破快取參數，只在第二次才加 `_t`
+3) 保留 onError 一次回退
+4) 驗證手機端/桌機端一致性，確認不再出現「先破圖再出現」的體感
