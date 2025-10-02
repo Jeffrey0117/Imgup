@@ -27,13 +27,61 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   const [imageSrc, setImageSrc] = useState<string>("");
   const imageRef = useRef<HTMLImageElement>(null);
 
-  // 規範化副檔名：確保有 dot 且為小寫，若不存在則為空字串
+  // 規範化副檔名：優先 fileExtension，否則 fallback filename -> url 推導；白名單過濾
   const normalizedExt = useMemo(() => {
-    const raw = (mapping?.fileExtension || "").toString().trim();
-    if (!raw) return "";
-    const ext = raw.startsWith(".") ? raw : `.${raw}`;
-    return ext.toLowerCase();
-  }, [mapping?.fileExtension]);
+    const ALLOWED = new Set([
+      ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg",
+      ".bmp", ".ico", ".tif", ".tiff", ".avif", ".heic", ".heif"
+    ]);
+
+    const normalize = (ext: string | null | undefined) => {
+      const raw = (ext || "").toString().trim();
+      if (!raw) return "";
+      const withDot = raw.startsWith(".") ? raw : `.${raw}`;
+      const lower = withDot.toLowerCase();
+      return ALLOWED.has(lower) ? lower : "";
+    };
+
+    const extractFromFilename = (name: string | null | undefined) => {
+      const n = (name || "").toString().trim();
+      if (!n) return "";
+      const m = n.match(/\.([a-zA-Z0-9]+)$/);
+      return normalize(m ? m[1] : "");
+    };
+
+    const extractFromUrl = (url: string | null | undefined) => {
+      const u = (url || "").toString().trim();
+      if (!u) return "";
+      try {
+        const parsed = new URL(u);
+        const pathname = parsed.pathname || "";
+        const basename = pathname.split("/").pop() || "";
+        const m = basename.match(/\.([a-zA-Z0-9]+)$/);
+        return normalize(m ? m[1] : "");
+      } catch {
+        // 若不是絕對 URL，嘗試當作路徑處理
+        const pathname = u.split("?")[0].split("#")[0];
+        const basename = pathname.split("/").pop() || "";
+        const m = basename.match(/\.([a-zA-Z0-9]+)$/);
+        return normalize(m ? m[1] : "");
+      }
+    };
+
+    // 1) 直接用 fileExtension
+    const byExplicit = normalize(mapping?.fileExtension);
+    if (byExplicit) return byExplicit;
+
+    // 2) 從 filename 推導
+    const byFilename = extractFromFilename(mapping?.filename);
+    if (byFilename) return byFilename;
+
+    // 3) 從原始 url 推導
+    const byUrl = extractFromUrl(mapping?.url);
+    if (byUrl) return byUrl;
+
+    // 無法推導則不附加
+    return "";
+  }, [mapping?.fileExtension, mapping?.filename, mapping?.url]);
 
   // 可複製/分享的短網址（一定帶副檔名的版本）
   const shortUrlWithExt = useMemo(() => {
