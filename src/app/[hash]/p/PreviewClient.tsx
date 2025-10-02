@@ -93,6 +93,16 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     }
   }, [hash, normalizedExt]);
 
+  // 不帶副檔名的短網址（作為圖片載入的回退方案）
+  const shortUrlNoExt = useMemo(() => {
+    try {
+      const origin = window.location.origin;
+      return `${origin}/${hash}`;
+    } catch {
+      return `/${hash}`;
+    }
+  }, [hash]);
+
   // 僅在客戶端建立代理短鏈，避免在 SSR 階段存取 window
   useEffect(() => {
     try {
@@ -244,9 +254,15 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
               className={styles.image}
               onError={(e) => {
                 const img = e.currentTarget as HTMLImageElement;
+                // 第一次錯誤：由「帶副檔名」回退到「不帶副檔名」
+                if (!img.dataset.triedNoExt) {
+                  img.dataset.triedNoExt = "true";
+                  img.src = shortUrlNoExt;
+                  return;
+                }
+                // 第二次仍失敗：改為透明占位圖並顯示錯誤
                 if (!img.dataset.failedOnce) {
                   img.dataset.failedOnce = "true";
-                  // 使用透明占位圖，避免任何情況下落回真實來源 URL
                   img.src =
                     "data:image/svg+xml;charset=utf-8," +
                     encodeURIComponent(
