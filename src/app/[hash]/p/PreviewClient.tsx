@@ -24,7 +24,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   const [passwordRequired, setPasswordRequired] = useState(!!mapping.password);
   const [passwordInput, setPasswordInput] = useState("");
   // 僅用代理短鏈作為圖片來源，避免任何情況下暴露原始來源
-  const [imageSrc, setImageSrc] = useState<string>("");
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
   // 規範化副檔名：優先 fileExtension，否則 fallback filename -> url 推導；白名單過濾
@@ -104,35 +104,27 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   }, [hash]);
 
 
-  // 僅在客戶端預載圖，再決定實際使用的 URL（先帶副檔名，失敗再用不帶副檔名）
   useEffect(() => {
     if (!shortUrlWithExt || !shortUrlNoExt) return;
 
+    setImageSrc(shortUrlWithExt);
+
     let cancelled = false;
 
-    const tryPreload = (url: string) =>
+    const tryPreload = (url: string, addBust: boolean) =>
       new Promise<boolean>((resolve) => {
         const img = new Image();
         img.onload = () => resolve(true);
         img.onerror = () => resolve(false);
-        img.src = url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now(); // 防止快取干擾
+        img.src = addBust ? url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now() : url;
       });
 
     (async () => {
-      const okExt = await tryPreload(shortUrlWithExt);
+      const okExt = await tryPreload(shortUrlWithExt, false);
       if (cancelled) return;
-      if (okExt) {
-        setImageSrc(shortUrlWithExt);
-        return;
-      }
-      const okNoExt = await tryPreload(shortUrlNoExt);
-      if (cancelled) return;
-      if (okNoExt) {
+      if (!okExt) {
         setImageSrc(shortUrlNoExt);
-        return;
       }
-      // 兩者都失敗，交由 onError 顯示占位圖與錯誤
-      setImageSrc(shortUrlWithExt);
     })();
 
     return () => {
@@ -174,7 +166,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
         openItem.onmouseover = () => (openItem.style.background = "#f0f0f0");
         openItem.onmouseout = () => (openItem.style.background = "transparent");
         openItem.onclick = () => {
-          window.open(imageSrc, "_blank");
+          window.open(imageSrc || shortUrlWithExt, "_blank");
           menu.remove();
         };
 
@@ -188,7 +180,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
         copyItem.onmouseover = () => (copyItem.style.background = "#f0f0f0");
         copyItem.onmouseout = () => (copyItem.style.background = "transparent");
         copyItem.onclick = () => {
-          navigator.clipboard.writeText(imageSrc);
+          navigator.clipboard.writeText(imageSrc || shortUrlWithExt);
           alert("圖片連結已複製到剪貼簿");
           menu.remove();
         };
@@ -275,32 +267,58 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
           </div>
 
           <div className={styles.imageWrapper}>
-            <img
-              ref={imageRef}
-              src={imageSrc}
-              alt={mapping.filename}
-              className={styles.image}
-              onError={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                // 第一次錯誤：由「帶副檔名」回退到「不帶副檔名」
-                if (!img.dataset.triedNoExt) {
-                  img.dataset.triedNoExt = "true";
-                  img.src = shortUrlNoExt;
-                  return;
-                }
-                // 第二次仍失敗：改為透明占位圖並顯示錯誤
-                if (!img.dataset.failedOnce) {
-                  img.dataset.failedOnce = "true";
-                  img.src =
-                    "data:image/svg+xml;charset=utf-8," +
-                    encodeURIComponent(
-                      "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='100%' height='100%' fill='transparent'/></svg>"
-                    );
-                }
-                setError("圖片載入失敗");
-              }}
-              onDragStart={(e) => e.preventDefault()}
-            />
+            {imageSrc ? (
+              <img
+                ref={imageRef}
+                src={imageSrc}
+                alt={mapping.filename}
+                className={styles.image}
+                onError={(e) => {
+                  const img = e.currentTarget as HTMLImageElement;
+                  // 第一次錯誤：由「帶副檔名」回退到「不帶副檔名」
+                  if (!img.dataset.triedNoExt) {
+                    img.dataset.triedNoExt = "true";
+                    img.src = shortUrlNoExt;
+                    return;
+                  }
+                  // 第二次仍失敗：改為透明占位圖並顯示錯誤
+                  if (!img.dataset.failedOnce) {
+                    img.dataset.failedOnce = "true";
+                    img.src =
+                      "data:image/svg+xml;charset=utf-8," +
+                      encodeURIComponent(
+                        "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='100%' height='100%' fill='transparent'/></svg>"
+                      );
+                  }
+                  setError("圖片載入失敗");
+                }}
+                onDragStart={(e) => e.preventDefault()}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  paddingTop: "56.25%",
+                  background: "#f3f4f6",
+                  borderRadius: 8,
+                  position: "relative",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#9ca3af",
+                    fontSize: 14,
+                  }}
+                >
+                  圖片載入中…
+                </div>
+              </div>
+            )}
           </div>
 
           <div className={styles.actions}>
