@@ -48,7 +48,7 @@ export async function GET(
       shortUrl: mapping.shortUrl,
       createdAt: new Date(mapping.createdAt).toISOString(),
       expiresAt: mapping.expiresAt ? new Date(mapping.expiresAt).toISOString() : null,
-      hasPassword: !!mapping.password, // 只返回是否有密碼，不返回密碼本身
+      password: mapping.password ?? null,
       fileExtension: (mapping as any).fileExtension ?? null,
     };
 

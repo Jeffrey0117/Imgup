@@ -10,7 +10,7 @@ export interface Mapping {
   fileExtension?: string | null;
   createdAt: string; // ISO string from server
   expiresAt?: string | null;
-  hasPassword?: boolean;
+  password?: string | null;
   shortUrl: string;
 }
 
@@ -21,10 +21,8 @@ interface PreviewClientProps {
 
 export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   const [error, setError] = useState<string | null>(null);
-  const [passwordRequired, setPasswordRequired] = useState(false);
+  const [passwordRequired, setPasswordRequired] = useState(!!mapping.password);
   const [passwordInput, setPasswordInput] = useState("");
-  const [isPasswordVerified, setIsPasswordVerified] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const imageRef = useRef<HTMLImageElement>(null);
 
   // 規範化副檔名：優先 fileExtension，否則 fallback filename -> url 推導；白名單過濾
@@ -103,35 +101,6 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
 
   const imageUrl = useMemo(() => shortUrlWithExt, [shortUrlWithExt]);
 
-  // 檢查是否需要密碼
-  useEffect(() => {
-    const checkPasswordStatus = async () => {
-      try {
-        // 檢查是否有驗證 cookie
-        const cookieAuth = document.cookie
-          .split('; ')
-          .find(row => row.startsWith(`auth_${hash}=`));
-        
-        if (cookieAuth) {
-          setIsPasswordVerified(true);
-          setPasswordRequired(false);
-        } else if (mapping.hasPassword) {
-          setPasswordRequired(true);
-          setIsPasswordVerified(false);
-        } else {
-          setPasswordRequired(false);
-          setIsPasswordVerified(true);
-        }
-      } catch (error) {
-        console.error("檢查密碼狀態錯誤:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkPasswordStatus();
-  }, [hash, mapping.hasPassword]);
-
   // 右鍵自訂選單（僅在客戶端掛載）
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
@@ -207,50 +176,20 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     };
   }, [imageUrl, shortUrlWithExt]);
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
+  const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!mapping) return;
-    
-    setError(null);
-    try {
-      const response = await fetch("/api/verify-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          hash,
-          password: passwordInput,
-        }),
-      });
-
-      if (response.ok) {
-        setPasswordRequired(false);
-        setIsPasswordVerified(true);
-        setError(null);
-      } else {
-        const data = await response.json();
-        setError(data.error || "密碼錯誤");
-      }
-    } catch (error) {
-      console.error("密碼驗證錯誤:", error);
-      setError("驗證失敗，請稍後再試");
+    if (passwordInput === (mapping.password || "")) {
+      setPasswordRequired(false);
+      setError(null);
+    } else {
+      setError("密碼錯誤");
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className={styles.container}>
-        <div style={{ textAlign: 'center', padding: '50px' }}>
-          <p>載入中...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={styles.container}>
-      {passwordRequired && !isPasswordVerified ? (
+      {passwordRequired ? (
         <div className={styles.passwordForm}>
           <h2>🔒 需要密碼</h2>
           <p>這張圖片受到密碼保護</p>

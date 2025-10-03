@@ -220,20 +220,6 @@ export async function GET(
     // 使用統一介面處理請求
     const response = await unifiedAccess.accessImage(accessRequest);
 
-    // 檢查是否需要密碼驗證
-    const mapping = response.data as ImageMapping | null;
-    if (mapping?.password) {
-      // 檢查是否有驗證 cookie
-      const cookies = req.cookies;
-      const authCookie = cookies.get(`auth_${rawHash}`);
-      
-      if (!authCookie || authCookie.value !== 'verified') {
-        // 需要密碼但沒有驗證，重定向到預覽頁面
-        return NextResponse.redirect(new URL(`/${rawHash}/p`, req.url), {
-          status: 302,
-        });
-      }
-    }
 
     // 根據回應類型處理結果
     switch (response.type) {
