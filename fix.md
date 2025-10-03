@@ -562,3 +562,95 @@ export default function NotFound() {
 **這份規劃確保 404 頁面不再是體驗斷層，而是品牌價值的延伸。**
 
 **下一步**：請確認要使用的文案風格與設計方向，我將立即建立 `not-found.tsx` 並整合樣式。
+
+---
+
+## 🚨 新發現問題：密碼保護功能失效
+
+### 問題描述
+**發現日期**：2025/10/3
+
+**問題現象**：
+- 即使設定了密碼的圖片，仍可以直接查看
+- 密碼保護機制未正常運作
+- 使用者設定的密碼形同虛設
+
+### 初步分析
+
+#### 1. 可能原因
+- **前端驗證邏輯問題**：密碼檢查可能只在前端進行，容易被繞過
+- **API 權限控制缺失**：後端 API 未正確驗證密碼
+- **Session/Token 管理問題**：密碼驗證後的授權狀態未正確管理
+- **路由保護不完整**：可能存在直接訪問圖片的路徑
+
+#### 2. 影響範圍
+- **安全性風險**：敏感圖片可能被未授權訪問
+- **功能可靠性**：核心功能之一失效
+- **用戶信任度**：可能影響用戶對產品的信心
+
+### 建議解決方案
+
+#### 方案 A：完整的後端密碼驗證（推薦）
+```typescript
+// API 端點應該要有的邏輯
+// src/app/api/image/[hash]/route.ts
+export async function GET(request: Request, { params }: { params: { hash: string } }) {
+  const mapping = await getMapping(params.hash);
+  
+  if (mapping.password) {
+    const authHeader = request.headers.get('Authorization');
+    const providedPassword = extractPassword(authHeader);
+    
+    if (!providedPassword || !verifyPassword(providedPassword, mapping.password)) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+  }
+  
+  // 返回圖片內容
+}
+```
+
+#### 方案 B：中間件層級的保護
+```typescript
+// middleware.ts
+export function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  
+  // 檢查是否為需要密碼保護的路徑
+  if (pathname.match(/^\/[a-zA-Z0-9]+\/(p)?$/)) {
+    // 驗證密碼邏輯
+  }
+}
+```
+
+### 修復計劃
+
+#### 階段一：問題診斷（1小時）
+1. 檢查現有密碼驗證流程
+2. 追蹤從設定密碼到訪問圖片的完整路徑
+3. 確認是前端還是後端的問題
+
+#### 階段二：實作修復（2-3小時）
+1. 強化後端 API 的密碼驗證
+2. 確保所有訪問路徑都經過驗證
+3. 實作安全的 session/token 機制
+
+#### 階段三：測試驗證（1小時）
+1. 測試各種訪問場景
+2. 確認無法繞過密碼保護
+3. 驗證正常使用流程不受影響
+
+### 臨時應對措施
+在修復完成前，建議：
+1. 提醒用戶暫時不要上傳敏感內容
+2. 在介面上標註密碼功能維護中
+3. 記錄所有密碼保護的使用情況以便追蹤
+
+### 優先級評估
+- **嚴重程度**：高（核心功能失效）
+- **影響範圍**：所有使用密碼功能的用戶
+- **建議處理時程**：應儘快修復
+
+---
+
+**注意**：此問題暫不修改，僅先記錄與規劃，待確認後再進行修復。
