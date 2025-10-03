@@ -23,7 +23,6 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [passwordRequired, setPasswordRequired] = useState(!!mapping.password);
   const [passwordInput, setPasswordInput] = useState("");
-  const [imageLoaded, setImageLoaded] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
 
   // 規範化副檔名：優先 fileExtension，否則 fallback filename -> url 推導；白名單過濾
@@ -236,23 +235,17 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
             </p>
           </div>
 
-          <div className={styles.imageWrapper} style={{ position: "relative" }}>
+          <div className={styles.imageWrapper}>
             <img
               ref={imageRef}
               src={imageUrl}
               alt={mapping.filename}
               className={styles.image}
-              style={{
-                opacity: imageLoaded ? 1 : 0,
-                transition: "opacity 150ms ease-in",
-              }}
-              onLoad={() => setImageLoaded(true)}
               onError={(e) => {
                 const img = e.currentTarget as HTMLImageElement;
                 if (!img.dataset.triedNoExt) {
                   img.dataset.triedNoExt = "true";
                   img.src = shortUrlNoExt;
-                  setImageLoaded(false);
                   return;
                 }
                 if (!img.dataset.failedOnce) {
@@ -267,23 +260,6 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
               }}
               onDragStart={(e) => e.preventDefault()}
             />
-            {!imageLoaded && (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "#f3f4f6",
-                  borderRadius: 8,
-                  color: "#9ca3af",
-                  fontSize: 14,
-                }}
-              >
-                圖片載入中…
-              </div>
-            )}
           </div>
 
           <div className={styles.actions}>

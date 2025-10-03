@@ -1630,3 +1630,21 @@
     display: none;
   }
 }
+
+.image {
+  width: 100%;
+  height: auto;
+  display: block;
+  animation: imageFadeIn 180ms ease-out forwards;
+}
+
+@keyframes imageFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
