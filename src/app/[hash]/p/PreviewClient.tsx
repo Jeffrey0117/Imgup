@@ -23,8 +23,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [passwordRequired, setPasswordRequired] = useState(!!mapping.password);
   const [passwordInput, setPasswordInput] = useState("");
-  // 僅用代理短鏈作為圖片來源，避免任何情況下暴露原始來源
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
 
   // 規範化副檔名：優先 fileExtension，否則 fallback filename -> url 推導；白名單過濾
@@ -83,7 +82,6 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     return "";
   }, [mapping?.fileExtension, mapping?.filename, mapping?.url]);
 
-  // 可複製/分享的短網址（一定帶副檔名的版本）
   const shortUrlWithExt = useMemo(() => {
     try {
       const origin = window.location.origin;
@@ -93,7 +91,6 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     }
   }, [hash, normalizedExt]);
 
-  // 不帶副檔名的短網址（圖片載入回退）
   const shortUrlNoExt = useMemo(() => {
     try {
       const origin = window.location.origin;
@@ -103,34 +100,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     }
   }, [hash]);
 
-
-  useEffect(() => {
-    if (!shortUrlWithExt || !shortUrlNoExt) return;
-
-    setImageSrc(shortUrlWithExt);
-
-    let cancelled = false;
-
-    const tryPreload = (url: string, addBust: boolean) =>
-      new Promise<boolean>((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve(true);
-        img.onerror = () => resolve(false);
-        img.src = addBust ? url + (url.includes("?") ? "&" : "?") + "_t=" + Date.now() : url;
-      });
-
-    (async () => {
-      const okExt = await tryPreload(shortUrlWithExt, false);
-      if (cancelled) return;
-      if (!okExt) {
-        setImageSrc(shortUrlNoExt);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [shortUrlWithExt, shortUrlNoExt]);
+  const imageUrl = useMemo(() => shortUrlWithExt, [shortUrlWithExt]);
 
   // 右鍵自訂選單（僅在客戶端掛載）
   useEffect(() => {
@@ -166,7 +136,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
         openItem.onmouseover = () => (openItem.style.background = "#f0f0f0");
         openItem.onmouseout = () => (openItem.style.background = "transparent");
         openItem.onclick = () => {
-          window.open(imageSrc || shortUrlWithExt, "_blank");
+          window.open(imageUrl, "_blank");
           menu.remove();
         };
 
@@ -180,7 +150,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
         copyItem.onmouseover = () => (copyItem.style.background = "#f0f0f0");
         copyItem.onmouseout = () => (copyItem.style.background = "transparent");
         copyItem.onclick = () => {
-          navigator.clipboard.writeText(imageSrc || shortUrlWithExt);
+          navigator.clipboard.writeText(imageUrl);
           alert("圖片連結已複製到剪貼簿");
           menu.remove();
         };
@@ -205,7 +175,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     return () => {
       document.removeEventListener("contextmenu", handleContextMenu);
     };
-  }, [imageSrc]);
+  }, [imageUrl, shortUrlWithExt]);
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,57 +236,52 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
             </p>
           </div>
 
-          <div className={styles.imageWrapper}>
-            {imageSrc ? (
-              <img
-                ref={imageRef}
-                src={imageSrc}
-                alt={mapping.filename}
-                className={styles.image}
-                onError={(e) => {
-                  const img = e.currentTarget as HTMLImageElement;
-                  // 第一次錯誤：由「帶副檔名」回退到「不帶副檔名」
-                  if (!img.dataset.triedNoExt) {
-                    img.dataset.triedNoExt = "true";
-                    img.src = shortUrlNoExt;
-                    return;
-                  }
-                  // 第二次仍失敗：改為透明占位圖並顯示錯誤
-                  if (!img.dataset.failedOnce) {
-                    img.dataset.failedOnce = "true";
-                    img.src =
-                      "data:image/svg+xml;charset=utf-8," +
-                      encodeURIComponent(
-                        "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='100%' height='100%' fill='transparent'/></svg>"
-                      );
-                  }
-                  setError("圖片載入失敗");
-                }}
-                onDragStart={(e) => e.preventDefault()}
-              />
-            ) : (
+          <div className={styles.imageWrapper} style={{ position: "relative" }}>
+            <img
+              ref={imageRef}
+              src={imageUrl}
+              alt={mapping.filename}
+              className={styles.image}
+              style={{
+                opacity: imageLoaded ? 1 : 0,
+                transition: "opacity 150ms ease-in",
+              }}
+              onLoad={() => setImageLoaded(true)}
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                if (!img.dataset.triedNoExt) {
+                  img.dataset.triedNoExt = "true";
+                  img.src = shortUrlNoExt;
+                  setImageLoaded(false);
+                  return;
+                }
+                if (!img.dataset.failedOnce) {
+                  img.dataset.failedOnce = "true";
+                  img.src =
+                    "data:image/svg+xml;charset=utf-8," +
+                    encodeURIComponent(
+                      "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='100%' height='100%' fill='transparent'/></svg>"
+                    );
+                }
+                setError("圖片載入失敗");
+              }}
+              onDragStart={(e) => e.preventDefault()}
+            />
+            {!imageLoaded && (
               <div
                 style={{
-                  width: "100%",
-                  paddingTop: "56.25%",
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   background: "#f3f4f6",
                   borderRadius: 8,
-                  position: "relative",
+                  color: "#9ca3af",
+                  fontSize: 14,
                 }}
               >
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#9ca3af",
-                    fontSize: 14,
-                  }}
-                >
-                  圖片載入中…
-                </div>
+                圖片載入中…
               </div>
             )}
           </div>
