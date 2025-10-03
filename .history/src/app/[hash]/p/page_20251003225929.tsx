@@ -36,7 +36,7 @@ async function fetchMappingMultiBase(hash: string): Promise<ClientMapping | null
         shortUrl: data.shortUrl,
         createdAt: typeof data.createdAt === "string" ? data.createdAt : new Date(data.createdAt).toISOString(),
         expiresAt: data.expiresAt ? (typeof data.expiresAt === "string" ? data.expiresAt : new Date(data.expiresAt).toISOString()) : null,
-        hasPassword: data.hasPassword ?? !!data.password, // 相容新舊格式
+        hasPassword: data.hasPassword ?? false,
         fileExtension: data.fileExtension ?? null,
       };
       return normalized;

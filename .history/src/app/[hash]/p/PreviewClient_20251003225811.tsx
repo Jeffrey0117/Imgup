@@ -11,7 +11,6 @@ export interface Mapping {
   createdAt: string; // ISO string from server
   expiresAt?: string | null;
   hasPassword?: boolean;
-  password?: string | null; // 支援舊格式
   shortUrl: string;
 }
 
@@ -108,9 +107,6 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   useEffect(() => {
     const checkPasswordStatus = async () => {
       try {
-        // 檢查是否需要密碼（支援新舊格式）
-        const needsPassword = mapping.hasPassword || !!mapping.password;
-        
         // 檢查是否有驗證 cookie
         const cookieAuth = document.cookie
           .split('; ')
@@ -119,7 +115,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
         if (cookieAuth) {
           setIsPasswordVerified(true);
           setPasswordRequired(false);
-        } else if (needsPassword) {
+        } else if (mapping.hasPassword) {
           setPasswordRequired(true);
           setIsPasswordVerified(false);
         } else {
@@ -134,7 +130,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     };
 
     checkPasswordStatus();
-  }, [hash, mapping.hasPassword, mapping.password]);
+  }, [hash, mapping.hasPassword]);
 
   // 右鍵自訂選單（僅在客戶端掛載）
   useEffect(() => {
