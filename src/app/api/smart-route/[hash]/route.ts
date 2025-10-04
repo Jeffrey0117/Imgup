@@ -220,20 +220,22 @@ export async function GET(
     // 使用統一介面處理請求
     const response = await unifiedAccess.accessImage(accessRequest);
 
-    // 🔒 新增:檢查是否過期
+    // 🔒 檢查是否過期
     const mapping = response.data as ImageMapping | null;
     if (mapping?.expiresAt) {
       const expiryDate = new Date(mapping.expiresAt);
       const now = new Date();
       
       if (expiryDate < now) {
-        // 圖片已過期,重定向到預覽頁面並帶上過期標記
-        const previewUrl = new URL(`/${rawHash}/p`, req.url);
-        previewUrl.searchParams.set('expired', 'true');
-        
-        return NextResponse.redirect(previewUrl, {
-          status: 302,
-        });
+        // 圖片已過期，直接返回 410 Gone 避免重定向循環
+        return NextResponse.json(
+          {
+            error: 'Link expired',
+            message: '這個連結已經過期了',
+            expiresAt: mapping.expiresAt
+          },
+          { status: 410 }
+        );
       }
     }
 
