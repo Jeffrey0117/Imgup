@@ -236,6 +236,7 @@ export async function POST(request: NextRequest) {
         createdAt: new Date(),
         password: password || null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        fileExtension: fileExtension || null,
       };
 
       console.log('[Upload] Saving to database with data:', {

@@ -108,10 +108,8 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   useEffect(() => {
     const checkPasswordStatus = async () => {
       try {
-        // 檢查是否需要密碼（支援新舊格式）
-        const needsPassword = mapping.hasPassword || !!mapping.password;
+        const needsPassword = !!mapping.hasPassword;
         
-        // 檢查是否有驗證 cookie
         const cookieAuth = document.cookie
           .split('; ')
           .find(row => row.startsWith(`auth_${hash}=`));
@@ -134,7 +132,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     };
 
     checkPasswordStatus();
-  }, [hash, mapping.hasPassword, mapping.password]);
+  }, [hash, mapping.hasPassword]);
 
   // 右鍵自訂選單（僅在客戶端掛載）
   useEffect(() => {
