@@ -227,11 +227,18 @@ export async function GET(
       const cookies = req.cookies;
       const authCookie = cookies.get(`auth_${rawHash}`);
       
+      // 🔒 新增檢查:如果請求來自預覽頁面,不要重定向(避免循環)
+      const referer = req.headers.get('referer') || '';
+      const isFromPreviewPage = referer.includes(`/${rawHash}/p`);
+      
       if (!authCookie || authCookie.value !== 'verified') {
-        // 需要密碼但沒有驗證，重定向到預覽頁面
-        return NextResponse.redirect(new URL(`/${rawHash}/p`, req.url), {
-          status: 302,
-        });
+        // 如果不是從預覽頁面來的,才重定向到預覽頁面
+        if (!isFromPreviewPage) {
+          return NextResponse.redirect(new URL(`/${rawHash}/p`, req.url), {
+            status: 302,
+          });
+        }
+        // 如果已在預覽頁面,讓它正常載入(顯示密碼表單)
       }
     }
 
