@@ -146,6 +146,20 @@ export default function Home() {
     const formData = new FormData();
     formData.append("image", item.file, item.file.name);
 
+    if (password) {
+      formData.append("password", password);
+      console.log('[Frontend] 附加密碼:', password);
+    } else {
+      console.log('[Frontend] 未設定密碼');
+    }
+    
+    if (expiryDate) {
+      formData.append("expiresAt", expiryDate.toISOString());
+      console.log('[Frontend] 附加過期時間:', expiryDate.toISOString());
+    } else {
+      console.log('[Frontend] 未設定過期時間');
+    }
+
     console.log(
       "開始上傳:",
       item.file.name,

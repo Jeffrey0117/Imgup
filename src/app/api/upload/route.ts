@@ -97,6 +97,14 @@ export async function POST(request: NextRequest) {
     }
 
     const image = formData.get("image") as File;
+    const password = formData.get("password") as string | null;
+    const expiresAt = formData.get("expiresAt") as string | null;
+
+    console.log('[Upload] FormData received:', {
+      hasImage: !!image,
+      password: password ? `[SET: ${password.length} chars]` : '[NOT SET]',
+      expiresAt: expiresAt || '[NOT SET]',
+    });
 
     // 步驟 5: 檢查檔案是否存在
     if (!image) {
@@ -220,16 +228,27 @@ export async function POST(request: NextRequest) {
           : "https://duk.tw");
       const shortUrl = `${base}/${hash}${fileExtension || ""}`;
 
-      await prisma.mapping.create({
-        data: {
-          hash,
-          url: imageUrl,
-          
-          filename: safeFileName,
-          shortUrl,
-          createdAt: new Date(),
-        },
+      const mappingData = {
+        hash,
+        url: imageUrl,
+        filename: safeFileName,
+        shortUrl,
+        createdAt: new Date(),
+        password: password || null,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      };
+
+      console.log('[Upload] Saving to database with data:', {
+        hash,
+        hasPassword: !!password,
+        password: password || null,
+        expiresAt: mappingData.expiresAt,
       });
+
+      await prisma.mapping.create({
+        data: mappingData,
+      });
+      
       console.log(`[Upload] Saved mapping to database: ${hash} -> ${imageUrl} (short: ${shortUrl})`);
     } catch (dbError) {
       console.error('[Upload] Database save error:', dbError);
