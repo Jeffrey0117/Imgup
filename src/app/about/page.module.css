@@ -1,7 +1,7 @@
 /* 基礎樣式 */
 .container {
   min-height: 100vh;
-  background: #fff;
+  background: #111;
   padding: 0;
 }
 
@@ -10,10 +10,13 @@
   margin: 0 auto;
   padding: 3rem 2rem;
   line-height: 1.75;
+  background: #1f2126;
+  border-radius: 18px;
+  box-shadow: 0 10px 40px #0008;
 }
 
 .content {
-  color: #222;
+  color: #eef;
 }
 
 /* 標題區塊 */
@@ -21,19 +24,19 @@
   font-size: 2rem;
   font-weight: 700;
   margin: 2rem 0 1rem;
-  color: #222;
+  color: #fff;
 }
 
 .subtitle {
   font-size: 1.1rem;
-  color: #666;
+  color: #ccc;
   margin-bottom: 2rem;
 }
 
 /* YouTube 影片 */
 .videoContainer {
   position: relative;
-  padding-bottom: 56.25%; /* 16:9 比例 */
+  padding-bottom: 56.25%;
   height: 0;
   margin: 2rem 0;
   border-radius: 8px;
@@ -58,22 +61,26 @@
   font-size: 1.5rem;
   font-weight: 700;
   margin: 2rem 0 1rem;
+  color: #fff;
 }
 
 .section h3 {
   font-size: 1.25rem;
   font-weight: 700;
   margin: 1.5rem 0 0.75rem;
+  color: #fff;
 }
 
 .section p {
   margin-bottom: 1rem;
+  color: #eef;
 }
 
 .section ul,
 .section ol {
   margin: 1rem 0;
   padding-left: 2rem;
+  color: #eef;
 }
 
 .section li {
@@ -88,25 +95,28 @@
 
 .featureList li {
   padding: 0.5rem 0;
+  color: #eef;
 }
 
 /* 連結樣式 */
 .link {
-  color: #0084ff;
+  color: #9b6bff;
   text-decoration: none;
+  transition: color 0.2s ease;
 }
 
 .link:hover {
   text-decoration: underline;
+  color: #b88fff;
 }
 
 /* 引用區塊 */
 .quote {
-  border-left: 4px solid #0084ff;
+  border-left: 4px solid #9b6bff;
   padding-left: 1rem;
   margin: 1.5rem 0;
   font-style: italic;
-  color: #555;
+  color: #ccc;
 }
 
 /* 參考連結列表 */
@@ -133,31 +143,43 @@
 
 .contactItem h4 {
   margin-bottom: 0.5rem;
+  color: #fff;
 }
 
 .contactItem p {
-  color: #666;
+  color: #ccc;
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
 }
 
 .contactLink {
-  color: #0084ff;
+  color: #9b6bff;
   text-decoration: none;
   font-weight: 600;
+  transition: color 0.2s ease;
 }
 
 .contactLink:hover {
   text-decoration: underline;
+  color: #b88fff;
 }
 
 /* CTA 區塊 */
 .ctaSection {
   text-align: center;
   padding: 3rem 2rem;
-  background: #f9f9f9;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   margin: 3rem 0;
+}
+
+.ctaSection h2 {
+  color: #fff;
+}
+
+.ctaSection p {
+  color: #ccc;
 }
 
 .ctaButtons {
@@ -169,38 +191,41 @@
 }
 
 .primaryButton {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #9b6bff, #ff7a59);
   color: white;
   padding: 0.75rem 2rem;
   border-radius: 8px;
   text-decoration: none;
   font-weight: 600;
-  transition: transform 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 14px rgba(155, 107, 255, 0.25);
 }
 
 .primaryButton:hover {
   transform: translateY(-2px);
+  box-shadow: 0 15px 35px rgba(155, 107, 255, 0.45);
 }
 
 .secondaryButton {
-  background: white;
-  color: #667eea;
+  background: transparent;
+  color: #cbd3ff;
   padding: 0.75rem 2rem;
   border-radius: 8px;
   text-decoration: none;
   font-weight: 600;
-  border: 2px solid #667eea;
-  transition: all 0.2s;
+  border: 1px solid #454a56;
+  transition: all 0.3s ease;
 }
 
 .secondaryButton:hover {
-  background: #667eea;
-  color: white;
+  background: #242831;
+  border-color: #555b69;
+  color: #fff;
 }
 
 /* Footer */
 .footer {
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   margin-top: 3rem;
   padding: 2rem 0;
 }
@@ -208,7 +233,7 @@
 .footerContent {
   text-align: center;
   font-size: 0.9rem;
-  color: #555;
+  color: #999;
 }
 
 /* RWD */
