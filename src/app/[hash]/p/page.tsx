@@ -68,6 +68,18 @@ export default function PreviewPage({ params }: Props) {
         return;
       }
 
+      const urlParams = new URLSearchParams(window.location.search);
+      const isExpired = urlParams.get('expired') === 'true';
+      
+      if (isExpired) {
+        if (mounted) {
+          setError("這個連結已經過期了");
+          setMapping(null);
+          setLoading(false);
+        }
+        return;
+      }
+
       const result = await fetchMappingMultiBase(hash);
       if (!mounted) return;
 
@@ -77,9 +89,11 @@ export default function PreviewPage({ params }: Props) {
         return;
       }
 
-      // 過期檢查（在前端做降級提示，不中斷渲染）
       if (result.expiresAt && new Date(result.expiresAt) < new Date()) {
-        setError("連結已過期");
+        setError("這個連結已經過期了");
+        setMapping(null);
+        setLoading(false);
+        return;
       }
 
       setMapping(result);
@@ -100,24 +114,33 @@ export default function PreviewPage({ params }: Props) {
     );
   }
 
-  // 友善錯誤畫面（不使用 notFound/redirect 以避免 SSR 介入）
   if (!mapping) {
     return (
       <div className={styles.container}>
-        <div className={styles.error}>
-          <h2>
+        <div className={styles.errorPage}>
+          <div className={styles.errorIcon}>
             <img
               src="/logo-imgup.png"
               alt="duk.tw Logo"
-              style={{ display: "inline", height: "1.2em", marginRight: "0.3em" }}
+              className={styles.errorLogo}
             />
-            哎呀！
-          </h2>
+          </div>
+          <h2 className={styles.errorTitle}>哎呀！</h2>
+          <p className={styles.errorMessage}>
+            {error || "找不到這個連結"}
+          </p>
+          <div className={styles.errorHint}>
+            <p>可能的原因：</p>
+            <ul>
+              <li>連結輸入錯誤</li>
+              <li>圖片已被刪除</li>
+              <li>連結已過期</li>
+            </ul>
+          </div>
+          <a href="/" className={styles.backLink}>
+            回到首頁
+          </a>
         </div>
-        <p className={styles.errorText}>{error || "無法顯示此頁面"}</p>
-        <a href="/" className={styles.backLink}>
-          回到首頁
-        </a>
       </div>
     );
   }

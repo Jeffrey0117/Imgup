@@ -220,14 +220,30 @@ export async function GET(
     // 使用統一介面處理請求
     const response = await unifiedAccess.accessImage(accessRequest);
 
-    // 檢查是否需要密碼驗證
+    // 🔒 新增:檢查是否過期
     const mapping = response.data as ImageMapping | null;
+    if (mapping?.expiresAt) {
+      const expiryDate = new Date(mapping.expiresAt);
+      const now = new Date();
+      
+      if (expiryDate < now) {
+        // 圖片已過期,重定向到預覽頁面並帶上過期標記
+        const previewUrl = new URL(`/${rawHash}/p`, req.url);
+        previewUrl.searchParams.set('expired', 'true');
+        
+        return NextResponse.redirect(previewUrl, {
+          status: 302,
+        });
+      }
+    }
+
+    // 檢查是否需要密碼驗證
     if (mapping?.password) {
       // 檢查是否有驗證 cookie
       const cookies = req.cookies;
       const authCookie = cookies.get(`auth_${rawHash}`);
       
-      // 🔒 新增檢查:如果請求來自預覽頁面,不要重定向(避免循環)
+      // 🔒 檢查:如果請求來自預覽頁面,不要重定向(避免循環)
       const referer = req.headers.get('referer') || '';
       const isFromPreviewPage = referer.includes(`/${rawHash}/p`);
       
