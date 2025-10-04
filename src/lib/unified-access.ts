@@ -312,6 +312,9 @@ export class EdgeDetector {
 
     // 檢查是否包含副檔名
     const hasExtension = hash.includes('.');
+    
+    // 檢查是否為圖片副檔名
+    const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff?|avif|heic|heif)$/i.test(hash);
 
     // 判斷是否為瀏覽器請求
     const isBrowserRequest = accept.includes('text/html') ||
@@ -319,6 +322,7 @@ export class EdgeDetector {
 
     // 判斷是否為圖片請求（curl 和其他非瀏覽器工具）
     const isImageRequest = (
+      hasImageExtension ||
       userAgent.includes('curl') ||
       userAgent.includes('wget') ||
       accept.includes('image/') ||
