@@ -17,6 +17,9 @@ import { detectFileExtensionComprehensive, generateHashedFilename } from '@/util
 import { prisma } from '@/lib/prisma';
 import { generateShortHash, generateUniqueHash } from '@/utils/hash';
 
+// 加入 Upload Manager
+import { UploadManager } from '@/utils/upload-providers';
+
 // 記錄上傳嘗試（用於監控和分析）
 async function logUploadAttempt(
   ip: string,
@@ -132,65 +135,37 @@ export async function POST(request: NextRequest) {
     // 步驟 7: 清理檔案名稱
     const safeFileName = sanitizeFileName(image.name);
 
-    // 步驟 8: 準備轉發到外部 API
+    // 步驟 8: 使用 Upload Manager 上傳
     console.log(`[Upload] Processing file: ${safeFileName} (${image.size} bytes) from ${clientIP}`);
 
-    // 創建 FormData 來轉發到新的 API
-    const uploadFormData = new FormData();
-    uploadFormData.append("file", image, safeFileName);
+    const uploadManager = new UploadManager();
+    console.log(`[Upload] Available providers: ${uploadManager.getAvailableProviders().join(', ')}`);
 
-    // 步驟 9: 調用外部上傳 API（meteor.today）
-    const response = await fetch(
-      "https://meteor.today/upload/upload_general_image",
-      {
-        method: "POST",
-        body: uploadFormData,
-        headers: {
-          Accept: "application/json, text/plain, */*",
-          "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6",
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Referer: "https://meteor.today/p/times",
-          Origin: "https://meteor.today",
-        },
-        mode: "cors",
-        credentials: "include",
-      }
-    );
-
-    // 步驟 10: 處理 API 回應
-    console.log(`[Upload] External API response status: ${response.status}`);
-
-    // 檢查 API 是否失效
-    if (response.status === 401 || response.status === 403) {
-      await logUploadAttempt(clientIP, false, 'External API auth failed', userAgent);
+    let uploadResult;
+    try {
+      uploadResult = await uploadManager.upload(image, safeFileName);
+      console.log(`[Upload] Upload result:`, {
+        provider: uploadResult.provider,
+        url: uploadResult.url,
+        filename: uploadResult.filename,
+      });
+    } catch (uploadError) {
+      console.error('[Upload] All providers failed:', uploadError);
+      await logUploadAttempt(clientIP, false, 'Upload failed', userAgent);
       return NextResponse.json(
         {
           status: 0,
-          message: "API authentication failed",
+          message: 'Upload failed. Please try again later.',
         },
-        { status: 401 }
+        { status: 500 }
       );
     }
-
-    if (response.status !== 200) {
-      await logUploadAttempt(clientIP, false, `External API error: ${response.status}`, userAgent);
-      return NextResponse.json(
-        {
-          status: 0,
-          message: `Upload service error: ${response.status}`,
-        },
-        { status: response.status }
-      );
-    }
-
-    const result = await response.json();
-    console.log(`[Upload] External API result:`, JSON.stringify(result, null, 2));
 
     // 記錄成功的上傳
-    await logUploadAttempt(clientIP, true, 'Success', userAgent);
-    // 步驟 11: 從結果中提取圖片 URL
-    const imageUrl = result.result;
+    await logUploadAttempt(clientIP, true, `Success via ${uploadResult.provider}`, userAgent);
+
+    // 步驟 9: 提取圖片 URL
+    const imageUrl = uploadResult.url;
     if (!imageUrl) {
       await logUploadAttempt(clientIP, false, 'No image URL in response', userAgent);
       return NextResponse.json(
@@ -202,11 +177,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 步驟 12: 檢測檔案副檔名
-    const fileExtension = detectFileExtensionComprehensive(image.type, imageUrl);
+    // 步驟 10: 檢測檔案副檔名
+    const fileExtension = detectFileExtensionComprehensive(
+      uploadResult.mime || image.type,
+      imageUrl
+    );
     console.log(`[Upload] Detected file extension: ${fileExtension}`);
 
-    // 步驟 13: 生成短 hash
+    // 步驟 11: 生成短 hash
     const hash = await generateUniqueHash(
       `${imageUrl}_${Date.now()}`,
       async (hashToCheck: string) => {
@@ -218,7 +196,7 @@ export async function POST(request: NextRequest) {
     );
     console.log(`[Upload] Generated hash: ${hash}`);
 
-    // 步驟 14: 儲存到資料庫
+    // 步驟 12: 儲存到資料庫
     try {
       // 構造短網址（含副檔名；若無法判定副檔名則不加）
       const base =

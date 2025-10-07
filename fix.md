@@ -1,387 +1,508 @@
-# PTT 圖片自動開啟問題 - MVP 修復方案
+# 整合 Urusai API 上傳圖片 - 方案 C 實作
 
-## 問題焦點
+## Urusai API 規格
 
-**唯一問題**: PTT 網頁版嵌入圖片時，有時能自動開啟，有時不行
+### API 資訊
+- **端點**: `https://api.urusai.cc/v1/upload`
+- **方法**: `POST`
+- **格式**: `multipart/form-data`
+- **檔案限制**: 單檔最大 50MB
 
-**重要前提**: 
-- ✅ 現有智慧路由規劃清楚且完善
-- ✅ 其他場景(瀏覽器、API、curl)都運作正常
-- ⚠️ **只需修復 PTT 嵌入場景，不影響其他功能**
+### 請求參數
+- `file` (必要): 要上傳的檔案
+- `token` (選填): 存取憑證,未提供則匿名上傳
+- `r18` (選填): `1` = R18, `0` = 非 R18 (預設)
 
-## 根本原因
-
-PTT 嵌入圖片時發送的請求特徵:
+### 回應格式
+```json
+{
+  "status": "success",
+  "message": "uploaded",
+  "data": {
+    "id": "shine",
+    "r18": "0",
+    "filename": "urusai.png",
+    "url_preview": "https://i.urusai.cc/shine",
+    "url_direct": "https://i.urusai.cc/shine.png",
+    "url_delete": "https://urusai.cc/del/abcd1234",
+    "mime": "image/png"
+  }
+}
 ```
-Accept: */*
-User-Agent: (不一定包含 Mozilla)
-Referer: (可能為空)
-URL: https://duk.tw/hash.jpg
+
+## 方案 C: 多 Provider 實作
+
+### 架構設計
+
+```
+┌─────────────────┐
+│  Upload Route   │
+│  /api/upload    │
+└────────┬────────┘
+         │
+         ↓
+┌─────────────────────────┐
+│  Upload Manager         │
+│  依序嘗試 providers     │
+└────────┬────────────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ↓         ↓
+┌─────────┐ ┌─────────┐
+│ Urusai  │ │ Meteor  │
+│Provider │ │Provider │
+│(主要)   │ │(備援)   │
+└─────────┘ └─────────┘
 ```
 
-當前 Edge 判斷邏輯在 [`src/lib/unified-access.ts:320-326`](src/lib/unified-access.ts:320):
+### 環境變數設定
+
+**新增到 `.env.local`**:
+```env
+# Urusai API (主要上傳服務)
+URUSAI_API_ENDPOINT=https://api.urusai.cc/v1/upload
+URUSAI_TOKEN=your_token_here  # 選填,不填則匿名上傳
+URUSAI_R18=0  # 預設非 R18
+
+# Meteor API (備援)
+ENABLE_METEOR_FALLBACK=true
+
+# Provider 優先順序 (逗號分隔)
+UPLOAD_PROVIDER_PRIORITY=urusai,meteor
+```
+
+## 實作代碼
+
+### 1. 建立 Provider 抽象層
+
+**新增檔案**: `src/utils/upload-providers.ts`
+
 ```typescript
-const isImageRequest = (
-  userAgent.includes('curl') ||
-  userAgent.includes('wget') ||
-  accept.includes('image/') ||
-  (!isBrowserRequest && (accept === '*/*' || accept === ''))
+// src/utils/upload-providers.ts
+
+export interface UploadResult {
+  url: string;              // 圖片 URL (用於儲存)
+  directUrl?: string;       // 直接存取 URL
+  previewUrl?: string;      // 預覽 URL
+  deleteUrl?: string;       // 刪除 URL
+  filename: string;         // 檔名
+  mime?: string;            // MIME 類型
+  provider: string;         // Provider 名稱
+}
+
+export interface UploadProvider {
+  name: string;
+  enabled: boolean;
+  priority: number;
+  upload: (file: File, filename: string) => Promise<UploadResult>;
+}
+
+// Urusai Provider
+export class UrusaiProvider implements UploadProvider {
+  name = 'urusai';
+  enabled = true;
+  priority = 1;
+
+  async upload(file: File, filename: string): Promise<UploadResult> {
+    const formData = new FormData();
+    formData.append('file', file, filename);
+    
+    // 選填參數
+    const token = process.env.URUSAI_TOKEN;
+    const r18 = process.env.URUSAI_R18 || '0';
+    
+    if (token) {
+      formData.append('token', token);
+    }
+    formData.append('r18', r18);
+
+    const response = await fetch(
+      process.env.URUSAI_API_ENDPOINT || 'https://api.urusai.cc/v1/upload',
+      {
+        method: 'POST',
+        body: formData,
+        signal: AbortSignal.timeout(30000), // 30 秒超時
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Urusai API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    // 檢查回應格式
+    if (result.status !== 'success' || !result.data) {
+      throw new Error(`Urusai API failed: ${result.message || 'Unknown error'}`);
+    }
+
+    const { data } = result;
+
+    return {
+      url: data.url_direct || data.url_preview, // 優先使用直接 URL
+      directUrl: data.url_direct,
+      previewUrl: data.url_preview,
+      deleteUrl: data.url_delete,
+      filename: data.filename || filename,
+      mime: data.mime,
+      provider: this.name,
+    };
+  }
+}
+
+// Meteor Provider (備援)
+export class MeteorProvider implements UploadProvider {
+  name = 'meteor';
+  enabled = process.env.ENABLE_METEOR_FALLBACK !== 'false';
+  priority = 2;
+
+  async upload(file: File, filename: string): Promise<UploadResult> {
+    const formData = new FormData();
+    formData.append('file', file, filename);
+
+    const response = await fetch(
+      'https://meteor.today/upload/upload_general_image',
+      {
+        method: 'POST',
+        body: formData,
+        headers: {
+          Accept: 'application/json, text/plain, */*',
+          'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7,zh-CN;q=0.6',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          Referer: 'https://meteor.today/p/times',
+          Origin: 'https://meteor.today',
+        },
+        mode: 'cors',
+        credentials: 'include',
+        signal: AbortSignal.timeout(30000),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Meteor API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const imageUrl = result.result;
+
+    if (!imageUrl) {
+      throw new Error('No image URL in meteor response');
+    }
+
+    return {
+      url: imageUrl,
+      directUrl: imageUrl,
+      filename: filename,
+      provider: this.name,
+    };
+  }
+}
+
+// Upload Manager
+export class UploadManager {
+  private providers: UploadProvider[] = [];
+
+  constructor() {
+    // 註冊 providers
+    this.registerProvider(new UrusaiProvider());
+    this.registerProvider(new MeteorProvider());
+
+    // 根據優先順序排序
+    this.providers.sort((a, b) => a.priority - b.priority);
+  }
+
+  private registerProvider(provider: UploadProvider): void {
+    if (provider.enabled) {
+      this.providers.push(provider);
+      console.log(`[UploadManager] Registered provider: ${provider.name}`);
+    } else {
+      console.log(`[UploadManager] Provider disabled: ${provider.name}`);
+    }
+  }
+
+  async upload(file: File, filename: string): Promise<UploadResult> {
+    if (this.providers.length === 0) {
+      throw new Error('No upload providers available');
+    }
+
+    let lastError: any;
+
+    for (const provider of this.providers) {
+      try {
+        console.log(`[UploadManager] Trying provider: ${provider.name}`);
+        const result = await provider.upload(file, filename);
+        console.log(`[UploadManager] Success with provider: ${provider.name}`);
+        return result;
+      } catch (error) {
+        console.error(`[UploadManager] Provider ${provider.name} failed:`, error);
+        lastError = error;
+        // 繼續嘗試下一個 provider
+      }
+    }
+
+    // 所有 providers 都失敗
+    throw lastError || new Error('All upload providers failed');
+  }
+
+  getAvailableProviders(): string[] {
+    return this.providers.map(p => p.name);
+  }
+}
+```
+
+### 2. 修改上傳 Route
+
+**修改檔案**: `src/app/api/upload/route.ts`
+
+在檔案開頭新增 import:
+```typescript
+import { UploadManager } from '@/utils/upload-providers';
+```
+
+替換步驟 8-11 的上傳邏輯 (136-203 行):
+
+```typescript
+// 步驟 8: 使用 Upload Manager 上傳
+console.log(`[Upload] Processing file: ${safeFileName} (${image.size} bytes) from ${clientIP}`);
+
+const uploadManager = new UploadManager();
+console.log(`[Upload] Available providers: ${uploadManager.getAvailableProviders().join(', ')}`);
+
+let uploadResult;
+try {
+  uploadResult = await uploadManager.upload(image, safeFileName);
+  console.log(`[Upload] Upload result:`, {
+    provider: uploadResult.provider,
+    url: uploadResult.url,
+    filename: uploadResult.filename,
+  });
+} catch (uploadError) {
+  console.error('[Upload] All providers failed:', uploadError);
+  await logUploadAttempt(clientIP, false, 'Upload failed', userAgent);
+  return NextResponse.json(
+    {
+      status: 0,
+      message: 'Upload failed. Please try again later.',
+    },
+    { status: 500 }
+  );
+}
+
+// 記錄成功的上傳
+await logUploadAttempt(clientIP, true, `Success via ${uploadResult.provider}`, userAgent);
+
+// 步驟 9: 提取圖片 URL
+const imageUrl = uploadResult.url;
+if (!imageUrl) {
+  await logUploadAttempt(clientIP, false, 'No image URL in response', userAgent);
+  return NextResponse.json(
+    {
+      status: 0,
+      message: "Upload service returned no image URL",
+    },
+    { status: 500 }
+  );
+}
+
+// 步驟 10: 檢測檔案副檔名
+const fileExtension = detectFileExtensionComprehensive(
+  uploadResult.mime || image.type, 
+  imageUrl
 );
+console.log(`[Upload] Detected file extension: ${fileExtension}`);
+
+// 其餘邏輯保持不變 (hash 生成、資料庫儲存...)
 ```
 
-**問題**: PTT 的 `Accept: */*` 在沒有被判定為 `browser` 時會進入 `isImageRequest`，但如果 User-Agent 包含 `Mozilla` 又會被判為 `browser`，導致不穩定。
+### 3. 更新資料庫 Schema (選用)
 
-## 現有路由邏輯分析
+如果要儲存額外的 Urusai 資訊 (預覽 URL、刪除 URL):
 
-**關鍵**: 路由處理在 [`src/lib/unified-access.ts:447-493`](src/lib/unified-access.ts:447)
+**修改**: `prisma/schema.prisma`
 
-```typescript
-private handleRouting(
-  request: ImageAccessRequest,
-  mapping: ImageMapping,
-  extension?: string
-): ImageAccessResponse {
-  const edgeResult = EdgeDetector.detectEdge(request);
-
-  // 1. 如果帶副檔名：
-  if (extension && mapping.url) {
-    // 瀏覽器請求 → 轉預覽頁
-    if (edgeResult.isBrowserRequest) {
-      const previewUrl = `/${request.hash.replace(/\.[^.]+$/, '')}/p`;
-      return this.createRedirectResponse(previewUrl);
-    }
-    // 非瀏覽器圖片請求 → 直接代理模式
-    return this.createProxyResponse(mapping);
-  }
-
-  // 2. 無副檔名但為圖片請求 → 使用代理
-  if (!extension && edgeResult.isImageRequest && mapping.url) {
-    return this.createProxyResponse(mapping);
-  }
-
-  // 3. 瀏覽器請求 → 預覽頁
-  if (edgeResult.isBrowserRequest) {
-    const previewUrl = `/${request.hash}/p`;
-    return this.createRedirectResponse(previewUrl);
-  }
-
-  // 4. 其他情況（API 請求），回傳 JSON 資料
-  return {
-    type: 'json',
-    data: mapping,
-    statusCode: 200
-  };
+```prisma
+model Mapping {
+  id              Int       @id @default(autoincrement())
+  hash            String    @unique
+  url             String    // 主要 URL
+  filename        String
+  shortUrl        String
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime?
+  password        String?
+  fileExtension   String?
+  
+  // 新增欄位 (選填)
+  directUrl       String?   // Urusai 直接 URL
+  previewUrl      String?   // Urusai 預覽 URL
+  deleteUrl       String?   // Urusai 刪除 URL
+  uploadProvider  String?   // 使用的 provider
+  
+  @@index([hash])
+  @@index([expiresAt])
 }
 ```
 
-### 🔍 **關鍵發現**: 路由邏輯中 `isBrowserRequest` 優先級高於 `isImageRequest`
-
-**執行順序**:
-1. 先檢查 `extension` → 如果有副檔名
-2. 再檢查 `edgeResult.isBrowserRequest` → **優先處理瀏覽器**
-3. 才檢查 `isImageRequest` → 處理圖片請求
-
-**這意味著**:
-```typescript
-// 即使 isImageRequest = true
-// 只要 isBrowserRequest = true，就會走瀏覽器分支
-if (extension && mapping.url) {
-  if (edgeResult.isBrowserRequest) {  // ← 這裡優先檢查
-    return this.createRedirectResponse(previewUrl);  // ← 重定向到預覽頁
-  }
-  return this.createProxyResponse(mapping);  // ← 非瀏覽器才代理
-}
-```
-
-## ✅ 安全性驗證
-
-### 情境 1: 一般使用者用瀏覽器訪問 `/hash.jpg`
-
-```
-請求:
-  URL: /hash.jpg
-  Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
-  User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...
-
-Edge 檢測:
-  isBrowserRequest = true  (因為 Accept 包含 text/html)
-  isImageRequest = true     (新邏輯: hasImageExtension)
-  
-路由處理:
-  if (extension && mapping.url) {           // ✅ 有副檔名 .jpg
-    if (edgeResult.isBrowserRequest) {      // ✅ 是瀏覽器
-      return this.createRedirectResponse(previewUrl);  // ← 重定向到預覽頁
-    }
-  }
-
-結果: 重定向到 /hash/p ✅ 完全不影響
-```
-
-### 情境 2: PTT 嵌入請求 `/hash.jpg`
-
-```
-請求:
-  URL: /hash.jpg
-  Accept: */*
-  User-Agent: (可能不含 Mozilla)
-
-Edge 檢測:
-  isBrowserRequest = false  (Accept 不含 text/html)
-  isImageRequest = true     (新邏輯: hasImageExtension)
-  
-路由處理:
-  if (extension && mapping.url) {           // ✅ 有副檔名 .jpg
-    if (edgeResult.isBrowserRequest) {      // ❌ 不是瀏覽器
-      // 不執行此分支
-    }
-    return this.createProxyResponse(mapping);  // ← 代理模式返回圖片
-  }
-
-結果: 返回圖片 ✅ PTT 修復
-```
-
-### 情境 3: curl 請求 `/hash.jpg`
-
-```
-請求:
-  URL: /hash.jpg
-  Accept: */*
-  User-Agent: curl/7.64.1
-
-Edge 檢測:
-  isBrowserRequest = false  (User-Agent 包含 curl，被排除)
-  isImageRequest = true     (原邏輯: userAgent.includes('curl'))
-  
-路由處理:
-  if (extension && mapping.url) {
-    if (edgeResult.isBrowserRequest) {  // ❌ 不是瀏覽器
-      // 不執行
-    }
-    return this.createProxyResponse(mapping);  // ← 代理返回圖片
-  }
-
-結果: 返回圖片 ✅ 不受影響
-```
-
-### 情境 4: API 請求 `/hash` (無副檔名)
-
-```
-請求:
-  URL: /hash
-  Accept: application/json
-  User-Agent: PostmanRuntime/7.26.8
-
-Edge 檢測:
-  isBrowserRequest = false
-  isImageRequest = false    (無副檔名，不觸發 hasImageExtension)
-  isApiRequest = true
-  
-路由處理:
-  if (extension && mapping.url) {  // ❌ 無副檔名，跳過
-  }
-  
-  if (!extension && edgeResult.isImageRequest && mapping.url) {  // ❌ 不是圖片請求
-  }
-  
-  if (edgeResult.isBrowserRequest) {  // ❌ 不是瀏覽器
-  }
-  
-  // 其他情況（API 請求），回傳 JSON 資料
-  return { type: 'json', data: mapping, statusCode: 200 };  // ← JSON
-
-結果: 返回 JSON ✅ 不受影響
-```
-
-## MVP 解決方案
-
-### 🎯 修改點: 優化副檔名請求的判斷優先級
-
-**修改位置**: [`src/lib/unified-access.ts:307-360`](src/lib/unified-access.ts:307)
+然後在上傳邏輯中新增:
 
 ```typescript
-static detectEdge(request: ImageAccessRequest): EdgeDetectionResult {
-  const { headers, hash } = request;
-  const accept = headers.accept || headers.Accept || '';
-  const userAgent = headers['user-agent'] || headers['User-Agent'] || '';
-
-  // 檢查是否包含副檔名
-  const hasExtension = hash.includes('.');
+const mappingData = {
+  hash,
+  url: imageUrl,
+  filename: safeFileName,
+  shortUrl,
+  createdAt: new Date(),
+  password: password || null,
+  expiresAt: expiresAt ? new Date(expiresAt) : null,
+  fileExtension: fileExtension || null,
   
-  // 🔧 新增: 檢查是否為圖片副檔名
-  const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff?|avif|heic|heif)$/i.test(hash);
-
-  // 判斷是否為瀏覽器請求 (不變)
-  const isBrowserRequest = accept.includes('text/html') ||
-    (userAgent.includes('Mozilla') && !userAgent.includes('curl') && !userAgent.includes('wget'));
-
-  // 🔧 修改: 帶圖片副檔名 → 視為圖片請求
-  const isImageRequest = 
-    hasImageExtension ||  // ← PTT 修復: 優先判斷副檔名
-    userAgent.includes('curl') ||
-    userAgent.includes('wget') ||
-    accept.includes('image/') ||
-    (!isBrowserRequest && (accept === '*/*' || accept === ''));
-
-  // ... 其餘邏輯完全不變
-}
+  // 新增欄位
+  directUrl: uploadResult.directUrl || null,
+  previewUrl: uploadResult.previewUrl || null,
+  deleteUrl: uploadResult.deleteUrl || null,
+  uploadProvider: uploadResult.provider,
+};
 ```
-
-### 為什麼瀏覽器不受影響?
-
-**關鍵**: `isBrowserRequest` 的判斷**完全不變**
-
-```typescript
-// 瀏覽器的判斷邏輯 (不修改)
-const isBrowserRequest = accept.includes('text/html') ||
-  (userAgent.includes('Mozilla') && !userAgent.includes('curl') && !userAgent.includes('wget'));
-```
-
-**只要瀏覽器發送 `Accept: text/html`，就會被判為 browser**
-
-**路由處理時，browser 優先於 image**:
-```typescript
-if (extension && mapping.url) {
-  if (edgeResult.isBrowserRequest) {  // ← 優先檢查
-    return this.createRedirectResponse(previewUrl);  // ← 重定向
-  }
-  return this.createProxyResponse(mapping);  // ← 只有非 browser 才到這
-}
-```
-
-## 完整修改代碼
-
-### 修改 1: Edge 檢測 (唯一關鍵修改)
-
-**檔案**: [`src/lib/unified-access.ts`](src/lib/unified-access.ts:307)
-
-```typescript
-static detectEdge(request: ImageAccessRequest): EdgeDetectionResult {
-  const { headers, hash } = request;
-  const accept = headers.accept || headers.Accept || '';
-  const userAgent = headers['user-agent'] || headers['User-Agent'] || '';
-
-  // 檢查是否包含副檔名
-  const hasExtension = hash.includes('.');
-  
-  // 🔧 新增: 檢查是否為圖片副檔名
-  const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff?|avif|heic|heif)$/i.test(hash);
-
-  // 判斷是否為瀏覽器請求
-  const isBrowserRequest = accept.includes('text/html') ||
-    (userAgent.includes('Mozilla') && !userAgent.includes('curl') && !userAgent.includes('wget'));
-
-  // 🔧 修改: 帶圖片副檔名 → 視為圖片請求
-  const isImageRequest = 
-    hasImageExtension ||  // ← 新增: 優先判斷
-    userAgent.includes('curl') ||
-    userAgent.includes('wget') ||
-    accept.includes('image/') ||
-    (!isBrowserRequest && (accept === '*/*' || accept === ''));
-
-  // 判斷是否為 API 請求
-  const isApiRequest = accept.includes('application/json') ||
-    userAgent.includes('curl') ||
-    userAgent.includes('wget') ||
-    userAgent.includes('Postman') ||
-    userAgent.includes('axios');
-
-  // 判斷客戶端類型
-  let clientType: EdgeDetectionResult['clientType'] = 'unknown';
-  if (isBrowserRequest) {
-    clientType = 'browser';
-  } else if (isApiRequest) {
-    clientType = 'api';
-  } else if (userAgent.includes('bot') || userAgent.includes('crawler')) {
-    clientType = 'crawler';
-  }
-
-  // 解析偏好內容類型
-  let preferredContentType: string | undefined;
-  if (accept.includes('image/')) {
-    const imageTypes = accept.split(',').filter(type => type.trim().startsWith('image/'));
-    preferredContentType = imageTypes.length > 0 ? imageTypes[0].trim() : undefined;
-  }
-
-  return {
-    isBrowserRequest,
-    isImageRequest,
-    isApiRequest,
-    hasExtension,
-    preferredContentType,
-    clientType
-  };
-}
-```
-
-## 影響分析總結
-
-### ✅ 確認不影響的場景
-
-| 場景 | Accept Header | User-Agent | isBrowserRequest | 路由行為 | 結果 |
-|------|--------------|------------|-----------------|---------|------|
-| **瀏覽器訪問 /hash.jpg** | `text/html,...` | `Mozilla/5.0...` | ✅ true | 重定向到 /hash/p | ✅ 預覽頁 |
-| **瀏覽器訪問 /hash** | `text/html,...` | `Mozilla/5.0...` | ✅ true | 重定向到 /hash/p | ✅ 預覽頁 |
-| **API 請求 /hash** | `application/json` | `PostmanRuntime` | ❌ false | 返回 JSON | ✅ JSON |
-| **curl /hash.jpg** | `*/*` | `curl/7.64.1` | ❌ false | 代理圖片 | ✅ 圖片 |
-| **curl /hash** | `*/*` | `curl/7.64.1` | ❌ false | 代理圖片 | ✅ 圖片 |
-
-### ✅ 修復的場景
-
-| 場景 | Accept Header | User-Agent | isBrowserRequest | 原行為 | 新行為 |
-|------|--------------|------------|-----------------|-------|-------|
-| **PTT 嵌入 /hash.jpg** | `*/*` | `(非 Mozilla)` | ❌ false | 不穩定 ❌ | 代理圖片 ✅ |
 
 ## 測試計畫
 
-### 測試 1: PTT 場景修復
+### 1. 單元測試 (本地)
+
 ```bash
-curl -H "Accept: */*" https://duk.tw/hash.jpg
-# 預期: 200 OK, Content-Type: image/*, 返回圖片內容
+# 測試 Urusai API
+curl -X POST https://api.urusai.cc/v1/upload \
+  -F "file=@test.png" \
+  -F "r18=0"
+
+# 預期回應
+{
+  "status": "success",
+  "message": "uploaded",
+  "data": { ... }
+}
 ```
 
-### 測試 2: 瀏覽器跳轉不受影響
+### 2. 整合測試
+
+**測試案例**:
+
+| 測試項目 | 步驟 | 預期結果 |
+|---------|------|---------|
+| **Urusai 成功** | 正常上傳 | 使用 Urusai, 返回 `url_direct` |
+| **Urusai 失敗 → Meteor 成功** | 停用 Urusai token | 自動降級到 Meteor |
+| **所有失敗** | 兩個 API 都停用 | 返回 500 錯誤 |
+| **大檔案** | 上傳 51MB 檔案 | Urusai 拒絕, 降級或失敗 |
+| **Token 驗證** | 使用/不使用 token | 兩種情況都能成功 |
+
+### 3. 壓力測試
+
 ```bash
-curl -H "Accept: text/html,application/xhtml+xml" \
-     -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-     https://duk.tw/hash.jpg
-# 預期: 302 Found, Location: /hash/p
+# 連續上傳 10 張圖片
+for i in {1..10}; do
+  curl -X POST http://localhost:3000/api/upload \
+    -F "image=@test.png" \
+    -F "password=" \
+    -F "expiresAt="
+  sleep 1
+done
 ```
 
-### 測試 3: 無副檔名 API 不受影響
-```bash
-curl -H "Accept: application/json" https://duk.tw/hash
-# 預期: 200 OK, Content-Type: application/json, 返回 JSON
+## 部署檢查清單
+
+### 1. 環境變數設定
+
+**Vercel Dashboard**:
+```
+URUSAI_API_ENDPOINT = https://api.urusai.cc/v1/upload
+URUSAI_TOKEN = (選填,留空則匿名)
+URUSAI_R18 = 0
+ENABLE_METEOR_FALLBACK = true
 ```
 
-### 測試 4: curl 保持原樣
+### 2. 檔案清單
+
+- [x] 新增 `src/utils/upload-providers.ts`
+- [x] 修改 `src/app/api/upload/route.ts`
+- [ ] (選用) 修改 `prisma/schema.prisma`
+- [ ] 更新 `.env.example`
+
+### 3. 部署流程
+
 ```bash
-curl https://duk.tw/hash.jpg
-# 預期: 200 OK, 返回圖片
+# 1. 提交代碼
+git add .
+git commit -m "feat(upload): 整合 Urusai API 並實作多 provider fallback"
+git push
+
+# 2. Vercel 會自動部署
+
+# 3. 驗證部署
+curl -X POST https://duk.tw/api/upload \
+  -F "image=@test.png"
 ```
 
-## 總結
+### 4. 監控
 
-### 修改內容
-- ✅ **僅修改一處**: Edge 檢測新增 `hasImageExtension` 判斷
-- ✅ **僅新增 2 行代碼**: 定義變數 + 加入判斷條件
-- ✅ **不修改路由邏輯**: `isBrowserRequest` 優先級保持不變
-- ✅ **不修改瀏覽器判斷**: `text/html` 判斷完全不變
+**關鍵指標**:
+- Urusai 成功率
+- Meteor fallback 觸發頻率
+- 平均上傳時間
+- 錯誤率
 
-### 瀏覽器跳轉保證
-- ✅ **瀏覽器判斷不變**: `accept.includes('text/html')` 保持原樣
-- ✅ **路由優先級不變**: browser 優先於 image
-- ✅ **重定向邏輯不變**: `/hash.jpg` → `/hash/p`
+**Vercel Logs**:
+```
+[UploadManager] Trying provider: urusai
+[UploadManager] Success with provider: urusai
+```
 
-### 修復效果
-- ✅ PTT 嵌入 100% 穩定
-- ✅ 所有其他場景零影響
-- ✅ 智慧路由完整保留
+## 優勢總結
 
-### 風險評估
-- **風險等級**: 極低
-- **影響範圍**: 僅優化副檔名判斷
-- **回滾方案**: 移除 `hasImageExtension ||` 即還原
+### ✅ 方案 C 的優點
 
----
+1. **高可用性**: Urusai 失效時自動降級到 Meteor
+2. **易擴展**: 未來可輕鬆新增更多 provider (Imgur, Cloudinary...)
+3. **監控友善**: 清楚記錄每個 provider 的使用情況
+4. **設定靈活**: 透過環境變數控制優先順序
 
-**確認: 瀏覽器用戶訪問 `/hash.jpg` 仍會跳轉到預覽頁 `/hash/p`，因為路由邏輯優先檢查 `isBrowserRequest`，不受 `isImageRequest` 影響。**
+### 📊 與現有系統的整合
+
+- ✅ 保留所有現有功能 (密碼、過期、hash 生成)
+- ✅ 不影響前端邏輯
+- ✅ 智慧路由完全相容
+- ✅ 資料庫結構向下相容
+
+### 🎯 額外功能
+
+**Urusai 提供的額外資訊**:
+- `url_direct`: 直接圖片 URL (用於嵌入)
+- `url_preview`: 預覽頁面 URL
+- `url_delete`: 刪除連結 (可實作刪除功能)
+
+## 實作時間估計
+
+| 階段 | 時間 | 說明 |
+|-----|------|------|
+| **建立 Provider 層** | 1-2 小時 | 新增 `upload-providers.ts` |
+| **修改 Upload Route** | 30 分鐘 | 整合 UploadManager |
+| **本地測試** | 30 分鐘 | 驗證基本功能 |
+| **更新 Schema** (選用) | 30 分鐘 | 儲存額外資訊 |
+| **部署與驗證** | 30 分鐘 | Production 測試 |
+| **總計** | **3-4 小時** | |
+
+## 立即開始
+
+**下一步**: 執行以下指令建立檔案並開始實作
+
+```bash
+# 1. 建立 upload-providers.ts
+touch src/utils/upload-providers.ts
+
+# 2. 設定環境變數
+echo "URUSAI_API_ENDPOINT=https://api.urusai.cc/v1/upload" >> .env.local
+echo "URUSAI_TOKEN=" >> .env.local
+echo "URUSAI_R18=0" >> .env.local
+echo "ENABLE_METEOR_FALLBACK=true" >> .env.local
+```
+
+準備好後我會開始實作程式碼。
