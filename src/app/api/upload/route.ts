@@ -221,8 +221,7 @@ export async function POST(request: NextRequest) {
             await prisma.user.update({
               where: { id: userId },
               data: {
-                totalUploads: { increment: 1 },
-                lastUploadAt: new Date()
+                totalUploads: { increment: 1 }
               }
             });
           }
