@@ -71,10 +71,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastUploadAt: new Date() }
-    });
 
     await cleanupOldSessions(user.id);
 
