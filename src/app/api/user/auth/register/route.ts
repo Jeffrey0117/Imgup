@@ -64,8 +64,7 @@ export async function POST(req: NextRequest) {
         username,
         passwordHash,
         tier: 'member',
-        isActive: true,
-        emailVerified: false
+        isActive: true
       }
     });
 
