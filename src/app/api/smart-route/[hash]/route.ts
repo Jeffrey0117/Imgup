@@ -194,6 +194,8 @@ export async function GET(
     );
     
     const { hash: rawHash } = params;
+    // 正規化：解碼並移除結尾空白/編碼空白，避免 `...png%20` 或 `...png ` 造成解析失敗
+    const cleanedHash = decodeURIComponent(rawHash).replace(/(%20|\s|\+)+$/g, '');
 
     // 建構統一請求物件
     const headers: Record<string, string> = {};
@@ -202,7 +204,7 @@ export async function GET(
     });
 
     const accessRequest: ImageAccessRequest = {
-      hash: rawHash,
+      hash: cleanedHash,
       headers,
       userAgent: headers['user-agent'] || headers['User-Agent'],
       referer: headers.referer || headers.Referer,
@@ -212,7 +214,7 @@ export async function GET(
     };
 
     console.log("Smart Route 統一介面請求:", {
-      rawHash,
+      rawHash: cleanedHash,
       userAgent: accessRequest.userAgent?.substring(0, 50),
       referer: accessRequest.referer?.substring(0, 50)
     });
@@ -243,16 +245,16 @@ export async function GET(
     if (mapping?.password) {
       // 檢查是否有驗證 cookie
       const cookies = req.cookies;
-      const authCookie = cookies.get(`auth_${rawHash}`);
+      const authCookie = cookies.get(`auth_${cleanedHash}`);
       
       // 🔒 檢查:如果請求來自預覽頁面,不要重定向(避免循環)
       const referer = req.headers.get('referer') || '';
-      const isFromPreviewPage = referer.includes(`/${rawHash}/p`);
+      const isFromPreviewPage = referer.includes(`/${cleanedHash}/p`);
       
       if (!authCookie || authCookie.value !== 'verified') {
         // 如果不是從預覽頁面來的,才重定向到預覽頁面
         if (!isFromPreviewPage) {
-          return NextResponse.redirect(new URL(`/${rawHash}/p`, req.url), {
+          return NextResponse.redirect(new URL(`/${cleanedHash}/p`, req.url), {
             status: 302,
           });
         }
@@ -371,14 +373,16 @@ export async function GET(
     }
 
     // 預設重定向到原路徑
-    return NextResponse.redirect(new URL(`/${rawHash}`, req.url), {
+    return NextResponse.redirect(new URL(`/${cleanedHash}`, req.url), {
       status: 302,
     });
 
   } catch (error) {
     console.error("Smart Route 統一介面錯誤:", error);
     // 發生錯誤時，重定向到原路由讓 Next.js 處理
-    return NextResponse.redirect(new URL(`/${params.hash}`, req.url), {
+    // 失敗時也嘗試使用正規化後的 hash
+    const fallbackHash = decodeURIComponent(params.hash).replace(/(%20|\s|\+)+$/g, '');
+    return NextResponse.redirect(new URL(`/${fallbackHash}`, req.url), {
       status: 302,
     });
   }

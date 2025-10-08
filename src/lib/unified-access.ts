@@ -438,8 +438,10 @@ export class UnifiedImageAccess {
     }
 
     const hash = rawHash.substring(0, lastDotIndex);
-    const extension = rawHash.substring(lastDotIndex + 1).toLowerCase();
-
+    // 取出副檔名，並移除尾端的空白/編碼空白/非英數符號（處理 .png%20 / .png+ / .png ）
+    let extension = rawHash.substring(lastDotIndex + 1).toLowerCase();
+    extension = extension.replace(/(%[0-9a-f]{2}|\s|\+)+$/gi, ''); // 去除尾端編碼或空白
+    extension = extension.replace(/[^a-z0-9]+$/gi, ''); // 再保險：去除非英數尾碼
     return { hash, extension };
   }
 
@@ -463,16 +465,9 @@ export class UnifiedImageAccess {
 
     // 混合代理模式：根據請求類型動態選擇
     
-    // 如果帶副檔名：
+    // 帶副檔名一律直出圖片（避免 <img> 被導到預覽頁）
     if (extension && mapping.url) {
-      // 瀏覽器請求 → 轉預覽頁
-      if (edgeResult.isBrowserRequest) {
-        const previewUrl = `/${request.hash.replace(/\.[^.]+$/, '')}/p`;
-        return this.createRedirectResponse(previewUrl);
-      }
-      // 非瀏覽器圖片請求 → 直接代理模式 (200 OK + immutable)
-      // 使用直接代理提供更好的快取控制
-      console.log('Using proxy response for extension request');
+      console.log('Using proxy response for extension request (always image for extension)');
       return this.createProxyResponse(mapping);
     }
 
