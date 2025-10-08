@@ -1,4 +1,17 @@
 import { NextRequest } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+export enum UserTier {
+  GUEST = 'guest',
+  MEMBER = 'member',
+  PREMIUM = 'premium'
+}
+
+export enum ViolationSeverity {
+  WARNING = 'warning',
+  RESTRICTION = 'restriction',
+  BLACKLIST = 'blacklist'
+}
 
 interface RateLimitConfig {
   maxRequests: number;
@@ -6,12 +19,26 @@ interface RateLimitConfig {
   identifier?: (req: NextRequest) => string;
   skipSuccessfulRequests?: boolean;
   skipFailedRequests?: boolean;
+  tierLimits?: {
+    guest: number;
+    member: number;
+    premium: number;
+  };
 }
 
 interface RateLimitStore {
   requests: number;
   resetTime: number;
   cooldownMultiplier?: number;
+  warningCount?: number;
+}
+
+interface UserContext {
+  userId?: string;
+  tier: UserTier;
+  isRestricted: boolean;
+  isBlacklisted: boolean;
+  restrictedUntil?: Date;
 }
 
 // 記憶體儲存（生產環境建議使用 Redis）
@@ -123,12 +150,110 @@ export function isSuspiciousUserAgent(userAgent: string | null): boolean {
   return false;
 }
 
-/**
- * 清理過期的記錄
- */
+export async function getUserContext(req: NextRequest): Promise<UserContext> {
+  const token = req.cookies.get('user_token')?.value;
+  
+  if (!token) {
+    return {
+      tier: UserTier.GUEST,
+      isRestricted: false,
+      isBlacklisted: false
+    };
+  }
+
+  try {
+    const session = await prisma.userSession.findUnique({
+      where: { token },
+      include: { user: true }
+    });
+
+    if (!session || session.expiresAt < new Date()) {
+      return {
+        tier: UserTier.GUEST,
+        isRestricted: false,
+        isBlacklisted: false
+      };
+    }
+
+    const user = session.user;
+    const now = new Date();
+    
+    return {
+      userId: user.id,
+      tier: user.tier as UserTier,
+      isRestricted: user.restrictedUntil ? user.restrictedUntil > now : false,
+      isBlacklisted: !!user.blacklistedAt,
+      restrictedUntil: user.restrictedUntil || undefined
+    };
+  } catch (error) {
+    console.error('[getUserContext] Error:', error);
+    return {
+      tier: UserTier.GUEST,
+      isRestricted: false,
+      isBlacklisted: false
+    };
+  }
+}
+
+async function recordViolation(
+  ipAddress: string,
+  userId: string | undefined,
+  endpoint: string,
+  violationType: string,
+  severity: ViolationSeverity,
+  requestCount: number,
+  limit: number
+): Promise<void> {
+  try {
+    await prisma.rateViolation.create({
+      data: {
+        userId,
+        ipAddress,
+        endpoint,
+        violationType,
+        severity,
+        requestCount,
+        limit,
+        details: {
+          timestamp: new Date().toISOString(),
+          userAgent: 'unknown'
+        }
+      }
+    });
+
+    if (userId && severity !== ViolationSeverity.WARNING) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (user) {
+        const newWarningCount = user.warningCount + 1;
+        const updateData: any = {
+          warningCount: newWarningCount,
+          lastWarningAt: new Date()
+        };
+
+        if (newWarningCount >= 3 && newWarningCount < 5) {
+          updateData.restrictedUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        } else if (newWarningCount >= 5) {
+          updateData.blacklistedAt = new Date();
+          updateData.blacklistReason = 'Repeated rate limit violations';
+          updateData.isActive = false;
+        }
+
+        await prisma.user.update({
+          where: { id: userId },
+          data: updateData
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[recordViolation] Error:', error);
+  }
+}
+
 function cleanupExpiredRecords(): void {
   const now = Date.now();
-  // 使用 Array.from 轉換為陣列，避免 TypeScript es5 target 的迭代器問題
   const entries = Array.from(memoryStore.entries());
   for (const [key, record] of entries) {
     if (record.resetTime <= now) {
@@ -137,101 +262,147 @@ function cleanupExpiredRecords(): void {
   }
 }
 
-/**
- * Rate Limit 中介軟體
- */
 export function createRateLimiter(config: RateLimitConfig) {
-  // 定期清理過期記錄（每分鐘一次）
   setInterval(cleanupExpiredRecords, 60000);
 
-  return async function rateLimit(req: NextRequest): Promise<{ 
-    allowed: boolean; 
+  return async function rateLimit(req: NextRequest): Promise<{
+    allowed: boolean;
     reason?: string;
     retryAfter?: number;
+    userContext?: UserContext;
   }> {
-    // 獲取識別符（預設使用 IP）
     const identifier = config.identifier ? config.identifier(req) : getClientIP(req);
+    const userContext = await getUserContext(req);
     
-    // 檢查 IP 黑名單
+    if (userContext.isBlacklisted) {
+      console.log(`[RateLimit] Blocked blacklisted user: ${userContext.userId || identifier}`);
+      await recordViolation(
+        identifier,
+        userContext.userId,
+        req.nextUrl.pathname,
+        'blacklisted_access',
+        ViolationSeverity.BLACKLIST,
+        0,
+        0
+      );
+      return { allowed: false, reason: '您的帳號已被停用', userContext };
+    }
+
+    if (userContext.isRestricted) {
+      const minutesLeft = userContext.restrictedUntil
+        ? Math.ceil((userContext.restrictedUntil.getTime() - Date.now()) / 60000)
+        : 0;
+      console.log(`[RateLimit] User restricted: ${userContext.userId || identifier}`);
+      return {
+        allowed: false,
+        reason: `您的帳號已被暫時限制，請在 ${minutesLeft} 分鐘後再試`,
+        retryAfter: minutesLeft * 60,
+        userContext
+      };
+    }
+    
     if (isIPBlacklisted(identifier)) {
       console.log(`[RateLimit] Blocked blacklisted IP: ${identifier}`);
-      return { allowed: false, reason: 'Access denied' };
+      return { allowed: false, reason: 'Access denied', userContext };
     }
 
-    // 檢查 IP 白名單（白名單內的 IP 不受限制）
     if (isIPWhitelisted(identifier)) {
-      return { allowed: true };
+      return { allowed: true, userContext };
     }
 
-    // 檢查 User-Agent
     const userAgent = req.headers.get('user-agent');
     if (process.env.ENABLE_USER_AGENT_CHECK === 'true' && isSuspiciousUserAgent(userAgent)) {
       console.log(`[RateLimit] Blocked suspicious User-Agent: ${userAgent} from ${identifier}`);
-      return { allowed: false, reason: 'Invalid client' };
+      return { allowed: false, reason: 'Invalid client', userContext };
+    }
+
+    let maxRequests = config.maxRequests;
+    if (config.tierLimits) {
+      maxRequests = config.tierLimits[userContext.tier] || config.maxRequests;
     }
 
     const now = Date.now();
     let record = memoryStore.get(identifier);
 
-    // 如果記錄不存在或已過期，建立新記錄
     if (!record || record.resetTime <= now) {
       record = {
         requests: 1,
         resetTime: now + config.windowMs,
-        cooldownMultiplier: 1
+        cooldownMultiplier: 1,
+        warningCount: 0
       };
       memoryStore.set(identifier, record);
-      return { allowed: true };
+      return { allowed: true, userContext };
     }
 
-    // 增加請求計數
     record.requests++;
 
-    // 檢查是否超過限制
-    if (record.requests > config.maxRequests) {
-      // 計算冷卻時間（指數遞增）
+    if (record.requests > maxRequests) {
       const cooldownMultiplier = record.cooldownMultiplier || 1;
-      const retryAfter = Math.ceil((record.resetTime - now) / 1000);
       
-      // 如果持續違規，增加冷卻倍數
-      if (record.requests === config.maxRequests + 1) {
-        record.cooldownMultiplier = Math.min((cooldownMultiplier * 2), 64); // 最多 64 倍
+      if (record.requests === maxRequests + 1) {
+        record.cooldownMultiplier = Math.min((cooldownMultiplier * 2), 64);
         record.resetTime = now + (config.windowMs * record.cooldownMultiplier);
+        record.warningCount = (record.warningCount || 0) + 1;
+
+        let severity = ViolationSeverity.WARNING;
+        if (record.warningCount >= 5) {
+          severity = ViolationSeverity.BLACKLIST;
+        } else if (record.warningCount >= 3) {
+          severity = ViolationSeverity.RESTRICTION;
+        }
+
+        await recordViolation(
+          identifier,
+          userContext.userId,
+          req.nextUrl.pathname,
+          'rate_limit_exceeded',
+          severity,
+          record.requests,
+          maxRequests
+        );
       }
 
-      console.log(`[RateLimit] Rate limit exceeded for ${identifier}: ${record.requests}/${config.maxRequests}, cooldown: ${cooldownMultiplier}x`);
+      console.log(`[RateLimit] Rate limit exceeded for ${identifier}: ${record.requests}/${maxRequests}, cooldown: ${cooldownMultiplier}x, warnings: ${record.warningCount}`);
       
-      return { 
-        allowed: false, 
-        reason: 'Too many requests',
-        retryAfter: Math.ceil((record.resetTime - now) / 1000)
+      return {
+        allowed: false,
+        reason: `請求次數過多，請稍後再試 (${userContext.tier === UserTier.GUEST ? '訪客' : userContext.tier === UserTier.MEMBER ? '會員' : '付費會員'} 限制: ${maxRequests}/分鐘)`,
+        retryAfter: Math.ceil((record.resetTime - now) / 1000),
+        userContext
       };
     }
 
-    return { allowed: true };
+    return { allowed: true, userContext };
   };
 }
 
-/**
- * 預設的上傳端點 Rate Limiter
- */
 export const uploadRateLimiter = createRateLimiter({
-  maxRequests: parseInt(process.env.UPLOAD_RATE_LIMIT_PER_MINUTE || '3'),
-  windowMs: 60 * 1000, // 1 分鐘
+  maxRequests: parseInt(process.env.UPLOAD_RATE_LIMIT_PER_MINUTE || '10'),
+  windowMs: 60 * 1000,
+  tierLimits: {
+    guest: 10,
+    member: 30,
+    premium: 100
+  }
 });
 
-/**
- * API 通用 Rate Limiter（較寬鬆）
- */
 export const apiRateLimiter = createRateLimiter({
   maxRequests: parseInt(process.env.API_RATE_LIMIT_PER_MINUTE || '60'),
-  windowMs: 60 * 1000, // 1 分鐘
+  windowMs: 60 * 1000,
+  tierLimits: {
+    guest: 60,
+    member: 120,
+    premium: 300
+  }
 });
 
-/**
- * 嚴格的 Rate Limiter（用於敏感操作）
- */
 export const strictRateLimiter = createRateLimiter({
   maxRequests: parseInt(process.env.STRICT_RATE_LIMIT_PER_MINUTE || '3'),
-  windowMs: 60 * 1000, // 1 分鐘
+  windowMs: 60 * 1000,
+  tierLimits: {
+    guest: 3,
+    member: 10,
+    premium: 30
+  }
 });

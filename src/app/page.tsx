@@ -504,17 +504,31 @@ export default function Home() {
             {/* Tooltip */}
             <div className={styles.hoverTooltip}>
               <div className={styles.tooltipHeader}>
-                📋 上傳規則
+                📋 上傳規則與限制
               </div>
               <div className={styles.tooltipContent}>
                 <div className={styles.tooltipItem}>
                   <strong>檔案限制：</strong> JPG、PNG、WebP、GIF 格式，單檔最大 25MB
                 </div>
                 <div className={styles.tooltipItem}>
-                  <strong>速率限制：</strong> 每分鐘最多上傳 10 張圖片，單日上限 100 張
+                  <strong>⚡ 訪客限制：</strong> 每分鐘最多上傳 10 張圖片
                 </div>
                 <div className={styles.tooltipItem}>
-                  <strong>違規冷卻機制：</strong> 違規上傳將暫停服務 24 小時，請遵守使用規範
+                  <strong>👤 會員限制：</strong> 每分鐘最多上傳 30 張圖片
+                </div>
+                <div className={styles.tooltipItem}>
+                  <strong>💎 付費會員：</strong> 每分鐘最多上傳 100 張圖片
+                </div>
+                <div className={styles.tooltipItem}>
+                  <strong>🚨 懲罰機制：</strong>
+                  <ul style={{marginTop: '4px', paddingLeft: '16px', fontSize: '12px'}}>
+                    <li>1-2 次違規：警告提示</li>
+                    <li>3-4 次違規：限制 24 小時</li>
+                    <li>5 次以上：永久停用</li>
+                  </ul>
+                </div>
+                <div className={styles.tooltipItem} style={{marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #ddd'}}>
+                  💡 <a href="/register" style={{color: '#4CAF50', textDecoration: 'underline'}}>註冊會員</a> 享有更高上傳限制！
                 </div>
               </div>
             </div>

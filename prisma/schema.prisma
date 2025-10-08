@@ -17,21 +17,23 @@ model Mapping {
   expiresAt DateTime?
   password  String?
 
-  // 新增欄位
   viewCount Int       @default(0)
   isDeleted Boolean   @default(false)
   deletedAt DateTime?
   deletedBy String?
 
-  // 副檔名字段 - 支援 PNG, JPG, JPEG, GIF, WEBP, SVG
   fileExtension String?
+  
+  userId    String?
+  ipAddress String?
 
-  // 關聯
   logs          AccessLog[]
   referrerStats ReferrerStats[]
+  uploader      User?       @relation("UserUploads", fields: [userId], references: [id])
 
   @@index([createdAt])
   @@index([isDeleted])
+  @@index([userId])
 }
 
 // 管理員模型
@@ -147,6 +149,80 @@ model AuditLog {
   @@index([action])
   @@index([entity])
   @@index([createdAt])
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  username      String   @unique
+  passwordHash  String
+  
+  tier          String   @default("guest")
+  
+  isActive      Boolean  @default(true)
+  emailVerified Boolean  @default(false)
+  
+  warningCount  Int      @default(0)
+  lastWarningAt DateTime?
+  restrictedUntil DateTime?
+  blacklistedAt DateTime?
+  blacklistReason String?
+  
+  totalUploads  Int      @default(0)
+  lastUploadAt  DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  sessions      UserSession[]
+  uploads       Mapping[] @relation("UserUploads")
+  violations    RateViolation[]
+  
+  @@index([email])
+  @@index([tier])
+  @@index([isActive])
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  
+  userAgent    String?
+  ipAddress    String
+  
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  
+  user         User     @relation(fields: [userId], references: [id])
+  
+  @@index([token])
+  @@index([userId])
+}
+
+model RateViolation {
+  id          String   @id @default(cuid())
+  userId      String?
+  ipAddress   String
+  
+  endpoint    String
+  violationType String
+  severity    String
+  
+  requestCount Int
+  limit       Int
+  
+  details     Json?
+  
+  createdAt   DateTime @default(now())
+  
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([ipAddress])
+  @@index([createdAt])
+  @@index([violationType])
 }
 
 // 系統設定

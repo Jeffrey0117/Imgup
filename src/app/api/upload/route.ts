@@ -198,13 +198,38 @@ export async function POST(request: NextRequest) {
 
     // 步驟 12: 儲存到資料庫
     try {
-      // 構造短網址（含副檔名；若無法判定副檔名則不加）
       const base =
         process.env.NEXT_PUBLIC_BASE_URL ||
         (typeof process !== "undefined" && process.env.VERCEL_URL
           ? `https://${process.env.VERCEL_URL}`
           : "https://duk.tw");
       const shortUrl = `${base}/${hash}${fileExtension || ""}`;
+
+      const userToken = request.cookies.get('user_token')?.value;
+      let userId: string | undefined;
+
+      if (userToken) {
+        try {
+          const session = await prisma.userSession.findUnique({
+            where: { token: userToken },
+            include: { user: true }
+          });
+
+          if (session && session.expiresAt > new Date() && session.user.isActive) {
+            userId = session.userId;
+            
+            await prisma.user.update({
+              where: { id: userId },
+              data: {
+                totalUploads: { increment: 1 },
+                lastUploadAt: new Date()
+              }
+            });
+          }
+        } catch (err) {
+          console.log('[Upload] User session check failed:', err);
+        }
+      }
 
       const mappingData = {
         hash,
@@ -215,6 +240,8 @@ export async function POST(request: NextRequest) {
         password: password || null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         fileExtension: fileExtension || null,
+        userId: userId || null,
+        ipAddress: clientIP
       };
 
       console.log('[Upload] Saving to database with data:', {
@@ -222,6 +249,7 @@ export async function POST(request: NextRequest) {
         hasPassword: !!password,
         password: password || null,
         expiresAt: mappingData.expiresAt,
+        userId: userId || 'guest',
       });
 
       await prisma.mapping.create({
