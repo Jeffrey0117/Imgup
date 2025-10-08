@@ -127,3 +127,54 @@ model SystemConfig {
   updatedAt DateTime @updatedAt
   updatedBy String?
 }
+
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  username        String          @unique
+  passwordHash    String
+  tier            String          @default("guest")
+  isActive        Boolean         @default(true)
+  totalUploads    Int             @default(0)
+  warningCount    Int             @default(0)
+  restrictedUntil DateTime?
+  blacklistedAt   DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  sessions        UserSession[]
+  violations      RateViolation[]
+
+  @@index([email])
+  @@index([username])
+  @@index([tier])
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model RateViolation {
+  id          String   @id @default(cuid())
+  userId      String?
+  ipAddress   String
+  violationType String
+  endpoint    String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([ipAddress])
+  @@index([createdAt])
+}
