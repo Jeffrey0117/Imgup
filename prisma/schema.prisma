@@ -8,104 +8,79 @@ datasource db {
 }
 
 model Mapping {
-  id        String   @id @default(cuid())
-  hash      String   @unique
-  filename  String
-  url       String
-  shortUrl  String
-  createdAt DateTime @default(now())
-  expiresAt DateTime?
-  password  String?
-
-  viewCount Int       @default(0)
-  isDeleted Boolean   @default(false)
-  deletedAt DateTime?
-  deletedBy String?
-
-  fileExtension String?
-  
-  userId    String?
-  ipAddress String?
-
-  logs          AccessLog[]
-  referrerStats ReferrerStats[]
-  uploader      User?       @relation("UserUploads", fields: [userId], references: [id])
+  id              String          @id @default(cuid())
+  hash            String          @unique
+  filename        String
+  url             String
+  shortUrl        String
+  createdAt       DateTime        @default(now())
+  expiresAt       DateTime?
+  password        String?
+  deletedAt       DateTime?
+  deletedBy       String?
+  isDeleted       Boolean         @default(false)
+  viewCount       Int             @default(0)
+  fileExtension   String?
+  backupUrls      Json?
+  providerMetrics Json?
+  uploadStats     Json?
+  logs            AccessLog[]
+  referrerStats   ReferrerStats[]
 
   @@index([createdAt])
   @@index([isDeleted])
-  @@index([userId])
 }
 
-// 管理員模型
 model Admin {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  username      String   @unique
-  passwordHash  String
-  role          String   @default("moderator")
-
-  // 2FA 設定
-  totpSecret    String?
-  totpEnabled   Boolean  @default(false)
-
-  // 狀態管理
-  isActive      Boolean  @default(true)
-  lastLoginAt   DateTime?
-  lastLoginIp   String?
-  failedAttempts Int     @default(0)
-  lockedUntil   DateTime?
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // 關聯
-  sessions      AdminSession[]
-  auditLogs     AuditLog[]
+  id             String         @id @default(cuid())
+  email          String         @unique
+  username       String         @unique
+  passwordHash   String
+  role           String         @default("moderator")
+  totpSecret     String?
+  totpEnabled    Boolean        @default(false)
+  isActive       Boolean        @default(true)
+  lastLoginAt    DateTime?
+  lastLoginIp    String?
+  failedAttempts Int            @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  sessions       AdminSession[]
+  auditLogs      AuditLog[]
 
   @@index([email])
   @@index([username])
 }
 
-// 管理員 Session
 model AdminSession {
   id           String   @id @default(cuid())
   adminId      String
   token        String   @unique
   refreshToken String   @unique
-
   userAgent    String?
   ipAddress    String
-
   expiresAt    DateTime
   createdAt    DateTime @default(now())
-
   admin        Admin    @relation(fields: [adminId], references: [id])
 
   @@index([token])
   @@index([adminId])
 }
 
-// 訪問日誌
 model AccessLog {
-  id        String   @id @default(cuid())
-  mappingId String
-
-  ipAddress String
-  userAgent String?
-  referer   String?
-
-  // 來源追蹤增強
-  refererDomain String?
-  accessType    String   // direct, referer, api, preview
-  clientType    String   // browser, api, crawler, unknown
-
-  // 地理資訊(可選)
+  id            String   @id @default(cuid())
+  mappingId     String
+  ipAddress     String
+  userAgent     String?
+  referer       String?
+  createdAt     DateTime @default(now())
+  accessType    String
+  clientType    String
   country       String?
+  refererDomain String?
   region        String?
-
-  createdAt DateTime @default(now())
-
-  mapping   Mapping  @relation(fields: [mappingId], references: [id])
+  mapping       Mapping  @relation(fields: [mappingId], references: [id])
 
   @@index([mappingId])
   @@index([createdAt])
@@ -120,7 +95,6 @@ model ReferrerStats {
   accessCount   Int      @default(0)
   lastAccessAt  DateTime @default(now())
   createdAt     DateTime @default(now())
-
   mapping       Mapping  @relation(fields: [mappingId], references: [id])
 
   @@unique([mappingId, refererDomain])
@@ -129,20 +103,15 @@ model ReferrerStats {
   @@index([accessCount])
 }
 
-// 審計日誌
 model AuditLog {
   id        String   @id @default(cuid())
   adminId   String
-
-  action    String   // CREATE, UPDATE, DELETE, LOGIN, etc.
-  entity    String   // mapping, admin, system, etc.
+  action    String
+  entity    String
   entityId  String?
-
-  details   Json?    // 詳細變更內容
+  details   Json?
   ipAddress String
-
   createdAt DateTime @default(now())
-
   admin     Admin    @relation(fields: [adminId], references: [id])
 
   @@index([adminId])
@@ -151,81 +120,6 @@ model AuditLog {
   @@index([createdAt])
 }
 
-model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  username      String   @unique
-  passwordHash  String
-  
-  tier          String   @default("guest")
-  
-  isActive      Boolean  @default(true)
-  emailVerified Boolean  @default(false)
-  
-  warningCount  Int      @default(0)
-  lastWarningAt DateTime?
-  restrictedUntil DateTime?
-  blacklistedAt DateTime?
-  blacklistReason String?
-  
-  totalUploads  Int      @default(0)
-  lastUploadAt  DateTime?
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  sessions      UserSession[]
-  uploads       Mapping[] @relation("UserUploads")
-  violations    RateViolation[]
-  
-  @@index([email])
-  @@index([tier])
-  @@index([isActive])
-}
-
-model UserSession {
-  id           String   @id @default(cuid())
-  userId       String
-  token        String   @unique
-  refreshToken String   @unique
-  
-  userAgent    String?
-  ipAddress    String
-  
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  
-  user         User     @relation(fields: [userId], references: [id])
-  
-  @@index([token])
-  @@index([userId])
-}
-
-model RateViolation {
-  id          String   @id @default(cuid())
-  userId      String?
-  ipAddress   String
-  
-  endpoint    String
-  violationType String
-  severity    String
-  
-  requestCount Int
-  limit       Int
-  
-  details     Json?
-  
-  createdAt   DateTime @default(now())
-  
-  user        User?    @relation(fields: [userId], references: [id])
-  
-  @@index([userId])
-  @@index([ipAddress])
-  @@index([createdAt])
-  @@index([violationType])
-}
-
-// 系統設定
 model SystemConfig {
   id        String   @id @default(cuid())
   key       String   @unique
