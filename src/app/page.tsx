@@ -470,7 +470,6 @@ export default function Home() {
             <h2 className={styles.subTitle}>Drop images → Upload → Markdown</h2>
             <h2 className={styles.subTitle}>輕鬆拖曳你的圖，它就上床了。</h2>
           </div>
-          <UserStatus />
         </div>
 
         <div className={styles.main}>

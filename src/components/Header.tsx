@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import styles from './Header.module.css';
+import UserStatus from './UserStatus';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -45,6 +46,11 @@ export default function Header() {
           <Link href="/guide" className={styles.navLink}>使用指南</Link>
         </nav>
 
+        {/* Desktop User Area */}
+        <div className={styles.userArea}>
+          <UserStatus />
+        </div>
+
         {/* Mobile Menu Button */}
         <button
           className={styles.mobileMenuButton}
@@ -61,6 +67,10 @@ export default function Header() {
           <Link href="/use-cases" className={styles.mobileNavLink} onClick={closeMenu}>應用案例</Link>
           <Link href="/about" className={styles.mobileNavLink} onClick={closeMenu}>關於我們</Link>
           <Link href="/guide" className={styles.mobileNavLink} onClick={closeMenu}>使用指南</Link>
+
+          <div className={styles.mobileUser}>
+            <UserStatus />
+          </div>
         </nav>
 
         {/* Mobile Menu Overlay */}
