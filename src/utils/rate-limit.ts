@@ -211,10 +211,10 @@ async function recordViolation(
         ipAddress,
         endpoint,
         violationType,
-        severity,
-        requestCount,
-        limit,
-        details: {
+        metadata: {
+          severity,
+          requestCount,
+          limit,
           timestamp: new Date().toISOString(),
           userAgent: 'unknown'
         }
@@ -229,15 +229,13 @@ async function recordViolation(
       if (user) {
         const newWarningCount = user.warningCount + 1;
         const updateData: any = {
-          warningCount: newWarningCount,
-          lastWarningAt: new Date()
+          warningCount: newWarningCount
         };
 
         if (newWarningCount >= 3 && newWarningCount < 5) {
           updateData.restrictedUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
         } else if (newWarningCount >= 5) {
           updateData.blacklistedAt = new Date();
-          updateData.blacklistReason = 'Repeated rate limit violations';
           updateData.isActive = false;
         }
 
