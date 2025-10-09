@@ -21,7 +21,7 @@ export interface UploadProvider {
 export class UrusaiProvider implements UploadProvider {
   name = 'urusai';
   enabled = true;
-  priority = 1;
+  priority = 2;
 
   async upload(file: File, filename: string): Promise<UploadResult> {
     const formData = new FormData();
@@ -74,7 +74,7 @@ export class UrusaiProvider implements UploadProvider {
 export class MeteorProvider implements UploadProvider {
   name = 'meteor';
   enabled = process.env.ENABLE_METEOR_FALLBACK !== 'false';
-  priority = 2;
+  priority = 1;
 
   async upload(file: File, filename: string): Promise<UploadResult> {
     const formData = new FormData();
