@@ -104,12 +104,12 @@ export async function POST(request: NextRequest) {
     const expiresAt = formData.get("expiresAt") as string | null;
 
     // 可選：指定上傳 Provider（例如 ?provider=meteor 或 formData provider=meteor）
-    // 預設先用 Meteor（可用 form/query 或環境變數覆寫）
+    // 預設先用 Urusai（可用 form/query 或環境變數覆寫）
     const providerPreference =
       (formData.get("provider") as string | null) ||
       request.nextUrl.searchParams.get("provider") ||
       process.env.DEFAULT_UPLOAD_PROVIDER ||
-      'meteor';
+      'urusai';
 
     console.log('[Upload] FormData received:', {
       hasImage: !!image,

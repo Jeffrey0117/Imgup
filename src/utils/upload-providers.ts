@@ -21,7 +21,7 @@ export interface UploadProvider {
 export class UrusaiProvider implements UploadProvider {
   name = 'urusai';
   enabled = true;
-  priority = 2;
+  priority = 1;
 
   async upload(file: File, filename: string): Promise<UploadResult> {
     const formData = new FormData();
@@ -45,15 +45,24 @@ export class UrusaiProvider implements UploadProvider {
       }
     );
 
+    const raw = await response.text().catch(() => '');
+
     if (!response.ok) {
-      throw new Error(`Urusai API error: ${response.status} ${response.statusText}`);
+      const snippet = raw ? ` - ${raw.slice(0, 300)}` : '';
+      throw new Error(`Urusai API error: ${response.status} ${response.statusText}${snippet}`);
     }
 
-    const result = await response.json();
+    let result: any;
+    try {
+      result = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new Error(`Urusai API invalid JSON: ${raw.slice(0, 300)}`);
+    }
 
     // 檢查回應格式
     if (result.status !== 'success' || !result.data) {
-      throw new Error(`Urusai API failed: ${result.message || 'Unknown error'}`);
+      const message = (result && (result.message || result.error)) || 'Unknown error';
+      throw new Error(`Urusai API failed: ${message}`);
     }
 
     const { data } = result;
@@ -74,7 +83,7 @@ export class UrusaiProvider implements UploadProvider {
 export class MeteorProvider implements UploadProvider {
   name = 'meteor';
   enabled = process.env.ENABLE_METEOR_FALLBACK !== 'false';
-  priority = 1;
+  priority = 2;
 
   async upload(file: File, filename: string): Promise<UploadResult> {
     const formData = new FormData();
@@ -92,17 +101,25 @@ export class MeteorProvider implements UploadProvider {
           Referer: 'https://meteor.today/p/times',
           Origin: 'https://meteor.today',
         },
-        mode: 'cors',
-        credentials: 'include',
+        // Node/Edge 環境不需要 mode/credentials
         signal: AbortSignal.timeout(30000),
       }
     );
 
+    const raw = await response.text().catch(() => '');
+
     if (!response.ok) {
-      throw new Error(`Meteor API error: ${response.status}`);
+      const snippet = raw ? ` - ${raw.slice(0, 300)}` : '';
+      throw new Error(`Meteor API error: ${response.status}${snippet}`);
     }
 
-    const result = await response.json();
+    let result: any;
+    try {
+      result = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new Error(`Meteor API invalid JSON: ${raw.slice(0, 300)}`);
+    }
+
     const imageUrl = result.result;
 
     if (!imageUrl) {
