@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const clientIP = getClientIP(request);
   const userAgent = request.headers.get('user-agent');
+  const debug = process.env.DEBUG_UPLOAD_ERRORS === 'true' || process.env.NODE_ENV !== 'production';
 
   try {
     // 步驟 1: 檢查 IP 黑名單
@@ -175,6 +176,7 @@ export async function POST(request: NextRequest) {
           {
             status: 0,
             message: 'Upload failed. Please try again later.',
+            detail: String(meteorError),
           },
           { status: 500 }
         );
@@ -188,13 +190,17 @@ export async function POST(request: NextRequest) {
     const imageUrl = uploadResult.url;
     if (!imageUrl) {
       await logUploadAttempt(clientIP, false, 'No image URL in response', userAgent);
-      return NextResponse.json(
-        {
-          status: 0,
-          message: "Upload service returned no image URL",
-        },
-        { status: 500 }
-      );
+      {
+        const debug = process.env.DEBUG_UPLOAD_ERRORS === 'true';
+        return NextResponse.json(
+          {
+            status: 0,
+            message: "Upload service returned no image URL",
+            ...(debug ? { detail: { provider: uploadResult?.provider || null, uploadResult } } : {}),
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // 步驟 10: 檢測檔案副檔名
@@ -259,8 +265,12 @@ export async function POST(request: NextRequest) {
         password: password || null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         fileExtension: fileExtension || null,
-        userId: userId || null,
-        ipAddress: clientIP
+        uploadStats: {
+          userId: userId || null,
+          ipAddress: clientIP,
+          provider: uploadResult.provider,
+          userAgent: userAgent || null,
+        }
       };
 
       console.log('[Upload] Saving to database with data:', {
@@ -279,13 +289,17 @@ export async function POST(request: NextRequest) {
     } catch (dbError) {
       console.error('[Upload] Database save error:', dbError);
       await logUploadAttempt(clientIP, false, 'Database save failed', userAgent);
-      return NextResponse.json(
-        {
-          status: 0,
-          message: "Failed to save upload record",
-        },
-        { status: 500 }
-      );
+      {
+        const debug = process.env.DEBUG_UPLOAD_ERRORS === 'true';
+        return NextResponse.json(
+          {
+            status: 0,
+            message: "Failed to save upload record",
+            ...(debug ? { detail: String(dbError) } : {}),
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // 記錄效能指標
@@ -316,10 +330,17 @@ export async function POST(request: NextRequest) {
     await logUploadAttempt(clientIP, false, 'Internal error', userAgent);
 
     // 不要洩漏錯誤詳情給客戶端
-    return NextResponse.json(
-      { status: 0, message: "Upload failed" },
-      { status: 500 }
-    );
+    {
+      const debug = process.env.DEBUG_UPLOAD_ERRORS === 'true';
+      return NextResponse.json(
+        {
+          status: 0,
+          message: "Upload failed",
+          ...(debug ? { detail: String(error) } : {}),
+        },
+        { status: 500 }
+      );
+    }
   }
 }
 

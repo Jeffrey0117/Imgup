@@ -164,6 +164,7 @@ export class UploadManager {
       throw new Error('No upload providers available');
     }
 
+    const errors: string[] = [];
     let lastError: any;
 
     for (const provider of providersToTry) {
@@ -173,6 +174,8 @@ export class UploadManager {
         console.log(`[UploadManager] Success with provider: ${provider.name}`);
         return result;
       } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        errors.push(`[${provider.name}] ${msg}`);
         console.error(`[UploadManager] Provider ${provider.name} failed:`, error);
         lastError = error;
         // 繼續嘗試下一個 provider
@@ -180,7 +183,8 @@ export class UploadManager {
     }
 
     // 所有 providers 都失敗
-    throw lastError || new Error('All upload providers failed');
+    const combined = errors.length ? `All upload providers failed: ${errors.join(' | ')}` : 'All upload providers failed';
+    throw lastError instanceof Error ? new Error(`${combined}`) : new Error(combined);
   }
 
   private getOrderedProviders(preferredProviderName?: string): UploadProvider[] {
