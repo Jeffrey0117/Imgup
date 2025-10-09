@@ -140,14 +140,16 @@ export class UploadManager {
     }
   }
 
-  async upload(file: File, filename: string): Promise<UploadResult> {
-    if (this.providers.length === 0) {
+  async upload(file: File, filename: string, preferredProviderName?: string): Promise<UploadResult> {
+    const providersToTry = this.getOrderedProviders(preferredProviderName);
+
+    if (providersToTry.length === 0) {
       throw new Error('No upload providers available');
     }
 
     let lastError: any;
 
-    for (const provider of this.providers) {
+    for (const provider of providersToTry) {
       try {
         console.log(`[UploadManager] Trying provider: ${provider.name}`);
         const result = await provider.upload(file, filename);
@@ -162,6 +164,25 @@ export class UploadManager {
 
     // 所有 providers 都失敗
     throw lastError || new Error('All upload providers failed');
+  }
+
+  private getOrderedProviders(preferredProviderName?: string): UploadProvider[] {
+    const ordered = [...this.providers];
+
+    if (preferredProviderName) {
+      const idx = ordered.findIndex(
+        (p) => p.name.toLowerCase() === preferredProviderName.toLowerCase()
+      );
+      if (idx > -1) {
+        const [preferred] = ordered.splice(idx, 1);
+        ordered.unshift(preferred);
+        console.log(`[UploadManager] Preferred provider set: ${preferred.name}`);
+      } else {
+        console.log(`[UploadManager] Preferred provider not found: ${preferredProviderName}`);
+      }
+    }
+
+    return ordered;
   }
 
   getAvailableProviders(): string[] {

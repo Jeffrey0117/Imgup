@@ -18,7 +18,7 @@ import { prisma } from '@/lib/prisma';
 import { generateShortHash, generateUniqueHash } from '@/utils/hash';
 
 // 加入 Upload Manager
-import { UploadManager } from '@/utils/upload-providers';
+import { UploadManager, MeteorProvider } from '@/utils/upload-providers';
 
 // 記錄上傳嘗試（用於監控和分析）
 async function logUploadAttempt(
@@ -103,6 +103,11 @@ export async function POST(request: NextRequest) {
     const password = formData.get("password") as string | null;
     const expiresAt = formData.get("expiresAt") as string | null;
 
+    // 可選：指定上傳 Provider（例如 ?provider=meteor 或 formData provider=meteor）
+    const providerPreference =
+      (formData.get("provider") as string | null) ||
+      request.nextUrl.searchParams.get("provider");
+
     console.log('[Upload] FormData received:', {
       hasImage: !!image,
       password: password ? `[SET: ${password.length} chars]` : '[NOT SET]',
@@ -143,22 +148,34 @@ export async function POST(request: NextRequest) {
 
     let uploadResult;
     try {
-      uploadResult = await uploadManager.upload(image, safeFileName);
+      uploadResult = await uploadManager.upload(image, safeFileName, providerPreference || undefined);
       console.log(`[Upload] Upload result:`, {
         provider: uploadResult.provider,
         url: uploadResult.url,
         filename: uploadResult.filename,
       });
     } catch (uploadError) {
-      console.error('[Upload] All providers failed:', uploadError);
-      await logUploadAttempt(clientIP, false, 'Upload failed', userAgent);
-      return NextResponse.json(
-        {
-          status: 0,
-          message: 'Upload failed. Please try again later.',
-        },
-        { status: 500 }
-      );
+      console.error('[Upload] UploadManager failed, attempting Meteor emergency fallback:', uploadError);
+      try {
+        const meteor = new MeteorProvider();
+        if (!meteor.enabled) {
+          console.warn('[Upload] Meteor provider is disabled by config, overriding for emergency fallback');
+          // 強制嘗試（即便環境變數關閉）
+          (meteor as any).enabled = true;
+        }
+        uploadResult = await meteor.upload(image, safeFileName);
+        console.log('[Upload] Meteor emergency fallback succeeded');
+      } catch (meteorError) {
+        console.error('[Upload] Meteor emergency fallback failed:', meteorError);
+        await logUploadAttempt(clientIP, false, 'Upload failed', userAgent);
+        return NextResponse.json(
+          {
+            status: 0,
+            message: 'Upload failed. Please try again later.',
+          },
+          { status: 500 }
+        );
+      }
     }
 
     // 記錄成功的上傳
@@ -280,6 +297,7 @@ export async function POST(request: NextRequest) {
         result: hash,
         extension: fileExtension,
         originalUrl: imageUrl,
+        provider: uploadResult.provider,
       },
       {
         status: 200,
