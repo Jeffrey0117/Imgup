@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 步驟 3: 驗證 Origin/Referer
-    if (process.env.ENABLE_ORIGIN_CHECK !== 'false' && !validateOrigin(request)) {
+    // 步驟 3: 驗證 Origin/Referer（改為僅當明確開啟時才檢查）
+    if (process.env.ENABLE_ORIGIN_CHECK === 'true' && !validateOrigin(request)) {
       await logUploadAttempt(clientIP, false, 'Invalid origin', userAgent);
       return NextResponse.json(
         { status: 0, message: 'Invalid request origin' },
@@ -129,8 +129,9 @@ export async function POST(request: NextRequest) {
 
     // 步驟 6: 驗證檔案（包含大小、類型、簽名、惡意內容檢查）
     const validationResult = await validateFile(image, {
-      checkSignature: process.env.ENABLE_FILE_SIGNATURE_CHECK !== 'false',
-      checkMalicious: process.env.ENABLE_MALICIOUS_CHECK !== 'false',
+      // 僅當明確設定為 'true' 才啟用嚴格檢查，避免誤殺導致 400/500
+      checkSignature: process.env.ENABLE_FILE_SIGNATURE_CHECK === 'true',
+      checkMalicious: process.env.ENABLE_MALICIOUS_CHECK === 'true',
     });
 
     if (!validationResult.valid) {
@@ -191,12 +192,11 @@ export async function POST(request: NextRequest) {
     if (!imageUrl) {
       await logUploadAttempt(clientIP, false, 'No image URL in response', userAgent);
       {
-        const debug = process.env.DEBUG_UPLOAD_ERRORS === 'true';
         return NextResponse.json(
           {
             status: 0,
             message: "Upload service returned no image URL",
-            ...(debug ? { detail: { provider: uploadResult?.provider || null, uploadResult } } : {}),
+            detail: { provider: uploadResult?.provider || null, uploadResult },
           },
           { status: 500 }
         );
@@ -290,12 +290,11 @@ export async function POST(request: NextRequest) {
       console.error('[Upload] Database save error:', dbError);
       await logUploadAttempt(clientIP, false, 'Database save failed', userAgent);
       {
-        const debug = process.env.DEBUG_UPLOAD_ERRORS === 'true';
         return NextResponse.json(
           {
             status: 0,
             message: "Failed to save upload record",
-            ...(debug ? { detail: String(dbError) } : {}),
+            detail: String(dbError),
           },
           { status: 500 }
         );
@@ -331,12 +330,11 @@ export async function POST(request: NextRequest) {
 
     // 不要洩漏錯誤詳情給客戶端
     {
-      const debug = process.env.DEBUG_UPLOAD_ERRORS === 'true';
       return NextResponse.json(
         {
           status: 0,
           message: "Upload failed",
-          ...(debug ? { detail: String(error) } : {}),
+          detail: String(error),
         },
         { status: 500 }
       );

@@ -35,8 +35,8 @@ const FILE_SIGNATURES = {
   ico: [0x00, 0x00, 0x01, 0x00],
 };
 
-// 預設最大檔案大小（5MB）
-const DEFAULT_MAX_FILE_SIZE = 5 * 1024 * 1024;
+// 預設最大檔案大小（25MB）
+const DEFAULT_MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 interface FileValidationResult {
   valid: boolean;

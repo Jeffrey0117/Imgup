@@ -198,11 +198,30 @@ export default function Home() {
 
       console.log("Response status:", response.status);
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // 讀取文字以便在非 2xx 時也能顯示後端 detail
+      const raw = await response.text().catch(() => "");
+      let result: any = null;
+      try {
+        result = raw ? JSON.parse(raw) : null;
+      } catch {
+        // 後端可能不是 JSON，保留 raw
       }
 
-      const result = await response.json();
+      if (!response.ok) {
+        const serverMsg = result?.message || response.statusText || 'Request failed';
+        const detail = result?.detail ? (typeof result.detail === 'string' ? result.detail : JSON.stringify(result.detail)) : raw;
+        const detailSnippet = detail ? ` - ${String(detail).slice(0, 500)}` : '';
+        throw new Error(`HTTP ${response.status}: ${serverMsg}${detailSnippet}`);
+      }
+
+      // 若前面已解析 JSON，直接使用；否則嘗試解析
+      if (!result) {
+        try {
+          result = raw ? JSON.parse(raw) : await response.json();
+        } catch {
+          result = {};
+        }
+      }
       console.log("Response result:", result);
 
       if (result.result) {
