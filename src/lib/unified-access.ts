@@ -321,10 +321,11 @@ export class EdgeDetector {
       (userAgent.includes('Mozilla') && !userAgent.includes('curl') && !userAgent.includes('wget'));
 
     // 判斷是否為圖片請求
-    // 優先判斷 Accept header，如果明確要求 image/* 則為圖片請求
-    // 若為瀏覽器但 Accept 包含 text/html，則不是圖片請求（即使有副檔名）
+    // 若 Accept 包含 text/html，則優先視為瀏覽器導航，而非圖片請求
+    // 只有當 Accept 純粹是 image/* 或非瀏覽器工具時，才視為圖片請求
     const isImageRequest = (
-      accept.includes('image/') ||
+      // 不包含 text/html 但包含 image/* → 真正的圖片請求（如 <img> 標籤）
+      (accept.includes('image/') && !accept.includes('text/html')) ||
       userAgent.includes('curl') ||
       userAgent.includes('wget') ||
       (!isBrowserRequest && hasImageExtension) ||
