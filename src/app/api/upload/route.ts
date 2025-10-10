@@ -55,18 +55,47 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent');
   const debug = process.env.DEBUG_UPLOAD_ERRORS === 'true' || process.env.NODE_ENV !== 'production';
 
-  // 簡單 API Key 驗證：
-  // 若環境變數 UPLOAD_API_KEY 有設定，則要求請求必須帶上相同的 Key
-  // 支援來源：
-  //  - Header: x-api-key
-  //  - Query: ?key= 或 ?apiKey=
+  // 簡單 API Key 驗證（對本站來源豁免）
+  // 規則：
+  //  1) 若未設定 UPLOAD_API_KEY => 不驗證
+  //  2) 若已設定：
+  //     - 來自本站網頁（duk.tw 或 NEXT_PUBLIC_BASE_URL 同源）=> 豁免，不需帶 key
+  //     - 其他來源（外部工具/腳本）=> 需要帶正確 key
   const requiredKey = (process.env.UPLOAD_API_KEY || '').trim();
+
+  // 判斷是否為本站來源
+  const host = request.headers.get('host') || '';
+  const originHeader = request.headers.get('origin') || '';
+  const refererHeader = request.headers.get('referer') || '';
+  const baseUrlEnv = process.env.NEXT_PUBLIC_BASE_URL || '';
+
+  const getHostname = (url: string): string => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return '';
+    }
+  };
+
+  const hostHostname = getHostname(`http://${host}`);
+  const originHostname = originHeader ? getHostname(originHeader) : '';
+  const refererHostname = refererHeader ? getHostname(refererHeader) : '';
+  const baseEnvHostname = baseUrlEnv ? getHostname(baseUrlEnv) : '';
+
+  const isFirstParty =
+    // 同 host
+    (!!hostHostname && (originHostname === hostHostname || refererHostname === hostHostname)) ||
+    // 與 NEXT_PUBLIC_BASE_URL 同網域
+    (!!baseEnvHostname && (originHostname === baseEnvHostname || refererHostname === baseEnvHostname));
+
+  // 支援的 key 來源
   const providedKey =
     request.headers.get('x-api-key') ||
     request.nextUrl.searchParams.get('key') ||
     request.nextUrl.searchParams.get('apiKey');
 
-  if (requiredKey) {
+  // 僅對「非本站來源」要求 key
+  if (requiredKey && !isFirstParty) {
     if (!providedKey || providedKey !== requiredKey) {
       await logUploadAttempt(clientIP, false, 'Invalid API key', userAgent);
       return NextResponse.json(
