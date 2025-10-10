@@ -174,3 +174,381 @@ const shortUrl = `${window.location.origin}/${hash}${extension}`;
 **已修復部分**：Edge 邏輯新增 `hasImageExtension` 優先判斷（commit 810addc）
 
 **待執行**：前端 API 強制生成帶副檔名的短網址（建議立即實施）
+
+---
+
+## 新問題：帶密碼的圖片直接顯示圖片內容
+
+### 問題描述
+- **URL**: `https://duk.tw/6U4jvP.jpg`
+- **預期行為**：應該先要求輸入密碼才能查看圖片
+- **實際行為**：瀏覽器直接顯示圖片內容，繞過密碼保護
+
+### 根本原因分析
+
+#### 1. 路由處理順序問題
+當前 `[hash]/page.tsx` 的處理邏輯：
+
+```typescript
+// src/app/[hash]/page.tsx:1-35
+export default async function SmartRoutePage({ params }: Props) {
+  const rawHash = params.hash;
+  const hashWithoutExt = rawHash.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i, '');
+  
+  // 檢查資料庫
+  const mapping = await prisma.mapping.findUnique({
+    where: { hash: hashWithoutExt },
+  });
+  
+  // 直接 redirect 到 /p，沒有檢查密碼
+  redirect(`/${hashWithoutExt}/p`);
+}
+```
+
+**問題**：
+1. `[hash]/page.tsx` 只做資料庫驗證與過期檢查
+2. **沒有檢查密碼欄位**
+3. 直接 redirect 到 `/p` 頁面，導致流程繞過密碼驗證
+
+#### 2. Smart Route API 的漏洞
+`/api/smart-route/[hash]/route.ts` 雖然有密碼檢查：
+
+```typescript
+// src/app/api/smart-route/[hash]/route.ts:244-263
+if (mapping?.password) {
+  const authCookie = cookies.get(`auth_${cleanedHash}`);
+  const referer = req.headers.get('referer') || '';
+  const isFromPreviewPage = referer.includes(`/${cleanedHash}/p`);
+  
+  if (!authCookie || authCookie.value !== 'verified') {
+    if (!isFromPreviewPage) {
+      return NextResponse.redirect(new URL(`/${cleanedHash}/p`, req.url), {
+        status: 302,
+      });
+    }
+  }
+}
+```
+
+**但是**：
+- Smart Route API 主要處理 **API 請求**（如 PTT 爬蟲、圖片嵌入）
+- 當用戶 **直接在瀏覽器輸入** `https://duk.tw/6U4jvP.jpg`，會先經過 `[hash]/page.tsx`
+- `[hash]/page.tsx` 沒有密碼檢查，直接 redirect 到 `/p`
+- `/p` 頁面再檢查 cookie，但此時用戶已經看到預覽頁面內容
+
+### 修復方案
+
+#### 方案 A：在 `[hash]/page.tsx` 加入密碼檢查（推薦）
+
+**修改位置**：`src/app/[hash]/page.tsx:1-35`
+
+```typescript
+import { redirect, notFound } from "next/navigation";
+import { isValidHash } from "../../utils/hash";
+import prisma from "@/lib/prisma";
+import { cookies } from 'next/headers';
+
+export default async function SmartRoutePage({ params }: Props) {
+  const rawHash = params.hash;
+  const hashWithoutExt = rawHash.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i, '');
+  
+  if (!isValidHash(hashWithoutExt)) {
+    redirect("/");
+  }
+
+  const mapping = await prisma.mapping.findUnique({
+    where: { hash: hashWithoutExt },
+  });
+
+  if (!mapping) {
+    notFound();
+  }
+
+  if (mapping.expiresAt && mapping.expiresAt < new Date()) {
+    notFound();
+  }
+
+  // 🔒 密碼檢查 - 關鍵修復
+  if (mapping.password) {
+    const cookieStore = cookies();
+    const authCookie = cookieStore.get(`auth_${hashWithoutExt}`);
+    
+    // 如果沒有驗證 cookie，強制導向預覽頁面要求輸入密碼
+    if (!authCookie || authCookie.value !== 'verified') {
+      redirect(`/${hashWithoutExt}/p`);
+    }
+  }
+
+  // 預設行為是重定向到預覽頁面
+  redirect(`/${hashWithoutExt}/p`);
+}
+```
+
+**優點**：
+- ✅ 最小改動
+- ✅ 在進入 `/p` 頁面前就攔截
+- ✅ 保持現有 Smart Route API 邏輯不變
+
+**缺點**：
+- ⚠️ 需要在兩個地方維護密碼檢查邏輯（`[hash]/page.tsx` + `smart-route/[hash]/route.ts`）
+
+### 建議實施方案
+
+**推薦：方案 A（最快實施）**
+
+1. 修改 `src/app/[hash]/page.tsx`，加入密碼檢查
+2. 確保 cookie 驗證邏輯與 Smart Route API 一致
+3. 測試流程：
+   - 上傳帶密碼的圖片
+   - 訪問 `https://duk.tw/{hash}.jpg`
+   - 確認被導向 `/p` 頁面並要求輸入密碼
+   - 輸入密碼後才能查看圖片
+
+### 測試案例
+
+#### 測試 1：帶密碼 + 帶副檔名
+- **URL**：`https://duk.tw/6U4jvP.jpg`
+- **預期**：導向 `/6U4jvP/p`，要求輸入密碼
+- **實際**：（待修復後測試）
+
+#### 測試 2：帶密碼 + 無副檔名
+- **URL**：`https://duk.tw/6U4jvP`
+- **預期**：導向 `/6U4jvP/p`，要求輸入密碼
+- **實際**：（待修復後測試）
+
+### 結論
+
+**新問題根源**：`[hash]/page.tsx` 沒有檢查密碼欄位，直接 redirect 導致繞過密碼保護
+
+**最佳解法**：方案 A - 在 `[hash]/page.tsx` 加入密碼檢查
+
+**立即行動**：修改 `src/app/[hash]/page.tsx:25-35`，加入密碼驗證邏輯
+
+---
+
+## 完整路由策略規劃：密碼保護 vs 論壇嵌入
+
+### 衝突分析
+
+#### 目前行為
+1. **帶副檔名 URL**（如 `https://duk.tw/6U4jvP.jpg`）
+   - `[hash]/page.tsx` 處理：直接 redirect 到 `/p` 預覽頁
+   - 結果：瀏覽器顯示預覽頁（HTML），**不是圖片**
+
+2. **論壇嵌入需求**（PTT、巴哈）
+   - 論壇爬蟲發送請求：`Accept: image/*` 或 HEAD 請求
+   - 需要回應：`Content-Type: image/jpeg` + 圖片二進位內容
+   - **不能**回應 HTML 或 redirect
+
+3. **密碼保護需求**
+   - 有密碼的圖片不應直接暴露
+   - 需要先驗證 cookie 或導向密碼表單
+
+#### 根本矛盾
+- **論壇嵌入**：需要 **直接回傳圖片**（不檢查密碼）
+- **密碼保護**：需要 **攔截請求**（檢查密碼）
+
+### 解決策略：User-Agent 與 Accept Header 區分
+
+#### 核心邏輯
+```
+if (帶副檔名) {
+  if (Accept: image/* 或 HEAD 請求) {
+    // 論壇爬蟲或 <img> 嵌入
+    if (有密碼) {
+      ❌ 回傳 403 Forbidden（保護圖片）
+    } else {
+      ✅ 回傳圖片（支援論壇嵌入）
+    }
+  } else {
+    // 瀏覽器直接訪問
+    if (有密碼) {
+      if (cookie 驗證通過) {
+        redirect 到 /p（顯示預覽頁）
+      } else {
+        redirect 到 /p（顯示密碼表單）
+      }
+    } else {
+      redirect 到 /p（顯示預覽頁）
+    }
+  }
+}
+```
+
+### 路由處理方案（完整版）
+
+#### 選項 1：`[hash]/page.tsx` 處理所有邏輯（不推薦）
+
+**問題**：
+- `[hash]/page.tsx` 是 **React Server Component**，只能 `redirect()`
+- **無法**直接回傳圖片二進位內容
+- **無法**設定 `Content-Type: image/jpeg`
+
+#### 選項 2：Middleware 重寫到 Smart Route API（推薦）
+
+**實施步驟**：
+
+1. **Middleware 攔截所有 `/{hash}.ext` 請求**
+   ```typescript
+   // middleware.ts
+   export function middleware(request: NextRequest) {
+     const pathname = request.nextUrl.pathname;
+     
+     // 檢查是否為帶副檔名的短網址
+     const match = pathname.match(/^\/([a-zA-Z0-9]+)\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i);
+     if (match) {
+       const [, hash, ext] = match;
+       // Rewrite 到 Smart Route API
+       return NextResponse.rewrite(new URL(`/api/smart-route/${hash}.${ext}`, request.url));
+     }
+     
+     return NextResponse.next();
+   }
+   ```
+
+2. **Smart Route API 統一處理**
+   ```typescript
+   // src/app/api/smart-route/[hash]/route.ts
+   export async function GET(req: NextRequest, { params }: { params: { hash: string } }) {
+     const cleanedHash = params.hash.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i, '');
+     const hasExtension = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(params.hash);
+     
+     // 查詢資料庫
+     const mapping = await prisma.mapping.findUnique({ where: { hash: cleanedHash } });
+     
+     if (!mapping) return notFound();
+     if (mapping.expiresAt && mapping.expiresAt < new Date()) return notFound();
+     
+     // 判斷請求類型
+     const accept = req.headers.get('accept') || '';
+     const isImageRequest = accept.includes('image/') || req.method === 'HEAD';
+     
+     // 🔒 密碼保護邏輯
+     if (mapping.password) {
+       const authCookie = req.cookies.get(`auth_${cleanedHash}`);
+       
+       if (isImageRequest) {
+         // 論壇爬蟲或 <img> 嵌入：拒絕訪問
+         return new NextResponse('Protected image', { status: 403 });
+       } else {
+         // 瀏覽器訪問：導向密碼頁面
+         if (!authCookie || authCookie.value !== 'verified') {
+           return NextResponse.redirect(new URL(`/${cleanedHash}/p`, req.url));
+         }
+       }
+     }
+     
+     // 無密碼或已驗證
+     if (isImageRequest && hasExtension) {
+       // 回傳圖片（代理模式）
+       const imageResponse = await fetch(mapping.url);
+       return new NextResponse(imageResponse.body, {
+         headers: {
+           'Content-Type': imageResponse.headers.get('Content-Type') || 'image/jpeg',
+           'Cache-Control': 'public, max-age=31536000',
+         }
+       });
+     } else {
+       // 回傳預覽頁
+       return NextResponse.redirect(new URL(`/${cleanedHash}/p`, req.url));
+     }
+   }
+   ```
+
+3. **`[hash]/page.tsx` 簡化**
+   ```typescript
+   // src/app/[hash]/page.tsx
+   export default async function SmartRoutePage({ params }: Props) {
+     // 只處理無副檔名的請求
+     const hashWithoutExt = params.hash.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i, '');
+     
+     // 所有邏輯都導向 /p
+     redirect(`/${hashWithoutExt}/p`);
+   }
+   ```
+
+### 行為對照表
+
+| 情境 | URL | 請求類型 | 有密碼 | Cookie | 行為 |
+|------|-----|----------|--------|--------|------|
+| PTT 嵌入 | `duk.tw/abc.jpg` | `Accept: image/*` | ❌ | - | ✅ 回傳圖片 |
+| PTT 嵌入 | `duk.tw/abc.jpg` | `Accept: image/*` | ✅ | - | ❌ 403 Forbidden |
+| 瀏覽器訪問 | `duk.tw/abc.jpg` | `Accept: text/html` | ❌ | - | redirect → `/abc/p` |
+| 瀏覽器訪問 | `duk.tw/abc.jpg` | `Accept: text/html` | ✅ | ❌ | redirect → `/abc/p`（密碼表單）|
+| 瀏覽器訪問 | `duk.tw/abc.jpg` | `Accept: text/html` | ✅ | ✅ | redirect → `/abc/p`（預覽頁）|
+| `<img src>` | `duk.tw/abc.jpg` | `Accept: image/*` | ❌ | - | ✅ 回傳圖片 |
+| `<img src>` | `duk.tw/abc.jpg` | `Accept: image/*` | ✅ | - | ❌ 403 Forbidden |
+
+### 優缺點分析
+
+#### 優點
+- ✅ 支援 PTT/巴哈論壇嵌入（無密碼圖片）
+- ✅ 保護密碼圖片（論壇無法嵌入）
+- ✅ 瀏覽器訪問有完整預覽體驗
+- ✅ 統一由 Smart Route API 處理，邏輯集中
+
+#### 缺點
+- ⚠️ **有密碼的圖片無法在論壇嵌入**
+- ⚠️ 需要修改 Middleware 與 Smart Route API
+
+### 替代方案：密碼圖片專用 Token
+
+#### 邏輯
+1. 密碼驗證通過後，生成臨時 token
+2. 將 token 加入圖片 URL：`duk.tw/abc.jpg?t=xxx`
+3. 論壇嵌入時附帶 token，Smart Route API 驗證 token 有效性
+
+#### 實施複雜度
+- 🔴 高複雜度：需要 token 生成、驗證、過期管理
+- 🔴 使用者體驗差：論壇連結會變很長
+
+### 最終建議
+
+#### 方案 B：Middleware + Smart Route API（推薦）
+
+**實施優先級**：
+1. ✅ 修改 `middleware.ts`，帶副檔名請求 rewrite 到 Smart Route API
+2. ✅ 修改 `smart-route/[hash]/route.ts`，加入密碼與請求類型判斷
+3. ✅ 簡化 `[hash]/page.tsx`，只做 redirect
+
+**權衡**：
+- 無密碼圖片：✅ 完美支援論壇嵌入
+- 有密碼圖片：❌ 無法在論壇嵌入（安全考量，符合預期）
+
+**文件說明**：
+> 注意：設定密碼保護的圖片無法在論壇（PTT、巴哈）中嵌入顯示。若需要論壇嵌入，請不要設定密碼。
+
+### 測試驗證清單
+
+#### 測試 1：無密碼 + 論壇嵌入
+- URL：`https://duk.tw/abc123.jpg`
+- 請求：PTT 爬蟲（`Accept: image/*`）
+- 預期：✅ 回傳圖片，PTT 自動嵌入
+
+#### 測試 2：有密碼 + 論壇嵌入
+- URL：`https://duk.tw/6U4jvP.jpg`
+- 請求：PTT 爬蟲（`Accept: image/*`）
+- 預期：❌ 403 Forbidden，PTT 顯示連結
+
+#### 測試 3：有密碼 + 瀏覽器訪問
+- URL：`https://duk.tw/6U4jvP.jpg`
+- 請求：Chrome（`Accept: text/html`）
+- 預期：redirect → `/6U4jvP/p`，顯示密碼表單
+
+#### 測試 4：有密碼 + Cookie 驗證
+- URL：`https://duk.tw/6U4jvP.jpg`
+- Cookie：`auth_6U4jvP=verified`
+- 預期：redirect → `/6U4jvP/p`，顯示預覽頁與圖片
+
+### 結論
+
+**完整策略**：
+1. **Middleware** rewrite 帶副檔名請求到 Smart Route API
+2. **Smart Route API** 根據 `Accept` header 區分請求類型
+3. **密碼保護**優先於論壇嵌入（安全第一）
+4. **文件明確告知**：密碼圖片無法嵌入論壇
+
+**立即行動**：
+1. 修改 `middleware.ts:4-14`，加入 rewrite 邏輯
+2. 修改 `smart-route/[hash]/route.ts:220-290`，加入密碼與請求類型判斷
+3. 簡化 `[hash]/page.tsx:1-35`

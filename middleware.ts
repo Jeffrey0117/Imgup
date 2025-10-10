@@ -6,11 +6,18 @@ export function middleware(request: NextRequest) {
  
   // 確保 /admin 路徑不會被 [hash] 動態路由捕獲
   if (pathname.startsWith('/admin')) {
-    // 讓所有 /admin 路徑正常通過
     return NextResponse.next();
   }
  
-  // 其他路徑正常處理（不做任何 rewrite）
+  // 帶副檔名的短網址：rewrite 到 Smart Route API
+  const match = pathname.match(/^\/([a-zA-Z0-9]+)\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i);
+  if (match) {
+    const [, hash, ext] = match;
+    const url = new URL(`/api/smart-route/${hash}.${ext}`, request.url);
+    return NextResponse.rewrite(url);
+  }
+ 
+  // 其他路徑正常處理
   return NextResponse.next();
 }
  

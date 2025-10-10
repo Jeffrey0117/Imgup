@@ -31,6 +31,6 @@ export default async function SmartRoutePage({ params }: Props) {
     notFound();
   }
 
-  // 預設行為是重定向到預覽頁面
+  // 統一導向預覽頁面（密碼驗證由 Smart Route API 或預覽頁面處理）
   redirect(`/${hashWithoutExt}/p`);
 }

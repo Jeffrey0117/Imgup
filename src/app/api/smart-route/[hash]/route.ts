@@ -196,6 +196,10 @@ export async function GET(
     const { hash: rawHash } = params;
     // 正規化：解碼並移除結尾空白/編碼空白，避免 `...png%20` 或 `...png ` 造成解析失敗
     const cleanedHash = decodeURIComponent(rawHash).replace(/(%20|\s|\+)+$/g, '');
+    
+    // 移除副檔名以查詢資料庫
+    const hashWithoutExt = cleanedHash.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i, '');
+    const hasExtension = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(cleanedHash);
 
     // 建構統一請求物件
     const headers: Record<string, string> = {};
@@ -204,7 +208,7 @@ export async function GET(
     });
 
     const accessRequest: ImageAccessRequest = {
-      hash: cleanedHash,
+      hash: hashWithoutExt,
       headers,
       userAgent: headers['user-agent'] || headers['User-Agent'],
       referer: headers.referer || headers.Referer,
@@ -215,6 +219,8 @@ export async function GET(
 
     console.log("Smart Route 統一介面請求:", {
       rawHash: cleanedHash,
+      hashWithoutExt,
+      hasExtension,
       userAgent: accessRequest.userAgent?.substring(0, 50),
       referer: accessRequest.referer?.substring(0, 50)
     });
@@ -241,24 +247,42 @@ export async function GET(
       }
     }
 
-    // 檢查是否需要密碼驗證
+    // 🔒 密碼保護邏輯
     if (mapping?.password) {
-      // 檢查是否有驗證 cookie
-      const cookies = req.cookies;
-      const authCookie = cookies.get(`auth_${cleanedHash}`);
+      const authCookie = req.cookies.get(`auth_${hashWithoutExt}`);
+      const accept = req.headers.get('accept') || '';
+      const isImageRequest = accept.includes('image/') || req.method === 'HEAD';
       
-      // 🔒 檢查:如果請求來自預覽頁面,不要重定向(避免循環)
-      const referer = req.headers.get('referer') || '';
-      const isFromPreviewPage = referer.includes(`/${cleanedHash}/p`);
+      console.log('[Smart Route] 密碼保護檢查:', {
+        hasPassword: true,
+        hasCookie: !!authCookie,
+        isImageRequest,
+        accept: accept.substring(0, 50)
+      });
       
-      if (!authCookie || authCookie.value !== 'verified') {
-        // 如果不是從預覽頁面來的,才重定向到預覽頁面
-        if (!isFromPreviewPage) {
-          return NextResponse.redirect(new URL(`/${cleanedHash}/p`, req.url), {
-            status: 302,
-          });
+      if (isImageRequest) {
+        // 論壇爬蟲或 <img> 嵌入：拒絕訪問
+        console.log('[Smart Route] 論壇嵌入請求 - 拒絕有密碼的圖片');
+        return new NextResponse('Protected image - password required', {
+          status: 403,
+          headers: {
+            'Content-Type': 'text/plain',
+            'Cache-Control': 'no-store'
+          }
+        });
+      } else {
+        // 瀏覽器訪問：檢查 cookie
+        const referer = req.headers.get('referer') || '';
+        const isFromPreviewPage = referer.includes(`/${hashWithoutExt}/p`);
+        
+        if (!authCookie || authCookie.value !== 'verified') {
+          if (!isFromPreviewPage) {
+            console.log('[Smart Route] 需要密碼驗證 - 導向預覽頁面');
+            return NextResponse.redirect(new URL(`/${hashWithoutExt}/p`, req.url), {
+              status: 302,
+            });
+          }
         }
-        // 如果已在預覽頁面,讓它正常載入(顯示密碼表單)
       }
     }
 
