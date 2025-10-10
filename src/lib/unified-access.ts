@@ -465,9 +465,16 @@ export class UnifiedImageAccess {
 
     // 混合代理模式：根據請求類型動態選擇
     
-    // 帶副檔名一律直出圖片（避免 <img> 被導到預覽頁）
+    // 帶副檔名：
+    // - 若為瀏覽器直接開啟（Accept: text/html 等，且非圖片請求）→ 導向預覽頁，避免在新分頁直接顯示原圖
+    // - 其他情境（<img>、爬蟲、API、HEAD、image Accept）→ 使用代理直出圖片，避免暴露來源
     if (extension && mapping.url) {
-      console.log('Using proxy response for extension request (always image for extension)');
+      if (edgeResult.isBrowserRequest && !edgeResult.isImageRequest) {
+        console.log('Extension request from browser navigation → redirect to preview');
+        const previewUrl = `/${request.hash}/p`;
+        return this.createRedirectResponse(previewUrl);
+      }
+      console.log('Extension request (non-browser navigation) → proxy image');
       return this.createProxyResponse(mapping);
     }
 
