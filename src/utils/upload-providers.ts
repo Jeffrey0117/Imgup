@@ -1,4 +1,6 @@
-// Upload Providers - 多 Provider 上傳系統
+ // Upload Providers - 多 Provider 上傳系統
+
+const PROVIDER_TIMEOUT_MS = parseInt(process.env.UPLOAD_PROVIDER_TIMEOUT_MS || '12000');
 
 export interface UploadResult {
   url: string;              // 圖片 URL (用於儲存)
@@ -41,7 +43,7 @@ export class UrusaiProvider implements UploadProvider {
       {
         method: 'POST',
         body: formData,
-        signal: AbortSignal.timeout(30000), // 30 秒超時
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
       }
     );
 
@@ -170,7 +172,11 @@ export class UploadManager {
     for (const provider of providersToTry) {
       try {
         console.log(`[UploadManager] Trying provider: ${provider.name}`);
-        const result = await provider.upload(file, filename);
+        const result = await this.withTimeout(
+          provider.upload(file, filename),
+          PROVIDER_TIMEOUT_MS,
+          provider.name
+        );
         console.log(`[UploadManager] Success with provider: ${provider.name}`);
         return result;
       } catch (error) {
@@ -185,6 +191,19 @@ export class UploadManager {
     // 所有 providers 都失敗
     const combined = errors.length ? `All upload providers failed: ${errors.join(' | ')}` : 'All upload providers failed';
     throw lastError instanceof Error ? new Error(`${combined}`) : new Error(combined);
+  }
+
+  private async withTimeout<T>(promise: Promise<T>, ms: number, name: string): Promise<T> {
+    let timer: NodeJS.Timeout;
+    const timeout = new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${name} timed out after ${ms}ms`)), ms);
+    });
+    try {
+      // 競速：provider 自身也使用 AbortSignal，但這裡再加一層保險
+      return await Promise.race([promise, timeout]);
+    } finally {
+      clearTimeout(timer!);
+    }
   }
 
   private getOrderedProviders(preferredProviderName?: string): UploadProvider[] {

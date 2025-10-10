@@ -263,13 +263,19 @@ export default function Home() {
         // 自動複製短網址到剪貼簿
         if (shortUrl) {
           try {
-            navigator.clipboard.writeText(shortUrl).then(() => {
-              console.log("短網址已自動複製到剪貼簿:", shortUrl);
-              showToast("圖片上傳成功！短網址已自動複製到剪貼簿");
-            }).catch((error) => {
-              console.error("自動複製失敗:", error);
+            // 僅在視窗聚焦時嘗試自動複製，避免 NotAllowedError
+            if (typeof document !== 'undefined' && document.hasFocus()) {
+              navigator.clipboard.writeText(shortUrl).then(() => {
+                console.log("短網址已自動複製到剪貼簿:", shortUrl);
+                showToast("圖片上傳成功！短網址已自動複製到剪貼簿");
+              }).catch((error) => {
+                console.error("自動複製失敗:", error);
+                showToast("圖片上傳成功！請手動複製短網址");
+              });
+            } else {
+              console.warn("文件未聚焦，跳過自動複製");
               showToast("圖片上傳成功！請手動複製短網址");
-            });
+            }
           } catch (error) {
             console.error("自動複製失敗:", error);
             showToast("圖片上傳成功！請手動複製短網址");

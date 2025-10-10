@@ -6,6 +6,9 @@ interface QRCodeProps {
 }
 
 export default function QRCode({ value, size = 150 }: QRCodeProps) {
+  // 沒有值時不渲染，避免 400 (Bad Request)
+  if (!value) return null;
+
   // 使用免費的 QR Code API 服務
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(
     value
