@@ -55,6 +55,27 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent');
   const debug = process.env.DEBUG_UPLOAD_ERRORS === 'true' || process.env.NODE_ENV !== 'production';
 
+  // 簡單 API Key 驗證：
+  // 若環境變數 UPLOAD_API_KEY 有設定，則要求請求必須帶上相同的 Key
+  // 支援來源：
+  //  - Header: x-api-key
+  //  - Query: ?key= 或 ?apiKey=
+  const requiredKey = (process.env.UPLOAD_API_KEY || '').trim();
+  const providedKey =
+    request.headers.get('x-api-key') ||
+    request.nextUrl.searchParams.get('key') ||
+    request.nextUrl.searchParams.get('apiKey');
+
+  if (requiredKey) {
+    if (!providedKey || providedKey !== requiredKey) {
+      await logUploadAttempt(clientIP, false, 'Invalid API key', userAgent);
+      return NextResponse.json(
+        { status: 0, message: 'Invalid API key' },
+        { status: 401 }
+      );
+    }
+  }
+
   try {
     // 步驟 1: 檢查 IP 黑名單
     if (isIPBlacklisted(clientIP)) {
