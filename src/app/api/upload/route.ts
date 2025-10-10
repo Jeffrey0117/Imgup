@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+
+// 確保在 Vercel/Serverless 環境不因預設超時而中斷上傳流程
+export const runtime = 'nodejs';         // 使用 Node.js 環境（非 edge），避免過短超時
+export const dynamic = 'force-dynamic';  // 強制動態，避免快取干擾
+export const maxDuration = 60;           // 放寬執行時間限制（秒），依部署平台支援度生效
 import {
   uploadRateLimiter,
   getClientIP,
