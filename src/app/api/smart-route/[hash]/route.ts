@@ -247,8 +247,9 @@ export async function GET(
       }
     }
 
-    // 🔒 密碼保護邏輯
-    if (mapping?.password) {
+    // 🔒 密碼保護邏輯（僅在非 proxy 模式下執行）
+    // proxy 模式表示 unified-access 已決定允許直接存取（如 img 標籤嵌入）
+    if (mapping?.password && response.type !== 'proxy') {
       const authCookie = req.cookies.get(`auth_${hashWithoutExt}`);
       const accept = req.headers.get('accept') || '';
       const isImageRequest = accept.includes('image/') || req.method === 'HEAD';
@@ -257,6 +258,7 @@ export async function GET(
         hasPassword: true,
         hasCookie: !!authCookie,
         isImageRequest,
+        responseType: response.type,
         accept: accept.substring(0, 50)
       });
       
