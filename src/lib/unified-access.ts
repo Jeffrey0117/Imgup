@@ -320,12 +320,14 @@ export class EdgeDetector {
     const isBrowserRequest = accept.includes('text/html') ||
       (userAgent.includes('Mozilla') && !userAgent.includes('curl') && !userAgent.includes('wget'));
 
-    // 判斷是否為圖片請求（curl 和其他非瀏覽器工具）
+    // 判斷是否為圖片請求
+    // 優先判斷 Accept header，如果明確要求 image/* 則為圖片請求
+    // 若為瀏覽器但 Accept 包含 text/html，則不是圖片請求（即使有副檔名）
     const isImageRequest = (
-      hasImageExtension ||
+      accept.includes('image/') ||
       userAgent.includes('curl') ||
       userAgent.includes('wget') ||
-      accept.includes('image/') ||
+      (!isBrowserRequest && hasImageExtension) ||
       (!isBrowserRequest && (accept === '*/*' || accept === ''))
     );
 
@@ -469,6 +471,14 @@ export class UnifiedImageAccess {
     // - 若為瀏覽器直接開啟（Accept: text/html 等，且非圖片請求）→ 導向預覽頁，避免在新分頁直接顯示原圖
     // - 其他情境（<img>、爬蟲、API、HEAD、image Accept）→ 使用代理直出圖片，避免暴露來源
     if (extension && mapping.url) {
+      const enableRedirectWithPassword = process.env.SMART_ROUTE_REDIRECT_EXT_WITH_PASSWORD === 'true';
+      
+      if (enableRedirectWithPassword && mapping.password && edgeResult.isBrowserRequest && !edgeResult.isImageRequest) {
+        console.log('EXT+PWD browser navigation → preview redirect');
+        const previewUrl = `/${request.hash}/p`;
+        return this.createRedirectResponse(previewUrl);
+      }
+      
       if (edgeResult.isBrowserRequest && !edgeResult.isImageRequest) {
         console.log('Extension request from browser navigation → redirect to preview');
         const previewUrl = `/${request.hash}/p`;
