@@ -462,7 +462,16 @@ export class UnifiedImageAccess {
     console.log('Edge detection result:', {
       ...edgeResult,
       hash: request.hash,
-      hasMapping: !!mapping.url
+      extension,
+      hasMapping: !!mapping.url,
+      hasPassword: !!mapping.password,
+      accept: request.headers.accept || request.headers.Accept,
+      userAgent: (request.headers['user-agent'] || request.headers['User-Agent'] || '').substring(0, 100)
+    });
+
+    console.log('Environment check:', {
+      SMART_ROUTE_REDIRECT_EXT_WITH_PASSWORD: process.env.SMART_ROUTE_REDIRECT_EXT_WITH_PASSWORD,
+      enableRedirectWithPassword: process.env.SMART_ROUTE_REDIRECT_EXT_WITH_PASSWORD === 'true'
     });
 
     // 混合代理模式：根據請求類型動態選擇
@@ -472,6 +481,8 @@ export class UnifiedImageAccess {
     // - 其他情境（<img>、爬蟲、API、HEAD、image Accept）→ 使用代理直出圖片，避免暴露來源
     if (extension && mapping.url) {
       const enableRedirectWithPassword = process.env.SMART_ROUTE_REDIRECT_EXT_WITH_PASSWORD === 'true';
+      
+      console.log('Extension branch: isBrowserRequest =', edgeResult.isBrowserRequest, ', isImageRequest =', edgeResult.isImageRequest);
       
       if (enableRedirectWithPassword && mapping.password && edgeResult.isBrowserRequest && !edgeResult.isImageRequest) {
         console.log('EXT+PWD browser navigation → preview redirect');
