@@ -226,6 +226,45 @@ export async function POST(request: NextRequest) {
       console.warn('[Upload] Logo-block check error:', e);
     }
 
+    // 7.2: 重複檔名防刷（同檔名在時間窗內多次上傳時擋下）
+    try {
+      const guardEnabled = process.env.ENABLE_DUPLICATE_FILENAME_GUARD !== 'false';
+      if (guardEnabled && safeFileName) {
+        const threshold = parseInt(process.env.DUP_GUARD_THRESHOLD || '3', 10); // 次數
+        const windowMinutes = parseInt(process.env.DUP_GUARD_WINDOW_MINUTES || '60', 10); // 分鐘
+        const since = new Date(Date.now() - windowMinutes * 60 * 1000);
+
+        const recent = await prisma.mapping.findMany({
+          where: {
+            filename: safeFileName,
+            createdAt: { gte: since },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: Math.max(threshold, 10),
+        });
+
+        // 同 IP 判斷（uploadStats 內含 ipAddress）
+        const recentSameIp = recent.filter(r => {
+          try {
+            const stats = (r as any).uploadStats || {};
+            return stats && stats.ipAddress === clientIP;
+          } catch {
+            return false;
+          }
+        });
+
+        if (recent.length >= threshold || recentSameIp.length >= Math.max(2, Math.floor(threshold / 2))) {
+          await logUploadAttempt(clientIP, false, `Duplicate filename guard hit: ${safeFileName}`, userAgent);
+          return NextResponse.json(
+            { status: 0, message: 'Too many uploads with the same filename recently' },
+            { status: 429 }
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('[Upload] Duplicate filename guard error:', e);
+    }
+
     // 步驟 8: 使用 Upload Manager 上傳
     console.log(`[Upload] Processing file: ${safeFileName} (${image.size} bytes) from ${clientIP}`);
 
