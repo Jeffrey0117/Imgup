@@ -200,6 +200,32 @@ export async function POST(request: NextRequest) {
     // 步驟 7: 清理檔案名稱
     const safeFileName = sanitizeFileName(image.name);
 
+    // 7.1: 阻擋可疑 Logo 重複上傳（可由環境變數 BLOCK_KNOWN_LOGO_UPLOADS 控制，預設啟用）
+    try {
+      const blockLogo = process.env.BLOCK_KNOWN_LOGO_UPLOADS !== 'false';
+      if (blockLogo) {
+        const lower = (safeFileName || '').toLowerCase().trim();
+        // 常見站內 Logo 檔名模式
+        const logoPattern = /^(logo[-_]?imgup|new_logo_with_text3(?:_resize)?)\.(png|webp|jpe?g|gif|svg|bmp|ico)$/i;
+        if (logoPattern.test(lower)) {
+          console.warn('[Upload] Blocked suspicious logo upload attempt:', {
+            file: lower,
+            ip: clientIP,
+            origin: request.headers.get('origin') || null,
+            referer: request.headers.get('referer') || null,
+            ua: userAgent || null,
+          });
+          await logUploadAttempt(clientIP, false, `Blocked suspicious logo upload: ${lower}`, userAgent);
+          return NextResponse.json(
+            { status: 0, message: 'Blocked suspicious upload' },
+            { status: 400 }
+          );
+        }
+      }
+    } catch (e) {
+      console.warn('[Upload] Logo-block check error:', e);
+    }
+
     // 步驟 8: 使用 Upload Manager 上傳
     console.log(`[Upload] Processing file: ${safeFileName} (${image.size} bytes) from ${clientIP}`);
 
