@@ -427,13 +427,19 @@ export async function POST(request: NextRequest) {
       console.warn(`[Upload] Slow request detected: ${processingTime}ms from ${clientIP}`);
     }
 
-    // 回傳包含 hash 和副檔名的結果
+    // 建立短網址（隱藏原始 provider 資訊）
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
+                    (typeof process !== "undefined" && process.env.VERCEL_URL
+                      ? `https://${process.env.VERCEL_URL}`
+                      : "https://duk.tw");
+    const shortUrl = `${baseUrl}/${hash}${fileExtension || ""}`;
+
+    // 回傳包含 hash、副檔名和短網址的結果（不回傳原始網址和 provider）
     return NextResponse.json(
       {
         result: hash,
         extension: fileExtension,
-        originalUrl: imageUrl,
-        provider: uploadResult.provider,
+        shortUrl: shortUrl,
       },
       {
         status: 200,

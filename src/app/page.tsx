@@ -225,15 +225,12 @@ export default function Home() {
       console.log("Response result:", result);
 
       if (result.result) {
-        // 直接使用 Upload API 回傳的 hash/extension 組短網址（免再呼叫 /api/shorten）
-        const hash = result.result;
-        const shortUrl = result.extension
-          ? `${window.location.origin}/${hash}${result.extension}`
-          : `${window.location.origin}/${hash}`;
+        // 直接使用後端回傳的短網址
+        const shortUrl = result.shortUrl || `${window.location.origin}/${result.result}${result.extension || ""}`;
 
         console.log("成功取得短網址:", {
           shortUrl,
-          hash,
+          hash: result.result,
           extension: result.extension,
         });
 
@@ -243,8 +240,8 @@ export default function Home() {
               ? {
                   ...q,
                   done: true,
-                  url: result.originalUrl,
-                  shortUrl: shortUrl || undefined,
+                  url: shortUrl,
+                  shortUrl: shortUrl,
                   progress: 100,
                   status: "success" as const,
                 }
@@ -252,9 +249,8 @@ export default function Home() {
           )
         );
 
-        // 設定上傳結果並延遲關閉動畫，給 QR Code 足夠時間生成
-        setCurrentUploadUrl(result.originalUrl);
-        // 確保有短網址才設置，否則使用原始網址
+        // 設定上傳結果（使用短網址代替原始網址）
+        setCurrentUploadUrl(shortUrl);
         setCurrentShortUrl(shortUrl);
 
         // 累計批次上傳成功數（單張也會累計為 1）
