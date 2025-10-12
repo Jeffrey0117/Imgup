@@ -309,7 +309,8 @@ export function createRateLimiter(config: RateLimitConfig) {
     }
 
     const userAgent = req.headers.get('user-agent');
-    if (process.env.ENABLE_USER_AGENT_CHECK === 'true' && isSuspiciousUserAgent(userAgent)) {
+    // 只在生產環境啟用 User-Agent 檢查，避免影響開發
+    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_USER_AGENT_CHECK === 'true' && isSuspiciousUserAgent(userAgent)) {
       console.log(`[RateLimit] Blocked suspicious User-Agent: ${userAgent} from ${identifier}`);
       return { allowed: false, reason: 'Invalid client', userContext };
     }
