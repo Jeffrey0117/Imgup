@@ -428,10 +428,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 建立短網址（隱藏原始 provider 資訊）
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ||
-                    (typeof process !== "undefined" && process.env.VERCEL_URL
-                      ? `https://${process.env.VERCEL_URL}`
-                      : "https://duk.tw");
+    // 優先使用 duk.tw，只在本地開發時才使用其他網址
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://duk.tw'
+      : (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000');
     const shortUrl = `${baseUrl}/${hash}${fileExtension || ""}`;
 
     // 回傳包含 hash、副檔名和短網址的結果（不回傳原始網址和 provider）
