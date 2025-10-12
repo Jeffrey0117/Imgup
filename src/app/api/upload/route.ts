@@ -427,15 +427,13 @@ export async function POST(request: NextRequest) {
       console.warn(`[Upload] Slow request detected: ${processingTime}ms from ${clientIP}`);
     }
 
-    // 回傳包含 hash 和副檔名的結果（隱藏原始 provider 網域）
+    // 回傳包含 hash 和副檔名的結果
     return NextResponse.json(
       {
         result: hash,
         extension: fileExtension,
-        // 移除 originalUrl 以避免洩漏 provider 網域
-        // originalUrl: imageUrl,
-        // 可選：也隱藏 provider 資訊
-        // provider: uploadResult.provider,
+        originalUrl: imageUrl,
+        provider: uploadResult.provider,
       },
       {
         status: 200,
