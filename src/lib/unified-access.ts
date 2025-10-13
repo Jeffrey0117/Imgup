@@ -478,25 +478,20 @@ export class UnifiedImageAccess {
     // 混合代理模式：根據請求類型動態選擇
     
     // 帶副檔名：
-    // - 若為瀏覽器直接開啟（Accept: text/html 等，且非圖片請求）→ 導向預覽頁，避免在新分頁直接顯示原圖
-    // - 其他情境（<img>、爬蟲、API、HEAD、image Accept）→ 使用代理直出圖片，避免暴露來源
+    // - 若為瀏覽器請求 → 永遠導向預覽頁（不論 Accept header，確保一致性）
+    // - 其他情境（<img>、爬蟲、API、HEAD）→ 使用代理直出圖片，避免暴露來源
     if (extension && mapping.url) {
-      const enableRedirectWithPassword = process.env.SMART_ROUTE_REDIRECT_EXT_WITH_PASSWORD === 'true';
-      
       console.log('Extension branch: isBrowserRequest =', edgeResult.isBrowserRequest, ', isImageRequest =', edgeResult.isImageRequest);
       
-      if (enableRedirectWithPassword && mapping.password && edgeResult.isBrowserRequest && !edgeResult.isImageRequest) {
-        console.log('EXT+PWD browser navigation → preview redirect');
+      // 只要是瀏覽器請求（有 Mozilla User-Agent）就轉址到預覽頁
+      // 不再依賴 Accept header，因為瀏覽器可能會快取或改變 Accept
+      if (edgeResult.isBrowserRequest) {
+        console.log('Extension request from browser → always redirect to preview');
         const previewUrl = `/${request.hash}/p`;
         return this.createRedirectResponse(previewUrl);
       }
       
-      if (edgeResult.isBrowserRequest && !edgeResult.isImageRequest) {
-        console.log('Extension request from browser navigation → redirect to preview');
-        const previewUrl = `/${request.hash}/p`;
-        return this.createRedirectResponse(previewUrl);
-      }
-      console.log('Extension request (non-browser navigation) → proxy image');
+      console.log('Extension request (non-browser) → proxy image');
       return this.createProxyResponse(mapping);
     }
 
