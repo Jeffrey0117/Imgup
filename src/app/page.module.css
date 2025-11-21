@@ -1155,7 +1155,7 @@
   }
 
   .item {
-    grid-template-columns: 48px 1fr minmax(50px, 60px) 28px;
+    grid-template-columns: 48px 1fr minmax(50px, 60px) 32px;
     gap: 8px;
     padding: 6px;
   }
@@ -1251,19 +1251,19 @@
   }
 
   .item {
-    grid-template-columns: 44px 1fr minmax(40px, 50px) 24px;
+    grid-template-columns: 48px 1fr minmax(44px, 54px) 32px;
     gap: 6px;
   }
 
   .thumb {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
   }
 
   .deleteBtn {
-    width: 20px;
-    height: 20px;
-    font-size: 12px;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
   }
 
   .copyBtn {
