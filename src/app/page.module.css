@@ -38,24 +38,30 @@
   place-items: center;
   min-height: 100vh;
   padding: 24px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .wrap {
   width: min(980px, 100%);
+  max-width: 100%;
   background: var(--panel);
   border-radius: 18px;
   box-shadow: 0 10px 40px #0008;
   overflow: hidden;
   position: relative;
+  border: 2px solid transparent;
+  box-sizing: border-box;
 }
 
 .wrap::before {
   content: "";
   position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
+  top: 0;     /* 修復：從 -2px 改為 0，避免超出 wrap 邊界 */
+  left: 0;    /* 修復：從 -2px 改為 0，避免超出 wrap 邊界 */
+  right: 0;   /* 修復：從 -2px 改為 0，避免超出 wrap 邊界 */
+  bottom: 0;  /* 修復：從 -2px 改為 0，避免超出 wrap 邊界 */
   background: linear-gradient(45deg, #ffd700, #ffed4e, #ffd700, #ffed4e);
   background-size: 400% 400%;
   border-radius: 20px;
@@ -123,12 +129,13 @@
 
 .tokenInput {
   width: 100%;
-  max-width: min(340px, calc(100vw - 80px));
+  max-width: 340px;
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid #333;
   background: #0f1115;
   color: #cfe;
+  box-sizing: border-box;
 }
 
 .clearBtn {
@@ -159,7 +166,8 @@
 }
 
 .zone {
-  width: min(88%, 680px);
+  width: 88%;
+  max-width: 100%;
   height: 240px;
   border: 2px dashed #fff9;
   border-radius: 14px;
@@ -170,6 +178,7 @@
   text-shadow: 0 1px 3px #0006;
   font-weight: 700;
   letter-spacing: 0.3px;
+  box-sizing: border-box;
 }
 
 .drop.dragover .zone {
@@ -612,10 +621,12 @@
 
 .marketingBannerImage img {
   width: 100%;
+  max-width: 100%;
   height: auto;
   display: block;
   object-fit: cover;
   aspect-ratio: 3 / 1;
+  box-sizing: border-box;
 }
 
 .marketingContent {
@@ -704,7 +715,9 @@
 .featureIcon img {
   border-radius: 16px;
   width: 100%;
+  max-width: 100%;
   height: auto;
+  box-sizing: border-box;
 }
 
 .featureTitle {
@@ -1045,24 +1058,451 @@
 
 /* Mobile Large (up to 600px) - Single column layout */
 @media (max-width: 600px) {
+  .container {
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .wrap {
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
   .main {
     grid-template-columns: 1fr;
     gap: var(--spacing-tablet);
     padding: var(--spacing-tablet);
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .drop {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .zone {
+    width: 88%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }
 
-/* Mobile Standard (376px - 480px) */
-@media (max-width: 480px) {
+/* ===== 徹底重寫：320-450px RWD 設定 ===== */
+
+/* iPhone SE and Small Phones (320px - 360px) */
+@media (max-width: 360px) {
   .container {
-    padding: 16px 12px; /* 調整左右 padding */
-    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
+    padding: 16px;
+    box-sizing: border-box;
   }
 
   .wrap {
-    width: 100%; /* 使用 container ?��??�寬�?*/
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+  }
+
+  .header {
+    padding: 14px;
+  }
+
+  .mainTitle {
+    font-size: 1.25rem;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
+  .subTitle {
+    font-size: 0.85rem;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
+  .main {
+    padding: 14px;
+    gap: 14px;
+    box-sizing: border-box;
+  }
+
+  .drop {
+    width: 100%;
+    height: 280px;
+    box-sizing: border-box;
+  }
+
+  .zone {
+    width: 90%;
+    height: 220px;
+    font-size: 13px;
+    box-sizing: border-box;
+  }
+
+  .hint {
+    font-size: 10px;
+    left: 10px;
+    bottom: 10px;
+    max-width: calc(100% - 20px);
+  }
+
+  .tokenInput {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .hoverTooltip {
+    display: none;
+  }
+
+  .rightPanel,
+  .list {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* iPhone SE (361px - 375px) - 完全重寫 */
+@media (min-width: 361px) and (max-width: 375px) {
+  .container {
+    padding: 12px;
+    width: 100vw;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .header {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .logoSection {
+    gap: 8px;
+  }
+
+  .logo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .mainTitle {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    word-break: break-word;
+    hyphens: auto;
+    max-width: 100%;
+  }
+
+  .subTitle {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    word-break: break-word;
+    hyphens: auto;
+    max-width: 100%;
+  }
+
+  .main {
+    padding: 12px;
+    gap: 12px;
+    box-sizing: border-box;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .drop {
+    width: 100%;
+    height: 240px;
+    box-sizing: border-box;
+  }
+
+  .zone {
+    width: 88%;
+    height: 180px;
+    font-size: 13px;
+    box-sizing: border-box;
+    padding: 12px;
+  }
+
+  .hint {
+    font-size: 10px;
+    left: 10px;
+    bottom: 10px;
+    max-width: calc(100% - 20px);
+  }
+
+  .hintFull {
+    display: none;
+  }
+
+  .hintShort {
+    display: inline;
+  }
+
+  .tokenInput {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .hoverTooltip {
+    display: none;
+  }
+
+  .rightPanel,
+  .list {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .list {
+    max-height: 300px;
+    padding: 10px;
+  }
+
+  .item {
+    grid-template-columns: 44px 1fr 54px 36px;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .thumb {
+    width: 44px;
+    height: 44px;
+  }
+
+  .name {
+    font-size: 12px;
+  }
+
+  .fileSizeBadge {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  .deleteBtn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .primaryUpload,
+  .secondaryClear {
+    width: 100%;
+    flex: none;
+    box-sizing: border-box;
+  }
+
+  .primaryUpload {
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+
+  .secondaryClear {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .tabButton {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  .tabContent {
+    padding: 10px;
+  }
+
+  .output {
+    height: 100px;
+    font-size: 12px;
+  }
+
+  .shortUrlItem {
+    padding: 6px 8px;
+  }
+
+  .shortUrlItemText {
+    font-size: 11px;
+  }
+
+  .shortUrlCopyBtn {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  .marketingSection {
+    padding: 40px 12px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .marketingCard {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .marketingContent {
+    padding: 20px 16px;
+  }
+
+  .marketingTitle {
+    font-size: 18px;
+  }
+
+  .marketingText {
+    font-size: 13px;
+  }
+
+  .highlight {
+    font-size: 14px;
+  }
+
+  .featuresSection {
+    padding: 40px 12px;
+    overflow-x: hidden;
+  }
+
+  .featuresMainTitle {
+    font-size: 20px;
+  }
+
+  .featureCard {
+    padding: 24px 16px;
+  }
+
+  .featureTitle {
+    font-size: 17px;
+  }
+
+  .featureDescription {
+    font-size: 13px;
+  }
+
+  .seoSection {
+    padding: 16px 12px;
+  }
+
+  .accordionHeader {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .toast {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    bottom: 20px;
+    top: auto;
+    transform: none;
+  }
+}
+
+/* Medium Phones (376px - 450px) */
+@media (min-width: 376px) and (max-width: 450px) {
+  .container {
+    padding: 18px;
+    box-sizing: border-box;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+  }
+
+  .header {
+    padding: 18px;
+  }
+
+  .mainTitle {
+    font-size: 1.45rem;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
+  .subTitle {
+    font-size: 0.95rem;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
+  .main {
+    padding: 18px;
+    gap: 18px;
+    box-sizing: border-box;
+  }
+
+  .drop {
+    width: 100%;
+    height: 320px;
+    box-sizing: border-box;
+  }
+
+  .zone {
+    width: 88%;
+    height: 260px;
+    font-size: 15px;
+    box-sizing: border-box;
+  }
+
+  .hint {
+    font-size: 11px;
+    left: 14px;
+    bottom: 14px;
+    max-width: calc(100% - 28px);
+  }
+
+  .tokenInput {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .hoverTooltip {
+    display: none;
+  }
+
+  .rightPanel,
+  .list {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* Mobile Standard (376px - 480px) - 加強防溢出 */
+@media (max-width: 480px) {
+  .container {
+    padding: 16px 12px;
+    width: 100vw;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .wrap {
+    width: 100%;
     margin: 0 auto;
-    max-width: none; /* 移除?�大寬度�???*/
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 
   .logoSection {
@@ -1077,22 +1517,30 @@
 
   .mainTitle {
     font-size: var(--fs-title-mobile);
-    text-align: center; /* 確�?標�?置中 */
+    text-align: center;
+    max-width: 100%;
   }
 
   .subTitle {
     font-size: 1rem;
-    text-align: center; /* 確�??��?題置�?*/
+    text-align: center;
+    max-width: 100%;
   }
 
   .main {
     gap: var(--spacing-mobile);
     padding: var(--spacing-mobile);
+    box-sizing: border-box;
+    overflow-x: hidden;
+    width: 100%;
   }
 
   .drop {
     height: var(--drop-height-mobile);
-    margin: 0 auto; /* 確�??�曳?�?�置�?*/
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
   }
 
   .zone {
@@ -1189,6 +1637,9 @@
     padding: 12px;
     font-size: 13px;
     margin: 20px auto;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 
   .accordionHeader {
@@ -1200,114 +1651,62 @@
     font-size: 12px;
     overflow-x: auto;
   }
-}
 
-/* Mobile Small (up to 375px) */
-@media (max-width: 375px) {
-  .container {
-    padding: 12px 8px; /* ?��???padding */
-    box-sizing: border-box; /* 確�? padding ?�含?�寬度內 */
+  /* Marketing Section - 防止溢出 */
+  .marketingSection {
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 
-  .wrap {
-    width: 100%; /* 使用 container ?��??�寬�?*/
-    margin: 0 auto;
-    max-width: none; /* 移除?�大寬度�???*/
+  .marketingCard {
+    width: 100%;
+    box-sizing: border-box;
   }
 
-  .logoSection {
-    gap: 10px;
+  .marketingBannerImage,
+  .marketingBannerImage img {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
-  .logo {
-    width: 44px;
-    height: 44px;
+  .marketingContent {
+    width: 100%;
+    box-sizing: border-box;
   }
 
-  .mainTitle {
-    font-size: var(--fs-title-mobile);
-    text-align: center;
+  /* Features Section - 防止溢出 */
+  .featuresSection {
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
 
-  .subTitle {
-    font-size: var(--fs-subtitle-mobile);
-    text-align: center;
+  .featuresContainer {
+    width: 100%;
+    box-sizing: border-box;
   }
 
-  .titleSection {
-    gap: 2px;
-    text-align: center; /* 確�??�個�?題�??�置�?*/
+  .featuresGrid {
+    width: 100%;
+    box-sizing: border-box;
   }
 
-  .zone {
-    height: 200px;
-    font-size: 14px;
-    text-align: center;
+  .featureCard {
+    width: 100%;
+    box-sizing: border-box;
   }
 
-  .hint {
-    font-size: 10px;
-    left: 10px;
-    bottom: 10px;
-    max-width: calc(100% - 20px);
-    line-height: 1.2;
-  }
-
-  .item {
-    grid-template-columns: 48px 1fr minmax(44px, 54px) 32px;
-    gap: 6px;
-  }
-
-  .thumb {
-    width: 48px;
-    height: 48px;
-  }
-
-  .deleteBtn {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
-  }
-
-  .copyBtn {
-    padding: 2px 4px;
-    font-size: 9px;
-  }
-
-  .outputHeader {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .primaryUpload {
-    min-height: 48px;
-    font-size: 15px;
-    padding: 12px 16px;
-  }
-
-  .secondaryClear {
-    min-height: 44px;
-    font-size: 14px;
-    padding: 10px 14px;
-  }
-
-  .primary {
-    max-width: 280px;
-  }
-
-  .seoSection {
-    padding: 8px;
-    margin: 16px auto;
+  .featureIcon,
+  .featureIcon img {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }
 
-/* 405px 以下使用最小 padding */
-@media (max-width: 405px) {
-  .container {
-    padding: 12px;
-  }
-}
+/* 舊的重複設定已刪除 - 320-450px 使用上方重寫的設定 */
 
 /* 上傳完畢彈�?�?? */
 .modalOverlay {
