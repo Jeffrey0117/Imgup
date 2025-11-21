@@ -1063,7 +1063,6 @@
   .logoSection {
     flex-direction: column;
     gap: 12px;
-    margin-bottom: 6px;
   }
 
   .logo {
@@ -1211,8 +1210,7 @@
   }
 
   .logoSection {
-    gap: 8px;
-    margin-bottom: 4px;
+    gap: 10px;
   }
 
   .logo {
