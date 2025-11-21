@@ -25,19 +25,35 @@ async function main() {
   console.log('========================================\n');
 
   // 檢查 Redis 配置
-  const redisUrl = process.env.REDIS_URL;
+  let redisUrl = process.env.REDIS_URL;
   if (!redisUrl) {
     console.error('❌ 錯誤：未設定 REDIS_URL 環境變數');
     console.log('請在 .env 文件中設定 REDIS_URL');
     process.exit(1);
   }
 
+  // 如果是 Upstash URL，確保使用 TLS（rediss://）
+  const isUpstash = redisUrl.includes('upstash.io');
+  if (isUpstash && redisUrl.startsWith('redis://')) {
+    redisUrl = redisUrl.replace('redis://', 'rediss://');
+    console.log('🔒 檢測到 Upstash，啟用 TLS 連接');
+  }
+
   // 連接 Redis
   console.log('📡 連接 Redis...');
-  const redis = new Redis(redisUrl, {
+  const redisConfig: any = {
     maxRetriesPerRequest: 3,
     enableReadyCheck: true,
-  });
+  };
+
+  // Upstash 需要 TLS 配置
+  if (isUpstash) {
+    redisConfig.tls = {
+      rejectUnauthorized: false
+    };
+  }
+
+  const redis = new Redis(redisUrl, redisConfig);
 
   try {
     await redis.ping();

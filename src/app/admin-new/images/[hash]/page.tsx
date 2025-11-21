@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import styles from "../dashboard.module.css";
+import styles from "../../dashboard.module.css";
 import detailStyles from "./detail.module.css";
 
 interface ImageDetail {
