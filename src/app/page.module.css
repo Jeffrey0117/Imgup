@@ -683,10 +683,12 @@
   transition: all 0.3s ease;
 }
 
-.featureCard:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 16px 40px rgba(155, 107, 255, 0.2);
-  border-color: #9b6bff;
+@media (hover: hover) {
+  .featureCard:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 40px rgba(155, 107, 255, 0.2);
+    border-color: #9b6bff;
+  }
 }
 
 .featureIcon {
