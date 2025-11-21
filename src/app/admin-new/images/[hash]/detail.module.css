@@ -1,0 +1,253 @@
+/* Detail Page - Dark Theme */
+
+.container {
+  display: grid;
+  grid-template-columns: 1fr 500px;
+  gap: 24px;
+}
+
+/* ===== Image Preview Section ===== */
+.previewSection {
+  background: #15171d;
+  border: 1px solid #2a2d33;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 10px 40px #0008;
+}
+
+.imageWrap {
+  width: 100%;
+  max-height: 600px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0f1115;
+  border: 1px solid #2a2d33;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.image {
+  max-width: 100%;
+  max-height: 600px;
+  object-fit: contain;
+  display: block;
+}
+
+.quickActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid #2a2d33;
+  background: #15171d;
+  color: #cfe;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.actionButton:hover {
+  background: #1a1f25;
+  border-color: #58c258;
+  color: #8ed88e;
+  transform: translateY(-2px);
+}
+
+.actionButtonDanger {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 99, 88, 0.35);
+  background: rgba(255, 59, 48, 0.12);
+  color: #ffe1e1;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.actionButtonDanger:hover {
+  background: rgba(255, 59, 48, 0.2);
+  border-color: rgba(255, 99, 88, 0.6);
+  transform: translateY(-2px);
+}
+
+/* ===== Info Section ===== */
+.infoSection {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.infoCard {
+  background: #15171d;
+  border: 1px solid #2a2d33;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 10px 40px #0008;
+}
+
+.cardTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #2a2d33;
+}
+
+.infoGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.infoLabel {
+  font-size: 13px;
+  color: #99a0ab;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  min-width: 100px;
+}
+
+.infoValue {
+  font-size: 14px;
+  color: #eef;
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+}
+
+.infoValueMono {
+  font-size: 13px;
+  color: #8ed88e;
+  font-weight: 600;
+  font-family: "Courier New", monospace;
+  text-align: right;
+  word-break: break-all;
+}
+
+.passwordValue {
+  color: #8ed88e;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  padding: 2px 8px;
+  background: rgba(45, 122, 45, 0.18);
+  border-radius: 4px;
+  border: 1px solid rgba(88, 194, 88, 0.25);
+}
+
+/* ===== Status Badges ===== */
+.statusBadgeGreen {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: rgba(45, 122, 45, 0.18);
+  color: #8ed88e;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(88, 194, 88, 0.25);
+}
+
+.statusBadgeOrange {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: rgba(255, 149, 0, 0.18);
+  color: #ffb340;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 179, 64, 0.25);
+}
+
+.statusBadgeRed {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: rgba(255, 59, 48, 0.18);
+  color: #ff9f88;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 99, 88, 0.25);
+}
+
+/* ===== Statistics ===== */
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.statBox {
+  background: rgba(45, 122, 45, 0.08);
+  border: 1px solid rgba(88, 194, 88, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.statValue {
+  font-size: 32px;
+  font-weight: 800;
+  color: #8ed88e;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #99a0ab;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1024px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+
+  .infoRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .infoLabel {
+    min-width: auto;
+  }
+
+  .infoValue,
+  .infoValueMono {
+    text-align: left;
+  }
+
+  .quickActions {
+    flex-direction: column;
+  }
+
+  .actionButton,
+  .actionButtonDanger {
+    width: 100%;
+  }
+}

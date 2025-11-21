@@ -1309,13 +1309,6 @@
   }
 }
 
-/* 480px 以�?移除 drop margin */
-@media (max-width: 480px) {
-  .drop {
-    margin: 0;
-  }
-}
-
 /* 上傳完畢彈�?�?? */
 .modalOverlay {
   position: fixed;

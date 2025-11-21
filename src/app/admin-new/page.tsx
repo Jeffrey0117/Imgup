@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./dashboard.module.css";
 
@@ -32,8 +32,15 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Infinite scroll state
+  const [galleryImages, setGalleryImages] = useState<MappingItem[]>([]);
+  const [galleryPage, setGalleryPage] = useState(1);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
   useEffect(() => {
     loadStats();
+    loadGalleryImages(1);
   }, []);
 
   const loadStats = async () => {
@@ -56,6 +63,54 @@ export default function AdminDashboardPage() {
       setLoading(false);
     }
   };
+
+  const loadGalleryImages = async (page: number) => {
+    try {
+      setGalleryLoading(true);
+      const response = await fetch(
+        `/api/admin/mappings?page=${page}&pageSize=20`,
+        {
+          credentials: "include",
+        }
+      );
+      const data = await response.json();
+
+      if (data.success && data.data && Array.isArray(data.data.items)) {
+        const newImages = data.data.items;
+        if (newImages.length === 0 || newImages.length < 20) {
+          setHasMore(false);
+        }
+        if (newImages.length > 0) {
+          setGalleryImages((prev) =>
+            page === 1 ? newImages : [...prev, ...newImages]
+          );
+          setGalleryPage(page);
+        }
+      } else {
+        console.error("API 返回格式錯誤:", data);
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("載入圖片失敗:", error);
+      setHasMore(false);
+    } finally {
+      setGalleryLoading(false);
+    }
+  };
+
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const target = e.currentTarget;
+      const scrollBottom =
+        target.scrollHeight - target.scrollTop - target.clientHeight;
+
+      // 當滾動到距離底部 100px 時開始載入
+      if (scrollBottom < 100 && !galleryLoading && hasMore) {
+        loadGalleryImages(galleryPage + 1);
+      }
+    },
+    [galleryLoading, hasMore, galleryPage]
+  );
 
   const handleCopyUrl = (hash: string) => {
     const url = `${window.location.origin}/${hash}`;
@@ -97,6 +152,10 @@ export default function AdminDashboardPage() {
     );
   }
 
+  if (!stats) {
+    return null;
+  }
+
   return (
     <div>
       {/* Top Bar */}
@@ -112,8 +171,95 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {stats && (
-        <>
+      {/* Main Dashboard Layout: Left Gallery + Right Stats */}
+      <div className={styles.dashboardLayout}>
+        {/* Left: Image Gallery Carousel */}
+        <div className={styles.gallerySection}>
+          <div className={styles.gallerySectionHeader}>
+            <h3 className={styles.gallerySectionTitle}>📸 最新上傳</h3>
+            <button
+              onClick={() => router.push("/admin-new/images")}
+              className={styles.galleryViewAll}
+            >
+              查看全部 →
+            </button>
+          </div>
+          <div className={styles.galleryCarousel} onScroll={handleScroll}>
+            {Array.isArray(galleryImages) && galleryImages.map((mapping) => (
+              <div key={mapping.id} className={styles.galleryItem}>
+                <div className={styles.galleryImageWrap}>
+                  <img
+                    src={mapping.url}
+                    alt={mapping.filename}
+                    className={styles.galleryImage}
+                    loading="lazy"
+                  />
+                  <div className={styles.galleryOverlay}>
+                    <div className={styles.galleryInfo}>
+                      <div className={styles.galleryFilename}>
+                        {mapping.filename.length > 25
+                          ? `${mapping.filename.substring(0, 25)}...`
+                          : mapping.filename}
+                      </div>
+                      <div className={styles.galleryMeta}>
+                        <span>👁️ {mapping.viewCount}</span>
+                        {mapping.hasPassword && <span>🔒</span>}
+                        {mapping.isExpired && <span>⏰</span>}
+                      </div>
+                    </div>
+                    <div className={styles.galleryActions}>
+                      <button
+                        onClick={() => handleCopyUrl(mapping.hash)}
+                        className={styles.galleryButton}
+                        title="複製連結"
+                      >
+                        📋
+                      </button>
+                      <button
+                        onClick={() =>
+                          window.open(`/${mapping.hash}`, "_blank")
+                        }
+                        className={styles.galleryButton}
+                        title="預覽"
+                      >
+                        🔍
+                      </button>
+                      <button
+                        onClick={() =>
+                          router.push(`/admin-new/images/${mapping.hash}`)
+                        }
+                        className={styles.galleryButton}
+                        title="詳情"
+                      >
+                        ℹ️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.galleryTimestamp}>
+                  {formatTime(mapping.createdAt)}
+                </div>
+              </div>
+            ))}
+
+            {/* Loading indicator */}
+            {galleryLoading && (
+              <div className={styles.galleryLoadingIndicator}>
+                <div className={styles.galleryLoader}>載入更多...</div>
+              </div>
+            )}
+
+            {/* End indicator */}
+            {!hasMore && galleryImages.length > 0 && (
+              <div className={styles.galleryEndIndicator}>
+                已載入全部圖片 ({galleryImages.length} 張)
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Stats & Info */}
+        <div className={styles.statsSection}>
           {/* Stats Grid */}
           <div className={styles.statsGrid}>
             <div className={styles.statCard}>
@@ -171,98 +317,35 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Recent Uploads */}
-          <div className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle}>最近上傳</h2>
-              <button
-                onClick={() => router.push("/admin-new/images")}
-                className={styles.viewAllButton}
-              >
-                查看全部 →
-              </button>
-            </div>
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>檔名</th>
-                    <th>短鏈</th>
-                    <th>瀏覽</th>
-                    <th>狀態</th>
-                    <th>時間</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.recentUploads.map((mapping) => (
-                    <tr key={mapping.id}>
-                      <td
-                        className={styles.fileName}
-                        data-label="檔名"
-                        title={mapping.filename}
-                      >
-                        {mapping.filename}
-                      </td>
-                      <td data-label="短鏈">
-                        <a
-                          href={`/${mapping.hash}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={styles.hashLink}
-                        >
-                          /{mapping.hash}
-                        </a>
-                      </td>
-                      <td className={styles.count} data-label="瀏覽">
-                        {mapping.viewCount.toLocaleString()}
-                      </td>
-                      <td data-label="狀態">
-                        <div className={styles.statusBadges}>
-                          {mapping.hasPassword && (
-                            <span className={styles.badge}>🔒</span>
-                          )}
-                          {mapping.isExpired && (
-                            <span className={styles.badge}>⏰</span>
-                          )}
-                        </div>
-                      </td>
-                      <td data-label="時間">
-                        {formatTime(mapping.createdAt)}
-                      </td>
-                      <td data-label="操作">
-                        <div className={styles.actions}>
-                          <button
-                            onClick={() => handleCopyUrl(mapping.hash)}
-                            className={styles.actionButton}
-                          >
-                            複製
-                          </button>
-                          <button
-                            onClick={() =>
-                              window.open(`/${mapping.hash}`, "_blank")
-                            }
-                            className={styles.actionButton}
-                          >
-                            預覽
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {stats.recentUploads.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className={styles.emptyRow}>
-                        暫無上傳記錄
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+          {/* Quick Links */}
+          <div className={styles.quickLinks}>
+            <button
+              onClick={() => router.push("/admin-new/images")}
+              className={styles.quickLinkButton}
+            >
+              📁 管理圖片
+            </button>
+            <button
+              onClick={() => router.push("/admin-new/users")}
+              className={styles.quickLinkButton}
+            >
+              👥 用戶管理
+            </button>
+            <button
+              onClick={() => router.push("/admin-new/analytics")}
+              className={styles.quickLinkButton}
+            >
+              📊 數據分析
+            </button>
+            <button
+              onClick={() => router.push("/admin-new/security")}
+              className={styles.quickLinkButton}
+            >
+              🔒 安全設定
+            </button>
           </div>
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

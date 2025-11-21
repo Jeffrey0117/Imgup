@@ -19,6 +19,8 @@ type Item = {
   viewCount: number;
   isDeleted: boolean;
   deletedAt: Date | null;
+  logs: { createdAt: Date }[];
+  referrerStats: { refererDomain: string | null; accessCount: number }[];
 };
 
 function parseBool(value: string | null): boolean | null {
@@ -165,6 +167,21 @@ export async function GET(request: NextRequest) {
         viewCount: true,
         isDeleted: true,
         deletedAt: true,
+        logs: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            createdAt: true,
+          },
+        },
+        referrerStats: {
+          orderBy: { accessCount: "desc" },
+          take: 3,
+          select: {
+            refererDomain: true,
+            accessCount: true,
+          },
+        },
       },
     });
 
@@ -182,6 +199,11 @@ export async function GET(request: NextRequest) {
       isExpired: m.expiresAt ? m.expiresAt < now : false,
       hasPassword: !!m.password,
       password: m.password, // Admin API 可以回傳實際密碼值
+      lastAccessedAt: m.logs.length > 0 ? m.logs[0].createdAt.toISOString() : null,
+      topReferrers: m.referrerStats.map((r) => ({
+        domain: r.refererDomain || "Direct",
+        count: r.accessCount,
+      })),
     }));
 
     let pagination;

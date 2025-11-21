@@ -1,0 +1,105 @@
+.previewContainer {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+}
+
+.controlBar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 1.5rem 2rem;
+}
+
+.controlContent {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.selectWrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 300px;
+}
+
+.label {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.select {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  flex: 1;
+  max-width: 400px;
+}
+
+.select:hover {
+  background: white;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.select:focus {
+  outline: none;
+  border-color: white;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+.description {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.9;
+  font-style: italic;
+}
+
+.layoutPreview {
+  flex: 1;
+  overflow: auto;
+  background: white;
+}
+
+@media (max-width: 768px) {
+  .controlContent {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .selectWrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .select {
+    max-width: 100%;
+  }
+}

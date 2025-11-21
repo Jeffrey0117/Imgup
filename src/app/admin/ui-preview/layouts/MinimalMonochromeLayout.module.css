@@ -1,0 +1,260 @@
+.layout {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #000000;
+}
+
+/* ===== Header ===== */
+.header {
+  border-bottom: 1px solid #000000;
+  padding: 32px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 300;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.nav {
+  display: flex;
+  gap: 48px;
+}
+
+.navLink {
+  color: #666666;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: color 0.3s ease;
+}
+
+.navLink:hover {
+  color: #000000;
+}
+
+.user {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 1px;
+}
+
+/* ===== Main ===== */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 80px 48px;
+}
+
+/* ===== Stats ===== */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: #000000;
+  border: 1px solid #000000;
+  margin-bottom: 120px;
+}
+
+.statCard {
+  background: #ffffff;
+  padding: 48px 32px;
+  text-align: center;
+}
+
+.statNumber {
+  font-size: 48px;
+  font-weight: 300;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #666666;
+  font-weight: 400;
+}
+
+/* ===== Section Titles ===== */
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin: 0 0 40px 0;
+  color: #000000;
+}
+
+/* ===== Featured ===== */
+.featured {
+  margin-bottom: 120px;
+}
+
+.featuredImage {
+  border: 1px solid #000000;
+}
+
+.featuredImage img {
+  width: 100%;
+  height: 600px;
+  object-fit: cover;
+  display: block;
+}
+
+.featuredCaption {
+  display: flex;
+  justify-content: space-between;
+  padding: 24px 32px;
+  border-top: 1px solid #000000;
+}
+
+.featuredFilename {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.featuredViews {
+  font-size: 14px;
+  color: #666666;
+}
+
+/* ===== Gallery ===== */
+.gallery {
+  margin-bottom: 120px;
+}
+
+.gridMinimal {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: #000000;
+  border: 1px solid #000000;
+}
+
+.gridItem {
+  background: #ffffff;
+}
+
+.gridImage {
+  aspect-ratio: 1;
+  overflow: hidden;
+}
+
+.gridImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s ease;
+}
+
+.gridItem:hover .gridImage img {
+  transform: scale(1.05);
+}
+
+.gridCaption {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #000000;
+}
+
+.gridFilename {
+  font-size: 11px;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gridViews {
+  font-size: 10px;
+  color: #666666;
+}
+
+/* ===== Users ===== */
+.users {
+  margin-bottom: 80px;
+}
+
+.userList {
+  border: 1px solid #000000;
+}
+
+.userRow {
+  display: grid;
+  grid-template-columns: 60px 1fr auto auto;
+  gap: 32px;
+  align-items: center;
+  padding: 24px 32px;
+  border-bottom: 1px solid #000000;
+  transition: background 0.3s ease;
+}
+
+.userRow:last-child {
+  border-bottom: none;
+}
+
+.userRow:hover {
+  background: #f5f5f5;
+}
+
+.userRank {
+  font-size: 18px;
+  font-weight: 300;
+  color: #666666;
+}
+
+.userName {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.userUploads,
+.userViews {
+  font-size: 14px;
+  color: #666666;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .nav {
+    gap: 24px;
+    flex-direction: column;
+  }
+
+  .main {
+    padding: 48px 24px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .gridMinimal {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .userRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .featuredImage img {
+    height: 400px;
+  }
+}
