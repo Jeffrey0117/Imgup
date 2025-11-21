@@ -771,14 +771,14 @@ export default function Home() {
               讓圖片分享像呼吸一樣自然 - duk.tw 圖鴨上床
             </h2>
             <p className={styles.marketingText}>
-              厭倦了複雜的圖片分享流程嗎？duk.tw
-              圖鴨上床讓一切變得簡單。只需拖曳圖片，系統會立即上傳並生成短網址，讓你輕鬆分享圖片到任何平台。無論是論壇發文、社群貼圖，還是工作協作，duk.tw
+              厭倦了複雜的圖片分享流程嗎？<span className={styles.highlight}>duk.tw
+              圖鴨上床</span>讓一切變得簡單。只需<span className={styles.highlight}>拖曳圖片</span>，系統會立即上傳並生成<span className={styles.highlight}>短網址</span>，讓你輕鬆分享圖片到任何平台。無論是論壇發文、社群貼圖，還是工作協作，<span className={styles.highlight}>duk.tw</span>
               都是你最可靠的夥伴。
             </p>
             <p className={styles.marketingText}>
               我們提供完整的圖片管理功能：自動生成
-              Markdown、HTML、BBCode
-              等多種格式，讓你在任何場景都能快速使用。更棒的是，所有功能完全免費，無需註冊，打開網頁就能使用！
+              <span className={styles.highlight}>Markdown</span>、<span className={styles.highlight}>HTML</span>、<span className={styles.highlight}>BBCode</span>
+              等多種格式，讓你在任何場景都能快速使用。更棒的是，所有功能<span className={styles.highlight}>完全免費</span>，<span className={styles.highlight}>無需註冊</span>，打開網頁就能使用！
             </p>
           </div>
         </div>
@@ -937,7 +937,7 @@ export default function Home() {
             <p>在 Markdown 文件中插入圖片的語法非常簡單：</p>
             <pre>![替代文字](圖片網址)</pre>
             <p>例如：</p>
-            <pre>![我的貓咪](https://i.imgur.com/example.jpg)</pre>
+            <pre>![我的貓咪](https://duk.tw/example.jpg)</pre>
             <p>duk.tw 會自動為你生成正確的 Markdown 語法，你只需要：</p>
             <ol>
               <li>上傳圖片</li>
@@ -985,7 +985,7 @@ export default function Home() {
             </pre>
             <p>例如：</p>
             <pre>
-              <img src="https://i.imgur.com/example.jpg" alt="我的貓咪" />
+              <img src="https://duk.tw/example.jpg" alt="我的貓咪" />
             </pre>
             <p>duk.tw 會自動生成完整的 HTML 標籤，你只需要：</p>
             <ol>
@@ -1086,7 +1086,7 @@ export default function Home() {
             }`}
           >
             <h4>Q: 上傳的圖片會儲存多久？</h4>
-            <p>A: 上傳到 Imgur 的圖片會永久保存，不會過期。</p>
+            <p>A: 上傳到 duk.tw 的圖片會永久保存，不會過期。</p>
 
             <h4>Q: 有檔案大小限制嗎？</h4>
             <p>A: 圖片大小取決於您使用的圖床服務限制。</p>
@@ -1100,7 +1100,7 @@ export default function Home() {
             </p>
 
             <h4>Q: 圖片會被壓縮嗎？</h4>
-            <p>A: Imgur 會根據檔案大小自動優化，但不會明顯降低畫質。</p>
+            <p>A: duk.tw 會根據檔案大小自動優化，但不會明顯降低畫質。</p>
           </div>
         </div>
       </section>

@@ -585,17 +585,20 @@
 /* 營銷區塊樣式 */
 .marketingSection {
   padding: 80px 20px;
-  background: linear-gradient(180deg, #111 0%, #1a1b1f 100%);
+  /* Removed gradient background to eliminate double-layer effect */
 }
 
 .marketingCard {
   max-width: 1200px;
   margin: 0 auto;
-  background: #1f2126;
-  border: 1px solid #2a2d33;
+  /* Removed individual background and border for seamless look */
+  /* Optional: Add subtle shadow for depth without layering */
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   border-radius: 18px;
   padding: 0;
   overflow: hidden;
+  /* Single unified background */
+  background: #1a1b1f;
 }
 
 .marketingBannerImage {
@@ -603,6 +606,8 @@
   height: auto;
   position: relative;
   overflow: hidden;
+  /* Ensure image flows seamlessly into content */
+  margin-bottom: -2px; /* Eliminate any potential gap */
 }
 
 .marketingBannerImage img {
@@ -617,6 +622,8 @@
   flex-direction: column;
   gap: 20px;
   padding: 40px;
+  /* Ensure consistent background with card */
+  background: #1a1b1f;
 }
 
 .marketingTitle {
@@ -632,6 +639,12 @@
   line-height: 1.8;
   color: #b8b9bd;
   margin: 0;
+}
+
+.highlight {
+  color: #9b6bff;
+  font-weight: 600;
+  font-size: 17px;
 }
 
 /* 功能亮點區塊樣式 */
@@ -706,7 +719,7 @@
 }
 
 .seoSection {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 40px auto;
   padding: 20px;
   font-size: 14px;
@@ -2107,6 +2120,10 @@
     font-size: 15px;
   }
 
+  .highlight {
+    font-size: 16px;
+  }
+
   .featuresSection {
     padding: 60px 16px;
   }
@@ -2198,6 +2215,10 @@
     line-height: 1.7;
   }
 
+  .highlight {
+    font-size: 15px;
+  }
+
   .featuresSection {
     padding: 48px 12px;
   }
@@ -2266,6 +2287,10 @@
 
   .marketingText {
     font-size: 13px;
+  }
+
+  .highlight {
+    font-size: 14px;
   }
 
   .featuresSection {
