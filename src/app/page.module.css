@@ -1186,7 +1186,6 @@
     padding: 12px;
     font-size: 13px;
     margin: 20px auto;
-    max-width: calc(100% - 24px); /* ??container padding 一??*/
   }
 
   .accordionHeader {
@@ -1297,7 +1296,6 @@
   .seoSection {
     padding: 8px;
     margin: 16px auto;
-    max-width: calc(100% - 16px); /* ??container padding 一??*/
   }
 }
 
