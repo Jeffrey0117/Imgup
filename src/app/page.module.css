@@ -1396,7 +1396,7 @@
   position: relative;
   width: 100%;
   max-width: 240px; /* ??QRCode 尺寸對�?，並?�白 */
-  height: 200px; /* ?��?高度，容納鴨子�? QRCode */
+  min-height: 200px; /* 最小高度，容納鴨子�? QRCode */
   display: flex;
   align-items: center;
   justify-content: center;
