@@ -1299,10 +1299,10 @@
   }
 }
 
-/* 405px 以�?移除 container padding */
+/* 405px 以下使用最小 padding */
 @media (max-width: 405px) {
   .container {
-    padding: 0;
+    padding: 12px;
   }
 }
 
