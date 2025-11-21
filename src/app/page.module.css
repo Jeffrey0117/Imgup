@@ -951,12 +951,6 @@
     font-size: var(--fs-subtitle-tablet);
   }
 
-  .main {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-tablet);
-    padding: var(--spacing-tablet);
-  }
-
   .drop {
     height: var(--drop-height-tablet);
   }
@@ -1044,6 +1038,15 @@
 
   .accordionContent.open {
     padding: 16px;
+  }
+}
+
+/* Mobile Large (up to 600px) - Single column layout */
+@media (max-width: 600px) {
+  .main {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-tablet);
+    padding: var(--spacing-tablet);
   }
 }
 
