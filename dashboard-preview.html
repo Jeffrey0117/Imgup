@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Activity Timeline Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #111;
+            color: #eef;
+            padding: 20px;
+        }
+
+        .preview-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .preview-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #8ed88e;
+            text-align: center;
+        }
+
+        .dashboard-layout {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 24px;
+        }
+
+        /* Gallery Section Mock */
+        .gallery-section {
+            background: #15171d;
+            border: 1px solid #2a2d33;
+            border-radius: 12px;
+            padding: 20px;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .gallery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px dashed #2a2d33;
+            margin-bottom: 16px;
+        }
+
+        .gallery-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .gallery-carousel {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .gallery-item {
+            height: 240px;
+            background: linear-gradient(135deg, #1a1f25, #0f1115);
+            border-radius: 8px;
+            border: 1px solid #2a2d33;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* KPI Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: #15171d;
+            border: 1px solid #2a2d33;
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #99a0ab;
+            margin-top: 4px;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            color: #8ed88e;
+            margin-top: 6px;
+        }
+
+        /* Activity Timeline */
+        .activity-timeline {
+            background: #15171d;
+            border: 1px solid #2a2d33;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px dashed #2a2d33;
+            margin-bottom: 20px;
+        }
+
+        .timeline-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .trend-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(142, 216, 142, 0.1);
+            border: 1px solid rgba(142, 216, 142, 0.2);
+            font-size: 13px;
+            font-weight: 700;
+            color: #8ed88e;
+        }
+
+        /* Mini Chart */
+        .chart-container {
+            background: #0f1115;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 60px;
+            gap: 8px;
+        }
+
+        .bar {
+            flex: 1;
+            background: linear-gradient(to top, #2d7a2d, #58c258);
+            border-radius: 4px 4px 0 0;
+        }
+
+        /* Timeline Items */
+        .timeline-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .timeline-item:hover {
+            background: rgba(45, 122, 45, 0.05);
+        }
+
+        .timeline-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #58c258;
+            margin-top: 5px;
+        }
+
+        .item-content {
+            flex: 1;
+        }
+
+        .item-header {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .item-thumb {
+            width: 48px;
+            height: 48px;
+            background: #0f1115;
+            border-radius: 6px;
+            border: 1px solid #2a2d33;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-filename {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .item-meta {
+            font-size: 12px;
+            color: #99a0ab;
+        }
+
+        /* Summary Stats */
+        .summary-stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px;
+            background: #0f1115;
+            border-radius: 8px;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 11px;
+            color: #99a0ab;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: #8ed88e;
+            margin-top: 4px;
+        }
+
+        .comparison {
+            background: #0f1115;
+            border: 1px solid #2a2d33;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 40px;
+        }
+
+        .comparison-title {
+            font-size: 18px;
+            color: #8ed88e;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .comparison-item h4 {
+            color: #58c258;
+            margin-bottom: 8px;
+        }
+
+        .comparison-item ul {
+            list-style: none;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .comparison-item li:before {
+            content: "• ";
+            color: #8ed88e;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <h1 class="preview-title">🎨 Admin Dashboard - Activity Timeline Design</h1>
+
+        <div class="dashboard-layout">
+            <!-- Left: Gallery Section (Mock) -->
+            <div class="gallery-section">
+                <div class="gallery-header">
+                    <div class="gallery-title">📸 最新上傳</div>
+                    <a href="#" style="color: #8ed88e; text-decoration: none; font-size: 13px;">查看全部 →</a>
+                </div>
+                <div class="gallery-carousel">
+                    <div class="gallery-item"></div>
+                    <div class="gallery-item"></div>
+                    <div class="gallery-item"></div>
+                </div>
+            </div>
+
+            <!-- Right: Stats + Activity Timeline -->
+            <div class="stats-section">
+                <!-- KPI Cards (Keeping these) -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #3b82f6;">📦</div>
+                        <div>
+                            <div class="stat-value">12,456</div>
+                            <div class="stat-label">總檔案數</div>
+                            <div class="stat-change">+234 今日</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #10b981;">📤</div>
+                        <div>
+                            <div class="stat-value">234</div>
+                            <div class="stat-label">今日上傳</div>
+                            <div class="stat-change">本日統計</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #8b5cf6;">✅</div>
+                        <div>
+                            <div class="stat-value">11,892</div>
+                            <div class="stat-label">活躍檔案</div>
+                            <div class="stat-change">未過期</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #f59e0b;">👁️</div>
+                        <div>
+                            <div class="stat-value">3.2M</div>
+                            <div class="stat-label">總瀏覽數</div>
+                            <div class="stat-change">累計統計</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NEW: Activity Timeline (Replacing Quick Links) -->
+                <div class="activity-timeline">
+                    <div class="timeline-header">
+                        <div>
+                            <div class="timeline-title">📊 活動時間軸</div>
+                            <span style="font-size: 12px; color: #99a0ab;">即時平台動態</span>
+                        </div>
+                        <div class="trend-badge">
+                            <span>📈</span>
+                            <span>+18%</span>
+                        </div>
+                    </div>
+
+                    <!-- Mini Chart -->
+                    <div class="chart-container">
+                        <div style="font-size: 12px; color: #99a0ab; margin-bottom: 12px;">過去 7 天上傳趨勢</div>
+                        <div class="chart">
+                            <div class="bar" style="height: 40%;"></div>
+                            <div class="bar" style="height: 60%;"></div>
+                            <div class="bar" style="height: 45%;"></div>
+                            <div class="bar" style="height: 70%;"></div>
+                            <div class="bar" style="height: 85%;"></div>
+                            <div class="bar" style="height: 90%;"></div>
+                            <div class="bar" style="height: 100%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Items -->
+                    <div class="timeline-list">
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="item-content">
+                                <div class="item-header">
+                                    <div class="item-thumb"></div>
+                                    <div class="item-info">
+                                        <div class="item-filename">product-banner-2024.jpg</div>
+                                        <div class="item-meta">2 分鐘前 • 2.4 MB</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="item-content">
+                                <div class="item-header">
+                                    <div class="item-thumb"></div>
+                                    <div class="item-info">
+                                        <div class="item-filename">screenshot-dashboard.png</div>
+                                        <div class="item-meta">15 分鐘前 • 1.8 MB</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="item-content">
+                                <div class="item-header">
+                                    <div class="item-thumb"></div>
+                                    <div class="item-info">
+                                        <div class="item-filename">logo-v3-final.svg</div>
+                                        <div class="item-meta">1 小時前 • 124 KB</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary Stats -->
+                    <div class="summary-stats">
+                        <div class="summary-item">
+                            <div class="summary-label">平均每日</div>
+                            <div class="summary-value">186 張</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">本週總計</div>
+                            <div class="summary-value">1,302 張</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">活躍時段</div>
+                            <div class="summary-value">14:00-18:00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison Section -->
+        <div class="comparison">
+            <h3 class="comparison-title">✨ Why Activity Timeline is Better</h3>
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <h4>❌ Old: Quick Links (Redundant)</h4>
+                    <ul>
+                        <li>Duplicates sidebar navigation</li>
+                        <li>No actionable information</li>
+                        <li>Static buttons with no data</li>
+                        <li>Wastes valuable dashboard space</li>
+                    </ul>
+                </div>
+                <div class="comparison-item">
+                    <h4>✅ New: Activity Timeline</h4>
+                    <ul>
+                        <li>Real-time activity monitoring</li>
+                        <li>Visual trend analysis with chart</li>
+                        <li>Quick access to recent uploads</li>
+                        <li>Actionable insights & statistics</li>
+                        <li>Helps identify usage patterns</li>
+                        <li>Integrated quick actions per item</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

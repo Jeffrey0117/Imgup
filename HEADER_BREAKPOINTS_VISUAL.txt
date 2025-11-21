@@ -1,0 +1,178 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                    Header RWD Breakpoints Visual Guide                          ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ DESKTOP (1024px+) - Full Horizontal Layout                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  [Logo] [圖鴨上床] [首頁] [功能特色] [應用案例] [關於我們] [使用指南]  [User]    │
+│                                                                                  │
+│  Header Height: 70px                                                             │
+│  Nav Gap: 2rem (wide)                                                            │
+│  Font: 0.95rem                                                                   │
+│  Logo: 120px max-width                                                           │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ TABLET (768px - 1024px) - Compact Desktop                                       │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  [Logo] 圖鴨 [首頁] [功能] [案例] [關於] [指南] [User]                           │
+│                                                                                  │
+│  Header Height: 70px                                                             │
+│  Nav Gap: 1.5rem (reduced)                                                       │
+│  Font: 0.9rem (smaller)                                                          │
+│  Logo: 110px max-width                                                           │
+│  Actions: Font size reduced                                                      │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ MOBILE (480px - 768px) - Hamburger Menu                                         │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  [Logo] [圖鴨上床]                                                   [☰]          │
+│  ─────────────────────────────────────────────────────────────────────────     │
+│  │ 首頁                                                                │         │
+│  │ 功能特色                                                            │         │
+│  │ 應用案例                                                            │         │
+│  │ 關於我們                                                            │         │
+│  │ 使用指南                                                            │         │
+│  │ ─────────────────────────────────────────────────────────────────  │         │
+│  │ [User Status / Buttons]                                             │         │
+│  └───────────────────────────────────────────────────────────────────┘         │
+│                                                                                  │
+│  Header Height: 65px                                                             │
+│  Menu Drawer: Fixed, full viewport height minus header                           │
+│  Logo: 100px max-width                                                           │
+│  Hamburger Animation: ☰ → ✕ (45deg rotation)                                     │
+│  Overlay: rgba(0,0,0,0.5) behind menu                                            │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ SMALL MOBILE (<480px) - Compact Hamburger Menu                                  │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  [Logo]                                                              [☰]         │
+│  ─────────────────────────────────────────────────────────────────────────     │
+│  │ 首頁                                                                │         │
+│  │ 功能特色                                                            │         │
+│  │ 應用案例                                                            │         │
+│  │ 關於我們                                                            │         │
+│  │ 使用指南                                                            │         │
+│  │ ─────────────────────────────────────────────────────────────────  │         │
+│  │ [User]                                                              │         │
+│  └───────────────────────────────────────────────────────────────────┘         │
+│                                                                                  │
+│  Header Height: 60px                                                             │
+│  Logo: 90px max-width                                                            │
+│  Site Name: Hidden                                                               │
+│  Hamburger Icon: 20px × 1.8px (smaller)                                          │
+│  Spacing: Very tight                                                              │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ EXTRA SMALL (<360px) - Ultra Compact                                            │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  [L]                                                                  [☰]        │
+│  ─────────────────────────────────────────────────────────────────────────     │
+│  │ 首頁                                                                │         │
+│  │ 功能特色                                                            │         │
+│  │ 應用案例                                                            │         │
+│  │ 關於我們                                                            │         │
+│  │ 使用指南                                                            │         │
+│  │ ─────────────────────────────────────────────────────────────────  │         │
+│  │ [User]                                                              │         │
+│  └───────────────────────────────────────────────────────────────────┘         │
+│                                                                                  │
+│  Header Height: 56px                                                             │
+│  Logo: 80px max-width                                                            │
+│  Site Name: Hidden                                                               │
+│  Hamburger Icon: 18px × 1.5px (smallest)                                         │
+│  Nav Link Font: 0.9rem                                                           │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                           Hamburger Icon Animation                              ║
+╠════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                 ║
+║  CLOSED:          OPENING:        OPEN:                                        ║
+║   ─────            ↘ ↖            ╱                                            ║
+║   ─────      →      ─      →      ╲                                            ║
+║   ─────            ↙ ↗                                                          ║
+║                                                                                 ║
+║  Duration: 0.3s   Easing: cubic-bezier(0.4, 0.0, 0.2, 1)                       ║
+║                                                                                 ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                          CSS Media Query Map                                    ║
+╠════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                 ║
+║  Desktop:           1024px+           (No media query - base styles)             ║
+║                                                                                 ║
+║  Tablet:            max-width: 1024px                                           ║
+║                     • Reduce gaps to 1.5rem                                      ║
+║                     • Font size: 0.9rem                                          ║
+║                     • Logo: 110px max                                            ║
+║                                                                                 ║
+║  Mobile:            max-width: 768px                                            ║
+║                     • Hide .desktopNav                                           ║
+║                     • Show .mobileMenuButton                                     ║
+║                     • Menu drawer: fixed, translateY(-100%)                      ║
+║                     • Header height: 65px                                        ║
+║                     • Logo: 100px max                                            ║
+║                                                                                 ║
+║  Small Mobile:      max-width: 480px                                            ║
+║                     • Header height: 60px                                        ║
+║                     • Logo: 90px max                                             ║
+║                     • Hide site name                                             ║
+║                     • Hamburger: 20px × 1.8px                                    ║
+║                     • Padding: 0.5rem (very tight)                               ║
+║                                                                                 ║
+║  Extra Small:       max-width: 360px                                            ║
+║                     • Header height: 56px                                        ║
+║                     • Logo: 80px max                                             ║
+║                     • Hamburger: 18px × 1.5px                                    ║
+║                     • Gap: 0.3rem                                                ║
+║                                                                                 ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                         Key Responsive Features                                 ║
+╠════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                 ║
+║  ✓ Hamburger Animation:   3-line → X shape (45deg rotations)                    ║
+║  ✓ Menu Drawer:           Fixed position, full height, slide from top           ║
+║  ✓ Overlay Backdrop:      Semi-transparent, prevents scrolling                  ║
+║  ✓ Logo Stability:        flex-shrink: 0 (never shrinks)                        ║
+║  ✓ User Area:             Always visible (desktop/tablet) or in menu (mobile)    ║
+║  ✓ Touch-Friendly:        Min 44×44px hit targets                               ║
+║  ✓ Smooth Transitions:    0.3s cubic-bezier timing                              ║
+║  ✓ Accessibility:         aria-labels, aria-expanded, semantic HTML             ║
+║  ✓ Performance:           Hardware-accelerated transforms                       ║
+║  ✓ Browser Support:       CSS3 Flexbox, Transforms, Transitions                 ║
+║                                                                                 ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                         File Locations Updated                                  ║
+╠════════════════════════════════════════════════════════════════════════════════╣
+║                                                                                 ║
+║  1. C:\Users\jeffb\Desktop\code\upimg-nextjs\src\components\Header.tsx          ║
+║     • Added .open class to hamburger button                                      ║
+║     • Added aria-expanded attribute                                              ║
+║                                                                                 ║
+║  2. C:\Users\jeffb\Desktop\code\upimg-nextjs\src\components\Header.module.css   ║
+║     • Complete RWD CSS with 5 media queries                                      ║
+║     • Hamburger animation styles                                                 ║
+║     • Menu drawer animations                                                     ║
+║     • Responsive typography and spacing                                          ║
+║                                                                                 ║
+╚════════════════════════════════════════════════════════════════════════════════╝
