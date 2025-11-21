@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import styles from "./layout.module.css";
 
 interface AdminData {
@@ -86,41 +87,41 @@ export default function AdminLayout({
         </div>
 
         <nav className={styles.nav}>
-          <a
+          <Link
             href="/admin-new"
             className={`${styles.navItem} ${pathname === "/admin-new" ? styles.active : ""}`}
           >
             <span className={styles.navIcon}>📊</span>
             <span className={styles.navText}>Dashboard</span>
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin-new/users"
             className={`${styles.navItem} ${pathname.startsWith("/admin-new/users") ? styles.active : ""}`}
           >
             <span className={styles.navIcon}>👥</span>
             <span className={styles.navText}>用戶管理</span>
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin-new/images"
             className={`${styles.navItem} ${pathname.startsWith("/admin-new/images") ? styles.active : ""}`}
           >
             <span className={styles.navIcon}>🖼️</span>
             <span className={styles.navText}>圖片管理</span>
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin-new/analytics"
             className={`${styles.navItem} ${pathname.startsWith("/admin-new/analytics") ? styles.active : ""}`}
           >
             <span className={styles.navIcon}>📈</span>
             <span className={styles.navText}>數據分析</span>
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin-new/security"
             className={`${styles.navItem} ${pathname.startsWith("/admin-new/security") ? styles.active : ""}`}
           >
             <span className={styles.navIcon}>🔐</span>
             <span className={styles.navText}>安全管理</span>
-          </a>
+          </Link>
         </nav>
 
         <div className={styles.sidebarFooter}>
