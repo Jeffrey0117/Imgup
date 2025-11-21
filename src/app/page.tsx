@@ -753,15 +753,127 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* 營銷區塊 */}
+      <section className={styles.marketingSection}>
+        <div className={styles.marketingCard}>
+          <div className={styles.marketingBannerImage}>
+            <Image
+              src="/duck-banner.jpeg"
+              alt="圖鴨上床橫幅"
+              width={1200}
+              height={400}
+              priority
+            />
+          </div>
+          <div className={styles.marketingContent}>
+            <h2 className={styles.marketingTitle}>
+              讓圖片分享像呼吸一樣自然 - duk.tw 圖鴨上床
+            </h2>
+            <p className={styles.marketingText}>
+              厭倦了複雜的圖片分享流程嗎？duk.tw
+              圖鴨上床讓一切變得簡單。只需拖曳圖片，系統會立即上傳並生成短網址，讓你輕鬆分享圖片到任何平台。無論是論壇發文、社群貼圖，還是工作協作，duk.tw
+              都是你最可靠的夥伴。
+            </p>
+            <p className={styles.marketingText}>
+              我們提供完整的圖片管理功能：自動生成
+              Markdown、HTML、BBCode
+              等多種格式，讓你在任何場景都能快速使用。更棒的是，所有功能完全免費，無需註冊，打開網頁就能使用！
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 功能亮點區塊 */}
+      <section className={styles.featuresSection}>
+        <div className={styles.featuresContainer}>
+          <h2 className={styles.featuresMainTitle}>
+            三大核心功能，讓圖片分享更輕鬆
+          </h2>
+          <div className={styles.featuresGrid}>
+            {/* Feature 1: 無限空間儲存 */}
+            <div className={styles.featureCard}>
+              <div className={styles.featureIcon}>
+                <Image
+                  src="/duck-1.png"
+                  alt="無限空間儲存"
+                  width={280}
+                  height={322}
+                />
+              </div>
+              <h3 className={styles.featureTitle}>無限空間儲存</h3>
+              <p className={styles.featureDescription}>
+                承載你的每一個創作瞬間。從個人相簿到專業作品集，duk.tw
+                就是你專屬的數位宇宙，讓每張圖片都閃耀光芒。
+              </p>
+            </div>
+
+            {/* Feature 2: 閃電般的速度 */}
+            <div className={styles.featureCard}>
+              <div className={styles.featureIcon}>
+                <Image
+                  src="/duck-2.png"
+                  alt="閃電般的速度"
+                  width={280}
+                  height={322}
+                />
+              </div>
+              <h3 className={styles.featureTitle}>閃電般的速度</h3>
+              <p className={styles.featureDescription}>
+                極速傳輸，毫秒完成。拖曳圖片即刻上傳，自動生成短網址，一鍵複製分享連結，讓靈感不再等待。
+              </p>
+            </div>
+
+            {/* Feature 3: 頂級安全防護 */}
+            <div className={styles.featureCard}>
+              <div className={styles.featureIcon}>
+                <Image
+                  src="/duck-3.png"
+                  alt="頂級安全防護"
+                  width={280}
+                  height={322}
+                />
+              </div>
+              <h3 className={styles.featureTitle}>頂級安全防護</h3>
+              <p className={styles.featureDescription}>
+                軍事級加密守護你的私密圖片。設定密碼鎖定存取權限，支援自訂過期時間，確保每一張圖片都在你的掌控之中。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className={styles.seoSection}>
         <h1>duk.tw 圖鴨上床-免費圖床工具介紹</h1>
 
         <div className={styles.accordion}>
           <button
-            className={styles.accordionHeader}
+            className={`${styles.accordionHeader} ${
+              openAccordion === "why" ? styles.accordionActive : ""
+            }`}
             onClick={() => handleAccordionToggle("why")}
           >
-            為什麼要用圖床？
+            <div className={styles.accordionButtonContent}>
+              <div className={styles.accordionLeft}>
+                <span className={styles.accordionIcon}>🚀</span>
+                <span className={styles.accordionTitle}>為什麼要用圖床？</span>
+              </div>
+              <svg
+                className={`${styles.accordionArrow} ${
+                  openAccordion === "why" ? styles.accordionArrowRotate : ""
+                }`}
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
           </button>
           <div
             className={`${styles.accordionContent} ${
@@ -790,10 +902,32 @@ export default function Home() {
           </div>
 
           <button
-            className={styles.accordionHeader}
+            className={`${styles.accordionHeader} ${
+              openAccordion === "markdown" ? styles.accordionActive : ""
+            }`}
             onClick={() => handleAccordionToggle("markdown")}
           >
-            Markdown 插入圖片教學
+            <div className={styles.accordionButtonContent}>
+              <div className={styles.accordionLeft}>
+                <span className={styles.accordionIcon}>📝</span>
+                <span className={styles.accordionTitle}>Markdown 插入圖片教學</span>
+              </div>
+              <svg
+                className={`${styles.accordionArrow} ${
+                  openAccordion === "markdown" ? styles.accordionArrowRotate : ""
+                }`}
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
           </button>
           <div
             className={`${styles.accordionContent} ${
@@ -813,10 +947,32 @@ export default function Home() {
           </div>
 
           <button
-            className={styles.accordionHeader}
+            className={`${styles.accordionHeader} ${
+              openAccordion === "html" ? styles.accordionActive : ""
+            }`}
             onClick={() => handleAccordionToggle("html")}
           >
-            HTML 插入圖片語法
+            <div className={styles.accordionButtonContent}>
+              <div className={styles.accordionLeft}>
+                <span className={styles.accordionIcon}>🌐</span>
+                <span className={styles.accordionTitle}>HTML 插入圖片語法</span>
+              </div>
+              <svg
+                className={`${styles.accordionArrow} ${
+                  openAccordion === "html" ? styles.accordionArrowRotate : ""
+                }`}
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
           </button>
           <div
             className={`${styles.accordionContent} ${
@@ -840,10 +996,32 @@ export default function Home() {
           </div>
 
           <button
-            className={styles.accordionHeader}
+            className={`${styles.accordionHeader} ${
+              openAccordion === "features" ? styles.accordionActive : ""
+            }`}
             onClick={() => handleAccordionToggle("features")}
           >
-            duk.tw 功能與優勢
+            <div className={styles.accordionButtonContent}>
+              <div className={styles.accordionLeft}>
+                <span className={styles.accordionIcon}>⭐</span>
+                <span className={styles.accordionTitle}>duk.tw 功能與優勢</span>
+              </div>
+              <svg
+                className={`${styles.accordionArrow} ${
+                  openAccordion === "features" ? styles.accordionArrowRotate : ""
+                }`}
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
           </button>
           <div
             className={`${styles.accordionContent} ${
@@ -875,10 +1053,32 @@ export default function Home() {
           </div>
 
           <button
-            className={styles.accordionHeader}
+            className={`${styles.accordionHeader} ${
+              openAccordion === "faq" ? styles.accordionActive : ""
+            }`}
             onClick={() => handleAccordionToggle("faq")}
           >
-            常見問題（FAQ）
+            <div className={styles.accordionButtonContent}>
+              <div className={styles.accordionLeft}>
+                <span className={styles.accordionIcon}>💬</span>
+                <span className={styles.accordionTitle}>常見問題（FAQ）</span>
+              </div>
+              <svg
+                className={`${styles.accordionArrow} ${
+                  openAccordion === "faq" ? styles.accordionArrowRotate : ""
+                }`}
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
           </button>
           <div
             className={`${styles.accordionContent} ${

@@ -582,6 +582,129 @@
   }
 }
 
+/* 營銷區塊樣式 */
+.marketingSection {
+  padding: 80px 20px;
+  background: linear-gradient(180deg, #111 0%, #1a1b1f 100%);
+}
+
+.marketingCard {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #1f2126;
+  border: 1px solid #2a2d33;
+  border-radius: 18px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.marketingBannerImage {
+  width: 100%;
+  height: auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.marketingBannerImage img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.marketingContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 40px;
+}
+
+.marketingTitle {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+}
+
+.marketingText {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #b8b9bd;
+  margin: 0;
+}
+
+/* 功能亮點區塊樣式 */
+.featuresSection {
+  padding: 80px 20px;
+  background: linear-gradient(180deg, #0d0e12 0%, #1a1b1f 100%);
+}
+
+.featuresContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.featuresMainTitle {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 60px 0;
+  line-height: 1.4;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+}
+
+.featureCard {
+  background: #1f2126;
+  border: 1px solid #2a2d33;
+  border-radius: 18px;
+  padding: 40px 30px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.featureCard:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 16px 40px rgba(155, 107, 255, 0.2);
+  border-color: #9b6bff;
+}
+
+.featureIcon {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  filter: drop-shadow(0 4px 16px rgba(155, 107, 255, 0.15));
+  width: 100%;
+  padding: 0 20px;
+}
+
+.featureIcon img {
+  border-radius: 16px;
+  width: 100%;
+  height: auto;
+}
+
+.featureTitle {
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 16px 0;
+}
+
+.featureDescription {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #b8b9bd;
+  margin: 0;
+}
+
 .seoSection {
   max-width: 800px;
   margin: 40px auto;
@@ -592,42 +715,140 @@
 }
 
 .accordion {
-  margin-top: 20px;
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .accordionHeader {
   width: 100%;
   text-align: left;
-  background: #2b2f39;
+  background: linear-gradient(135deg, #2b2f39 0%, #1f2329 100%);
   color: #eef;
-  border: 1px solid #3a3f48;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px 20px;
   cursor: pointer;
   font-size: 16px;
   font-weight: 500;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.accordionHeader::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent, rgba(139, 92, 246, 0.1));
+  opacity: 0;
+  transition: opacity 0.4s ease;
 }
 
 .accordionHeader:hover {
-  background: #333842;
-  border-color: #4a4f5a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.3);
+  background: linear-gradient(135deg, #333842 0%, #252933 100%);
+}
+
+.accordionHeader:hover::before {
+  opacity: 1;
+}
+
+.accordionHeader.accordionActive {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+}
+
+.accordionHeader.accordionActive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(139, 92, 246, 0.4);
+}
+
+.accordionButtonContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.accordionLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.accordionIcon {
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.accordionHeader:hover .accordionIcon {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.accordionHeader.accordionActive .accordionIcon {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.accordionTitle {
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.accordionArrow {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  color: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+
+.accordionArrowRotate {
+  transform: rotate(180deg);
+}
+
+.accordionHeader.accordionActive .accordionArrow {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .accordionContent {
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease-in-out;
-  background: #1f2126;
-  border-radius: 8px;
-  padding: 0 16px;
-  margin-bottom: 12px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, #1f2126 0%, #1a1c20 100%);
+  border-radius: 12px;
+  padding: 0 20px;
+  margin-top: -4px;
+  margin-bottom: 0;
+  border: 1px solid transparent;
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 .accordionContent.open {
   max-height: 1000px;
-  padding: 16px;
+  padding: 20px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  border-color: rgba(255, 255, 255, 0.05);
+  opacity: 1;
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .accordionContent p,
@@ -774,16 +995,40 @@
   }
 
   .accordionHeader {
-    padding: 10px 14px;
+    padding: 14px 16px;
     font-size: 15px;
   }
 
+  .accordionButtonContent {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .accordionLeft {
+    gap: 10px;
+  }
+
+  .accordionIcon {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+  }
+
+  .accordionTitle {
+    font-size: 15px;
+  }
+
+  .accordionArrow {
+    width: 18px;
+    height: 18px;
+  }
+
   .accordionContent {
-    padding: 0 14px;
+    padding: 0 16px;
   }
 
   .accordionContent.open {
-    padding: 14px;
+    padding: 16px;
   }
 }
 
@@ -1845,6 +2090,59 @@
     font-size: 1rem;
   }
 
+  /* 營銷和功能亮點響應式 - Tablet */
+  .marketingSection {
+    padding: 60px 16px;
+  }
+
+  .marketingContent {
+    padding: 32px 24px;
+  }
+
+  .marketingTitle {
+    font-size: 24px;
+  }
+
+  .marketingText {
+    font-size: 15px;
+  }
+
+  .featuresSection {
+    padding: 60px 16px;
+  }
+
+  .featuresMainTitle {
+    font-size: 28px;
+    margin-bottom: 48px;
+  }
+
+  .featuresGrid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .featureCard {
+    padding: 36px 24px;
+  }
+
+  .featureIcon {
+    margin-bottom: 16px;
+    padding: 0 16px;
+  }
+
+  .featureIcon img {
+    width: 100%;
+    border-radius: 14px;
+  }
+
+  .featureTitle {
+    font-size: 20px;
+  }
+
+  .featureDescription {
+    font-size: 14px;
+  }
+
   .notFoundActions {
     flex-direction: column;
     width: 100%;
@@ -1882,6 +2180,58 @@
     font-size: 15px;
   }
 
+  /* 營銷和功能亮點響應式 - Mobile */
+  .marketingSection {
+    padding: 48px 12px;
+  }
+
+  .marketingContent {
+    padding: 28px 20px;
+  }
+
+  .marketingTitle {
+    font-size: 22px;
+  }
+
+  .marketingText {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .featuresSection {
+    padding: 48px 12px;
+  }
+
+  .featuresMainTitle {
+    font-size: 24px;
+    margin-bottom: 40px;
+  }
+
+  .featuresGrid {
+    gap: 24px;
+  }
+
+  .featureCard {
+    padding: 32px 20px;
+  }
+
+  .featureIcon {
+    padding: 0 16px;
+  }
+
+  .featureIcon img {
+    width: 100%;
+    border-radius: 14px;
+  }
+
+  .featureTitle {
+    font-size: 19px;
+  }
+
+  .featureDescription {
+    font-size: 13px;
+  }
+
   .notFoundIcon img {
     width: 100px !important;
     height: 100px !important;
@@ -1899,6 +2249,57 @@
 
   .notFoundTitle {
     font-size: 1.5rem;
+  }
+
+  /* 營銷和功能亮點響應式 - Mobile Small */
+  .marketingSection {
+    padding: 40px 10px;
+  }
+
+  .marketingContent {
+    padding: 24px 16px;
+  }
+
+  .marketingTitle {
+    font-size: 20px;
+  }
+
+  .marketingText {
+    font-size: 13px;
+  }
+
+  .featuresSection {
+    padding: 40px 10px;
+  }
+
+  .featuresMainTitle {
+    font-size: 22px;
+    margin-bottom: 32px;
+  }
+
+  .featuresGrid {
+    gap: 20px;
+  }
+
+  .featureCard {
+    padding: 28px 16px;
+  }
+
+  .featureIcon {
+    padding: 0 12px;
+  }
+
+  .featureIcon img {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .featureTitle {
+    font-size: 18px;
+  }
+
+  .featureDescription {
+    font-size: 13px;
   }
 
   .notFoundHint {
