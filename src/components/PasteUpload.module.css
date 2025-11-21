@@ -133,14 +133,16 @@
 }
 
 /* 響應式設計 */
+/* 997px 以下隱藏貼上提示 */
+@media (max-width: 997px) {
+  .pasteHint {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .pasteContainer {
     bottom: 12px;
-  }
-
-  /* 手機版隱藏貼上提示 */
-  .pasteHint {
-    display: none;
   }
 
   .hintText {
