@@ -622,7 +622,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 40px;
+  padding: clamp(24px, 5vw, 40px) clamp(16px, 4vw, 40px);
   /* Ensure consistent background with card */
   background: #1a1b1f;
 }
@@ -2132,9 +2132,6 @@
     padding: 60px 16px;
   }
 
-  .marketingContent {
-    padding: 32px 24px;
-  }
 
   .marketingTitle {
     font-size: 24px;
@@ -2226,9 +2223,6 @@
     padding: 48px 12px;
   }
 
-  .marketingContent {
-    padding: 28px 20px;
-  }
 
   .marketingTitle {
     font-size: 22px;
@@ -2301,9 +2295,6 @@
     padding: 40px 10px;
   }
 
-  .marketingContent {
-    padding: 24px 16px;
-  }
 
   .marketingTitle {
     font-size: 20px;
