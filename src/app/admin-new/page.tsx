@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./dashboard.module.css";
+import ActivityTimeline from "./components/ActivityTimeline";
 
 interface MappingItem {
   id: string;
@@ -317,33 +318,11 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Quick Links */}
-          <div className={styles.quickLinks}>
-            <button
-              onClick={() => router.push("/admin-new/images")}
-              className={styles.quickLinkButton}
-            >
-              📁 管理圖片
-            </button>
-            <button
-              onClick={() => router.push("/admin-new/users")}
-              className={styles.quickLinkButton}
-            >
-              👥 用戶管理
-            </button>
-            <button
-              onClick={() => router.push("/admin-new/analytics")}
-              className={styles.quickLinkButton}
-            >
-              📊 數據分析
-            </button>
-            <button
-              onClick={() => router.push("/admin-new/security")}
-              className={styles.quickLinkButton}
-            >
-              🔒 安全設定
-            </button>
-          </div>
+          {/* Activity Timeline - Replacing Quick Links */}
+          <ActivityTimeline
+            recentUploads={stats.recentUploads}
+            weeklyStats={stats.weeklyStats}
+          />
         </div>
       </div>
     </div>

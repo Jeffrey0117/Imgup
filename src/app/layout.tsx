@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   title: "圖鴨上床(duk.tw)–台灣熱門圖床｜免費上傳、圖片空間分享",
   description:
     "圖鴨上床 duk.tw，台灣熱門免費圖床，支援圖片快速上傳，免註冊即可分享，穩定又方便。",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+  },
   verification: {
     google: "25Xjaefx0m920B4GPVL4Qi6A8Ac7_-26BVy_xElQexY",
   },
