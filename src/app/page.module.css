@@ -1077,7 +1077,7 @@
   }
 
   .mainTitle {
-    font-size: 1.8rem;
+    font-size: var(--fs-title-mobile);
     text-align: center; /* 確�?標�?置中 */
   }
 
