@@ -35,12 +35,12 @@ export const metadata: Metadata = {
 export default function FeaturesPage() {
   const features = [
     {
-      icon: "/icons/ICON-F-01.png",
+      icon: "/icons/ICON-F-01.jpeg",
       title: "拖曳上傳",
       description: "支援拖曳多張圖片快速上傳，只需將圖片拖放到上傳區域即可。告別繁瑣的檔案選擇流程，讓上傳變得直觀又順暢。",
     },
     {
-      icon: "/icons/ICON-F-02.png",
+      icon: "/icons/ICON-F-02.jpeg",
       title: "批量處理",
       description: "同時上傳多張圖片，一次處理所有檔案。無論是 5 張還是 50 張圖片，我們的系統都能高效處理，為您節省寶貴時間。",
     },

@@ -777,7 +777,7 @@ export default function Home() {
             </p>
             <p className={styles.marketingText}>
               我們提供完整的圖片管理功能：自動生成
-              <span className={styles.highlight}>Markdown</span>、<span className={styles.highlight}>HTML</span>、<span className={styles.highlight}>BBCode</span>
+              <span className={styles.highlight}>Markdown</span>、<span className={styles.highlight}>HTML</span>
               等多種格式，讓你在任何場景都能快速使用。更棒的是，所有功能<span className={styles.highlight}>完全免費</span>，<span className={styles.highlight}>無需註冊</span>，打開網頁就能使用！
             </p>
           </div>
@@ -934,16 +934,11 @@ export default function Home() {
               openAccordion === "markdown" ? styles.open : ""
             }`}
           >
-            <p>在 Markdown 文件中插入圖片的語法非常簡單：</p>
-            <pre>![替代文字](圖片網址)</pre>
-            <p>例如：</p>
-            <pre>![我的貓咪](https://duk.tw/example.jpg)</pre>
-            <p>duk.tw 會自動為你生成正確的 Markdown 語法，你只需要：</p>
-            <ol>
-              <li>上傳圖片</li>
-              <li>複製 Markdown 輸出區域的內容</li>
-              <li>貼到你的 Markdown 文件中</li>
-            </ol>
+            <p>Markdown 圖片語法：</p>
+            <pre>![描述](圖片網址)</pre>
+            <p>範例：</p>
+            <pre>![圖片](https://duk.tw/abc123.jpg)</pre>
+            <p>上傳後直接複製生成的 Markdown 語法即可使用。</p>
           </div>
 
           <button
@@ -979,20 +974,11 @@ export default function Home() {
               openAccordion === "html" ? styles.open : ""
             }`}
           >
-            <p>在 HTML 中插入圖片需要使用 &lt;img&gt; 標籤：</p>
-            <pre>
-              <img src="圖片網址" alt="替代文字" />
-            </pre>
-            <p>例如：</p>
-            <pre>
-              <img src="https://duk.tw/example.jpg" alt="我的貓咪" />
-            </pre>
-            <p>duk.tw 會自動生成完整的 HTML 標籤，你只需要：</p>
-            <ol>
-              <li>上傳圖片到 duk.tw</li>
-              <li>複製 HTML 標籤輸出區域的內容</li>
-              <li>貼到你的 HTML 文件中</li>
-            </ol>
+            <p>HTML 圖片語法：</p>
+            <pre>&lt;img src=&quot;圖片網址&quot; alt=&quot;描述&quot; /&gt;</pre>
+            <p>範例：</p>
+            <pre>&lt;img src=&quot;https://duk.tw/abc123.jpg&quot; alt=&quot;圖片&quot; /&gt;</pre>
+            <p>上傳後直接複製生成的 HTML 標籤即可使用。</p>
           </div>
 
           <button
