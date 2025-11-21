@@ -615,6 +615,7 @@
   height: auto;
   display: block;
   object-fit: cover;
+  aspect-ratio: 3 / 1;
 }
 
 .marketingContent {
