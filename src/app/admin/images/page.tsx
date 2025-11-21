@@ -22,15 +22,6 @@ interface MappingRow {
   isExpired: boolean;
   hasPassword: boolean;
   password: string | null;
-  // 新增統計欄位
-  referrerStats?: Array<{
-    refererDomain: string;
-    accessCount: number;
-    lastAccessAt: string;
-  }>;
-  logs?: Array<{
-    createdAt: string;
-  }>;
 }
 
 // 統計概覽介面
@@ -843,8 +834,6 @@ export default function AdminImagesPage() {
                     <th>原始 URL</th>
                     <th>密碼</th>
                     <th>上傳時間</th>
-                    <th>來源統計</th>
-                    <th>最後訪問</th>
                     <th>狀態</th>
                     <th>操作</th>
                   </tr>
@@ -852,7 +841,7 @@ export default function AdminImagesPage() {
                 <tbody>
                   {items.length === 0 && (
                     <tr>
-                      <td className={styles.empty} colSpan={11}>
+                      <td className={styles.empty} colSpan={9}>
                         沒有資料
                       </td>
                     </tr>
@@ -919,31 +908,6 @@ export default function AdminImagesPage() {
                       </td>
                       <td data-label="上傳時間">
                         {formatDateTime(row.createdAt)}
-                      </td>
-                      <td data-label="來源統計">
-                        {row.referrerStats && row.referrerStats.length > 0 ? (
-                          <div className={styles.referrerStats}>
-                            {row.referrerStats.slice(0, 3).map((stat, i) => (
-                              <div key={i} className={styles.referrerItem} title={`${stat.refererDomain}: ${stat.accessCount} 次`}>
-                                {stat.refererDomain}: {stat.accessCount}
-                              </div>
-                            ))}
-                            {row.referrerStats.length > 3 && (
-                              <div className={styles.moreReferrers}>
-                                +{row.referrerStats.length - 3} 個來源
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td data-label="最後訪問">
-                        {row.logs && row.logs.length > 0 ? (
-                          formatDateTime(row.logs[0].createdAt)
-                        ) : (
-                          "—"
-                        )}
                       </td>
                       <td data-label="狀態">
                         {statusTags(row).map((t, i) => (

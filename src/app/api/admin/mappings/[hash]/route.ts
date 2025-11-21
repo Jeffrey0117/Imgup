@@ -121,12 +121,6 @@ export async function GET(
     // 查找檔案記錄
     const mapping = await prisma.mapping.findUnique({
       where: { hash },
-      include: {
-        logs: {
-          orderBy: { createdAt: "desc" },
-          take: 10,
-        },
-      },
     });
 
     if (!mapping) {
@@ -142,10 +136,6 @@ export async function GET(
       hasPassword: !!mapping.password,
       // Admin API 可以回傳實際密碼值
       password: mapping.password,
-      logs: mapping.logs.map((log: any) => ({
-        ...log,
-        createdAt: log.createdAt.toISOString(),
-      })),
     };
 
     return NextResponse.json({
