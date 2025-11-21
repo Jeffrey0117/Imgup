@@ -22,7 +22,6 @@ interface StatsData {
   totalMappings: number;
   todayUploads: number;
   activeMappings: number;
-  totalViews: number;
   recentUploads: MappingItem[];
   weeklyStats: { date: string; count: number }[];
 }
@@ -213,13 +212,6 @@ export default function AdminDashboard() {
               <div className={styles.statMeta}>
                 <div className={styles.statNumber}>{stats.activeMappings}</div>
                 <div className={styles.statLabel}>活躍檔案</div>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statIcon}>👁️</div>
-              <div className={styles.statMeta}>
-                <div className={styles.statNumber}>{stats.totalViews}</div>
-                <div className={styles.statLabel}>總瀏覽數</div>
               </div>
             </div>
           </div>

@@ -843,7 +843,6 @@ export default function AdminImagesPage() {
                     <th>原始 URL</th>
                     <th>密碼</th>
                     <th>上傳時間</th>
-                    <th>瀏覽次數</th>
                     <th>來源統計</th>
                     <th>最後訪問</th>
                     <th>狀態</th>
@@ -853,7 +852,7 @@ export default function AdminImagesPage() {
                 <tbody>
                   {items.length === 0 && (
                     <tr>
-                      <td className={styles.empty} colSpan={12}>
+                      <td className={styles.empty} colSpan={11}>
                         沒有資料
                       </td>
                     </tr>
@@ -921,7 +920,6 @@ export default function AdminImagesPage() {
                       <td data-label="上傳時間">
                         {formatDateTime(row.createdAt)}
                       </td>
-                      <td data-label="瀏覽次數">{row.viewCount}</td>
                       <td data-label="來源統計">
                         {row.referrerStats && row.referrerStats.length > 0 ? (
                           <div className={styles.referrerStats}>

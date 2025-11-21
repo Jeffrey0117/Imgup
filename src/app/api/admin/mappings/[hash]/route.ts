@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { hash: string } }
+  { params }: { params: Promise<{ hash: string }> }
 ) {
   try {
     // 驗證管理員身份
@@ -39,7 +39,7 @@ export async function DELETE(
       return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
     }
 
-    const { hash } = params;
+    const { hash } = await params;
 
     // 查找檔案記錄
     const mapping = await prisma.mapping.findUnique({
@@ -84,7 +84,7 @@ export async function DELETE(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { hash: string } }
+  { params }: { params: Promise<{ hash: string }> }
 ) {
   try {
     // 驗證管理員身份
@@ -116,7 +116,7 @@ export async function GET(
       return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
     }
 
-    const { hash } = params;
+    const { hash } = await params;
 
     // 查找檔案記錄
     const mapping = await prisma.mapping.findUnique({
@@ -160,7 +160,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { hash: string } }
+  { params }: { params: Promise<{ hash: string }> }
 ) {
   try {
     // 驗證管理員身份（支援 Header Bearer 與 Cookie）
@@ -191,7 +191,7 @@ export async function PUT(
       return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
     }
 
-    const { hash } = params;
+    const { hash } = await params;
     const body = await request.json().catch(() => ({}));
 
     const {
@@ -296,7 +296,6 @@ export async function PUT(
         shortUrl: updated.shortUrl,
         createdAt: updated.createdAt.toISOString(),
         expiresAt: updated.expiresAt ? updated.expiresAt.toISOString() : null,
-        viewCount: updated.viewCount,
         isDeleted: updated.isDeleted,
         deletedAt: updated.deletedAt ? updated.deletedAt.toISOString() : null,
         isExpired: updated.expiresAt ? updated.expiresAt < new Date() : false,

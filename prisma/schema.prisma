@@ -8,24 +8,21 @@ datasource db {
 }
 
 model Mapping {
-  id              String          @id @default(cuid())
-  hash            String          @unique
+  id              String    @id @default(cuid())
+  hash            String    @unique
   filename        String
   url             String
   shortUrl        String
-  createdAt       DateTime        @default(now())
+  createdAt       DateTime  @default(now())
   expiresAt       DateTime?
   password        String?
   deletedAt       DateTime?
   deletedBy       String?
-  isDeleted       Boolean         @default(false)
-  viewCount       Int             @default(0)
+  isDeleted       Boolean   @default(false)
   fileExtension   String?
   backupUrls      Json?
   providerMetrics Json?
   uploadStats     Json?
-  logs            AccessLog[]
-  referrerStats   ReferrerStats[]
 
   @@index([createdAt])
   @@index([isDeleted])
@@ -66,41 +63,6 @@ model AdminSession {
 
   @@index([token])
   @@index([adminId])
-}
-
-model AccessLog {
-  id            String   @id @default(cuid())
-  mappingId     String
-  ipAddress     String
-  userAgent     String?
-  referer       String?
-  createdAt     DateTime @default(now())
-  accessType    String
-  clientType    String
-  country       String?
-  refererDomain String?
-  region        String?
-  mapping       Mapping  @relation(fields: [mappingId], references: [id])
-
-  @@index([mappingId])
-  @@index([createdAt])
-  @@index([refererDomain])
-  @@index([accessType])
-}
-
-model ReferrerStats {
-  id            String   @id @default(cuid())
-  mappingId     String
-  refererDomain String
-  accessCount   Int      @default(0)
-  lastAccessAt  DateTime @default(now())
-  createdAt     DateTime @default(now())
-  mapping       Mapping  @relation(fields: [mappingId], references: [id])
-
-  @@unique([mappingId, refererDomain])
-  @@index([mappingId])
-  @@index([refererDomain])
-  @@index([accessCount])
 }
 
 model AuditLog {
@@ -165,14 +127,14 @@ model UserSession {
 }
 
 model RateViolation {
-  id          String   @id @default(cuid())
-  userId      String?
-  ipAddress   String
+  id            String   @id @default(cuid())
+  userId        String?
+  ipAddress     String
   violationType String
-  endpoint    String
-  metadata    Json?
-  createdAt   DateTime @default(now())
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint      String
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([ipAddress])

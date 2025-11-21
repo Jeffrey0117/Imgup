@@ -10,7 +10,6 @@ import {
   ImageMapping,
   EdgeDetector
 } from "@/lib/unified-access";
-import { trackingServiceV2, TrackingData } from "@/lib/tracking-service-v2";
 
 // 初始化 Redis 客戶端（用於快取和統計）
 let redisClient: RedisClientType | null = null;
@@ -121,28 +120,6 @@ const statsProvider = async (hash: string): Promise<void> => {
   }
 };
 
-// 追蹤提供者（整合新的追蹤服務）
-const trackingProvider = async (
-  hash: string,
-  request: ImageAccessRequest,
-  responseType: string
-): Promise<void> => {
-  const edgeResult = EdgeDetector.detectEdge(request);
-  
-  const trackingData: TrackingData = {
-    hash,
-    referer: request.referer,
-    userAgent: request.userAgent,
-    ipAddress: request.ip,
-    accessType: responseType === 'proxy' ? 'direct' :
-               responseType === 'redirect' && request.hash.includes('/p') ? 'preview' :
-               edgeResult.isApiRequest ? 'api' : 'direct',
-    clientType: edgeResult.clientType
-  };
-
-  await trackingServiceV2.track(trackingData);
-};
-
 /** 具備超時與重試的抓取工具 */
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -179,21 +156,20 @@ async function fetchWithRetry(
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { hash: string } }
+  { params }: { params: Promise<{ hash: string }> }
 ) {
   try {
     // 確保快取已初始化
     await ensureCacheInitialized();
-    
+
     // 初始化增強的統一存取服務
     const unifiedAccess = new EnhancedImageAccess(
       cacheProvider,
       prismaDataProvider,
-      statsProvider,
-      trackingProvider
+      statsProvider
     );
-    
-    const { hash: rawHash } = params;
+
+    const { hash: rawHash } = await params;
     // 正規化：解碼並移除結尾空白/編碼空白，避免 `...png%20` 或 `...png ` 造成解析失敗
     const cleanedHash = decodeURIComponent(rawHash).replace(/(%20|\s|\+)+$/g, '');
     
@@ -407,7 +383,8 @@ export async function GET(
     console.error("Smart Route 統一介面錯誤:", error);
     // 發生錯誤時，重定向到原路由讓 Next.js 處理
     // 失敗時也嘗試使用正規化後的 hash
-    const fallbackHash = decodeURIComponent(params.hash).replace(/(%20|\s|\+)+$/g, '');
+    const resolvedParams = await params;
+    const fallbackHash = decodeURIComponent(resolvedParams.hash).replace(/(%20|\s|\+)+$/g, '');
     return NextResponse.redirect(new URL(`/${fallbackHash}`, req.url), {
       status: 302,
     });

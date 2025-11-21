@@ -9,7 +9,6 @@ interface TimelineItem {
   filename: string;
   url: string;
   createdAt: string;
-  viewCount: number;
   hasPassword: boolean;
   isExpired: boolean;
 }
@@ -96,10 +95,6 @@ export default function ActivityTimeline({
                   <div className={styles.itemMeta}>
                     <span className={styles.metaTime}>
                       {formatTimeAgo(item.createdAt)}
-                    </span>
-                    <span className={styles.metaDivider}>•</span>
-                    <span className={styles.metaViews}>
-                      👁️ {item.viewCount}
                     </span>
                     {item.hasPassword && (
                       <>

@@ -83,7 +83,6 @@ export async function GET(request: NextRequest) {
         password: true,
         createdAt: true,
         expiresAt: true,
-        viewCount: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -97,7 +96,6 @@ export async function GET(request: NextRequest) {
       password: mapping.password || "", // 空字串表示無密碼
       createdAt: mapping.createdAt.toISOString(),
       expiresAt: mapping.expiresAt ? mapping.expiresAt.toISOString() : "",
-      viewCount: mapping.viewCount,
     }));
 
     // 根據格式生成檔案
@@ -112,7 +110,6 @@ export async function GET(request: NextRequest) {
           { id: "password", title: "密碼" },
           { id: "createdAt", title: "建立時間" },
           { id: "expiresAt", title: "到期時間" },
-          { id: "viewCount", title: "瀏覽量" },
         ],
       });
 
@@ -136,7 +133,6 @@ export async function GET(request: NextRequest) {
           "password",
           "createdAt",
           "expiresAt",
-          "viewCount",
         ],
       });
 
@@ -149,7 +145,6 @@ export async function GET(request: NextRequest) {
         "密碼",
         "建立時間",
         "到期時間",
-        "瀏覽量",
       ];
 
       XLSX.utils.sheet_add_aoa(worksheet, [headers], { origin: "A1" });

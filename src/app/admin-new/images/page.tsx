@@ -13,13 +13,10 @@ interface ImageItem {
   shortUrl: string;
   createdAt: string;
   expiresAt: string | null;
-  viewCount: number;
   isExpired: boolean;
   hasPassword: boolean;
   password: string | null;
   isDeleted: boolean;
-  lastAccessedAt: string | null;
-  topReferrers: { domain: string; count: number }[];
 }
 
 interface PaginationInfo {
@@ -390,9 +387,6 @@ export default function ImagesPage() {
               <th style={{ width: "120px" }}>原始 URL</th>
               <th style={{ width: "100px" }}>密碼</th>
               <th style={{ width: "140px" }}>上傳時間</th>
-              <th style={{ width: "80px" }}>瀏覽數</th>
-              <th style={{ width: "150px" }}>來源統計</th>
-              <th style={{ width: "140px" }}>最後訪問</th>
               <th style={{ width: "80px" }}>狀態</th>
               <th style={{ width: "160px" }}>操作</th>
             </tr>
@@ -455,29 +449,6 @@ export default function ImagesPage() {
                   )}
                 </td>
                 <td data-label="上傳時間">{formatTime(image.createdAt)}</td>
-                <td className={styles.count} data-label="瀏覽數">
-                  {image.viewCount.toLocaleString()}
-                </td>
-                <td data-label="來源統計">
-                  {image.topReferrers && image.topReferrers.length > 0 ? (
-                    <div style={{ fontSize: "12px", lineHeight: "1.4" }}>
-                      {image.topReferrers.slice(0, 2).map((ref, idx) => (
-                        <div key={idx} style={{ color: "#8ed88e" }}>
-                          {ref.domain}: {ref.count}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <span style={{ color: "#99a0ab" }}>無資料</span>
-                  )}
-                </td>
-                <td data-label="最後訪問">
-                  {image.lastAccessedAt ? (
-                    formatTime(image.lastAccessedAt)
-                  ) : (
-                    <span style={{ color: "#99a0ab" }}>從未訪問</span>
-                  )}
-                </td>
                 <td data-label="狀態">
                   <div className={styles.statusBadges}>
                     {image.hasPassword && (
@@ -530,7 +501,7 @@ export default function ImagesPage() {
             ))}
             {images.length === 0 && (
               <tr>
-                <td colSpan={12} className={styles.emptyRow}>
+                <td colSpan={7} className={styles.emptyRow}>
                   暫無圖片記錄
                 </td>
               </tr>

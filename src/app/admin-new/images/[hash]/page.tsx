@@ -13,7 +13,6 @@ interface ImageDetail {
   shortUrl: string;
   createdAt: string;
   expiresAt: string | null;
-  viewCount: number;
   isExpired: boolean;
   hasPassword: boolean;
   password: string | null;
@@ -251,16 +250,6 @@ export default function ImageDetailPage() {
             </div>
           </div>
 
-          {/* Statistics */}
-          <div className={detailStyles.infoCard}>
-            <h3 className={detailStyles.cardTitle}>訪問統計</h3>
-            <div className={detailStyles.statsGrid}>
-              <div className={detailStyles.statBox}>
-                <div className={detailStyles.statValue}>{image.viewCount.toLocaleString()}</div>
-                <div className={detailStyles.statLabel}>總瀏覽次數</div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

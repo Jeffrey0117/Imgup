@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 獲取統計數據
-    const [totalMappings, todayUploads, activeMappings, totalViews] =
+    const [totalMappings, todayUploads, activeMappings] =
       await Promise.all([
         // 總檔案數（未刪除）
         prisma.mapping.count({
@@ -64,14 +64,6 @@ export async function GET(request: NextRequest) {
             isDeleted: false,
           },
         }),
-
-        // 總瀏覽次數
-        prisma.mapping.aggregate({
-          where: { isDeleted: false },
-          _sum: {
-            viewCount: true,
-          },
-        }),
       ]);
 
     // 獲取最近上傳的檔案
@@ -89,7 +81,6 @@ export async function GET(request: NextRequest) {
         shortUrl: true,
         createdAt: true,
         expiresAt: true,
-        viewCount: true,
         password: true,
       },
     });
@@ -116,7 +107,6 @@ export async function GET(request: NextRequest) {
       totalMappings,
       todayUploads,
       activeMappings,
-      totalViews: totalViews._sum.viewCount || 0,
       recentUploads: recentUploads.map((mapping: any) => ({
         ...mapping,
         createdAt: mapping.createdAt.toISOString(),

@@ -13,6 +13,7 @@ interface MappingItem {
   shortUrl: string;
   createdAt: string;
   expiresAt: string | null;
+  viewCount: number;
   isExpired: boolean;
   hasPassword: boolean;
 }
@@ -21,6 +22,7 @@ interface StatsData {
   totalMappings: number;
   todayUploads: number;
   activeMappings: number;
+  totalViews: number;
   recentUploads: MappingItem[];
   weeklyStats: { date: string; count: number }[];
 }
@@ -201,6 +203,7 @@ export default function AdminDashboardPage() {
                           : mapping.filename}
                       </div>
                       <div className={styles.galleryMeta}>
+                        <span>👁️ {mapping.viewCount}</span>
                         {mapping.hasPassword && <span>🔒</span>}
                         {mapping.isExpired && <span>⏰</span>}
                       </div>
@@ -301,6 +304,18 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
+            <div className={styles.statCard}>
+              <div className={styles.statIcon} style={{ background: "#f59e0b" }}>
+                👁️
+              </div>
+              <div className={styles.statContent}>
+                <div className={styles.statValue}>
+                  {(stats.totalViews / 1000000).toFixed(1)}M
+                </div>
+                <div className={styles.statLabel}>總瀏覽數</div>
+                <div className={styles.statChange}>累計統計</div>
+              </div>
+            </div>
           </div>
 
           {/* Activity Timeline - Replacing Quick Links */}

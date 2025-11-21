@@ -4,7 +4,6 @@ import {
   extractTokenFromRequest,
   verifyAdminSession,
 } from "@/utils/admin-auth";
-import { getBatchViewCounts } from "@/lib/view-count-helper";
 
 type StatusFilter = "valid" | "expired" | "deleted";
 
@@ -17,11 +16,8 @@ type Item = {
   createdAt: Date;
   expiresAt: Date | null;
   password: string | null;
-  viewCount: number;
   isDeleted: boolean;
   deletedAt: Date | null;
-  logs: { createdAt: Date }[];
-  referrerStats: { refererDomain: string | null; accessCount: number }[];
 };
 
 function parseBool(value: string | null): boolean | null {
@@ -74,10 +70,7 @@ export async function GET(request: NextRequest) {
     const dateEnd = searchParams.get("dateEnd");
     const status = (searchParams.get("status") as StatusFilter | null) || null; // valid | expired | deleted
     const passwordProtected = parseBool(searchParams.get("passwordProtected")); // true | false | null
-    const minViews = searchParams.get("minViews") ? parseInt(searchParams.get("minViews")!, 10) : null;
-    const maxViews = searchParams.get("maxViews") ? parseInt(searchParams.get("maxViews")!, 10) : null;
     const fileType = searchParams.get("fileType")?.trim() || "";
-    const includeStats = parseBool(searchParams.get("includeStats")); // 是否包含統計資訊
 
     // 當提供 ids 參數時，忽略其他篩選條件，只查詢指定項目
     let where: any = undefined;
@@ -131,14 +124,6 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // 瀏覽量範圍篩選
-      if (minViews !== null || maxViews !== null) {
-        const viewCountRange: any = {};
-        if (minViews !== null) viewCountRange.gte = minViews;
-        if (maxViews !== null) viewCountRange.lte = maxViews;
-        AND.push({ viewCount: viewCountRange });
-      }
-
       // 檔案類型篩選（依副檔名）
       if (fileType) {
         AND.push({ filename: { endsWith: `.${fileType}`, mode: "insensitive" } });
@@ -165,58 +150,25 @@ export async function GET(request: NextRequest) {
         createdAt: true,
         expiresAt: true,
         password: true,
-        viewCount: true,
         isDeleted: true,
         deletedAt: true,
-        logs: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: {
-            createdAt: true,
-          },
-        },
-        referrerStats: {
-          orderBy: { accessCount: "desc" },
-          take: 3,
-          select: {
-            refererDomain: true,
-            accessCount: true,
-          },
-        },
       },
     });
 
-    // 批量獲取實時 viewCount（從 Redis，降級到 DB 快照）
-    const viewCountResults = await getBatchViewCounts(
-      (items as Item[]).map((m: Item) => ({
-        hash: m.hash,
-        dbSnapshot: m.viewCount  // DB 快照值作為降級選項
-      }))
-    );
-
-    const data = (items as Item[]).map((m: Item) => {
-      const viewCountResult = viewCountResults.get(m.hash);
-      return {
-        id: m.id,
-        hash: m.hash,
-        filename: m.filename,
-        url: m.url,
-        shortUrl: m.shortUrl,
-        createdAt: m.createdAt.toISOString(),
-        expiresAt: m.expiresAt ? m.expiresAt.toISOString() : null,
-        viewCount: viewCountResult?.viewCount || m.viewCount,  // Redis 優先，降級到 DB
-        isDeleted: m.isDeleted,
-        deletedAt: m.deletedAt ? m.deletedAt.toISOString() : null,
-        isExpired: m.expiresAt ? m.expiresAt < now : false,
-        hasPassword: !!m.password,
-        password: m.password, // Admin API 可以回傳實際密碼值
-        lastAccessedAt: m.logs.length > 0 ? m.logs[0].createdAt.toISOString() : null,
-        topReferrers: m.referrerStats.map((r) => ({
-          domain: r.refererDomain || "Direct",
-          count: r.accessCount,
-        })),
-      };
-    });
+    const data = (items as Item[]).map((m: Item) => ({
+      id: m.id,
+      hash: m.hash,
+      filename: m.filename,
+      url: m.url,
+      shortUrl: m.shortUrl,
+      createdAt: m.createdAt.toISOString(),
+      expiresAt: m.expiresAt ? m.expiresAt.toISOString() : null,
+      isDeleted: m.isDeleted,
+      deletedAt: m.deletedAt ? m.deletedAt.toISOString() : null,
+      isExpired: m.expiresAt ? m.expiresAt < now : false,
+      hasPassword: !!m.password,
+      password: m.password, // Admin API 可以回傳實際密碼值
+    }));
 
     let pagination;
     if (ids) {
