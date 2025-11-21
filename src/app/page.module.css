@@ -1003,7 +1003,6 @@
   .seoSection {
     padding: 16px;
     margin: 20px auto;
-    max-width: calc(100% - 32px); /* ??container padding 一??*/
   }
 
   .accordionHeader {
