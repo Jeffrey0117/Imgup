@@ -1891,7 +1891,19 @@
 
 @media (max-width: 768px) {
   .hoverTooltip {
-    display: none;
+    /* 改為常駐顯示在 Drop Zone 下方 */
+    position: static;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    margin-top: 16px;
+    margin-bottom: 0;
+    min-width: 100%;
+  }
+
+  .drop:hover .hoverTooltip {
+    /* 取消 hover 效果，保持常駐 */
+    transform: none;
   }
 }
 
@@ -2088,6 +2100,14 @@
 }
 
 /* RWD 調整 */
+/* Tablet - 2 column layout */
+@media (max-width: 1024px) {
+  .featuresGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+  }
+}
+
 @media (max-width: 768px) {
   .notFoundWrapper {
     padding: 30px 16px;
