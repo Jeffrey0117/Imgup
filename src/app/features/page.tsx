@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -32,6 +33,54 @@ export const metadata: Metadata = {
 };
 
 export default function FeaturesPage() {
+  const features = [
+    {
+      icon: "/icons/ICON-F-01.png",
+      title: "拖曳上傳",
+      description: "支援拖曳多張圖片快速上傳，只需將圖片拖放到上傳區域即可。告別繁瑣的檔案選擇流程，讓上傳變得直觀又順暢。",
+    },
+    {
+      icon: "/icons/ICON-F-02.png",
+      title: "批量處理",
+      description: "同時上傳多張圖片，一次處理所有檔案。無論是 5 張還是 50 張圖片，我們的系統都能高效處理，為您節省寶貴時間。",
+    },
+    {
+      icon: "/icons/ICON-F-03.jpeg",
+      title: "格式支援",
+      description: "支援多種常見圖片格式：PNG、JPG、JPEG、WebP、GIF 等。不論是高畫質照片還是動態圖片，都能完美支援。",
+    },
+    {
+      icon: "/icons/ICON-F-04.jpeg",
+      title: "即時生成",
+      description: "上傳完成後立即生成 Markdown 和 HTML 語法。不再需要手動編寫程式碼，一鍵複製即可使用。",
+    },
+    {
+      icon: "/icons/ICON-F-05.jpeg",
+      title: "一鍵複製",
+      description: "點擊按鈕即可將生成的程式碼複製到剪貼簿。支援批量複製所有圖片的連結，操作簡單直覺。",
+    },
+    {
+      icon: "/icons/ICON-F-06.jpeg",
+      title: "完全免費",
+      description: "100% 免費使用，無需註冊、無隱藏費用。專為內容創作者和開發者設計，讓創作更自由。",
+    },
+    {
+      icon: "/icons/ICON-F-07.jpeg",
+      title: "安全可靠",
+      description: "使用業界標準的安全措施保護您的圖片。所有上傳的圖片都經過驗證，確保檔案安全無虞。",
+    },
+    {
+      icon: "/icons/ICON-F-08.jpeg",
+      title: "響應式設計",
+      description: "完美適配桌面和行動裝置。無論在電腦、平板還是手機上，都能享受到一致的使用體驗。",
+    },
+    {
+      icon: "/icons/ICON-F-09.jpeg",
+      title: "高速 CDN",
+      description: "全球 CDN 加速網路確保圖片載入速度。無論您的讀者身在何處，都能快速看到您的圖片。",
+    },
+  ];
+
   return (
     <div className={styles.container}>
 
@@ -46,86 +95,22 @@ export default function FeaturesPage() {
           </div>
 
           <div className={styles.featuresGrid}>
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>🖱️</div>
-              <h3>拖曳上傳</h3>
-              <p>
-                支援拖曳多張圖片快速上傳，只需將圖片拖放到上傳區域即可。
-                告別繁瑣的檔案選擇流程，讓上傳變得直觀又順暢。
-              </p>
-            </div>
-
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>📦</div>
-              <h3>批量處理</h3>
-              <p>
-                同時上傳多張圖片，一次處理所有檔案。無論是 5 張還是 50 張圖片，
-                我們的系統都能高效處理，為您節省寶貴時間。
-              </p>
-            </div>
-
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>🎨</div>
-              <h3>格式支援</h3>
-              <p>
-                支援多種常見圖片格式：PNG、JPG、JPEG、WebP、GIF 等。
-                不論是高畫質照片還是動態圖片，都能完美支援。
-              </p>
-            </div>
-
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>⚡</div>
-              <h3>即時生成</h3>
-              <p>
-                上傳完成後立即生成 Markdown 和 HTML 語法。
-                不再需要手動編寫程式碼，一鍵複製即可使用。
-              </p>
-            </div>
-
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>📋</div>
-              <h3>一鍵複製</h3>
-              <p>
-                點擊按鈕即可將生成的程式碼複製到剪貼簿。
-                支援批量複製所有圖片的連結，操作簡單直覺。
-              </p>
-            </div>
-
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>🆓</div>
-              <h3>完全免費</h3>
-              <p>
-                100% 免費使用，無需註冊、無隱藏費用。
-                專為內容創作者和開發者設計，讓創作更自由。
-              </p>
-            </div>
-
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>🔒</div>
-              <h3>安全可靠</h3>
-              <p>
-                使用業界標準的安全措施保護您的圖片。
-                所有上傳的圖片都經過驗證，確保檔案安全無虞。
-              </p>
-            </div>
-
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>📱</div>
-              <h3>響應式設計</h3>
-              <p>
-                完美適配桌面和行動裝置。無論在電腦、平板還是手機上，
-                都能享受到一致的使用體驗。
-              </p>
-            </div>
-
-            <div className={styles.featureCard}>
-              <div className={styles.featureIcon}>🚀</div>
-              <h3>高速 CDN</h3>
-              <p>
-                全球 CDN 加速網路確保圖片載入速度。
-                無論您的讀者身在何處，都能快速看到您的圖片。
-              </p>
-            </div>
+            {features.map((feature, index) => (
+              <div className={styles.featureCard} key={index}>
+                <div className={styles.featureImageContainer}>
+                  <Image
+                    src={feature.icon}
+                    alt={feature.title}
+                    layout="fill"
+                    objectFit="cover"
+                  />
+                </div>
+                <div className={styles.featureContent}>
+                  <h3>{feature.title}</h3>
+                  <p>{feature.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className={styles.ctaSection}>
