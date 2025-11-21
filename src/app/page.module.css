@@ -643,7 +643,7 @@
 }
 
 .highlight {
-  color: #9b6bff;
+  color: var(--accent);
   font-weight: 600;
   font-size: 17px;
 }
@@ -675,7 +675,7 @@
 }
 
 .featureCard {
-  background: #1f2126;
+  background: var(--panel);
   border: 1px solid #2a2d33;
   border-radius: 18px;
   padding: 40px 30px;
@@ -687,7 +687,7 @@
   .featureCard:hover {
     transform: translateY(-8px);
     box-shadow: 0 16px 40px rgba(155, 107, 255, 0.2);
-    border-color: #9b6bff;
+    border-color: var(--accent);
   }
 }
 
