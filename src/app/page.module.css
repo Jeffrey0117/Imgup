@@ -720,11 +720,13 @@
 
 .seoSection {
   max-width: 1200px;
+  width: 100%;
   margin: 40px auto;
   padding: 20px;
   font-size: 14px;
   line-height: 1.6;
   color: #ddd;
+  box-sizing: border-box;
 }
 
 .accordion {

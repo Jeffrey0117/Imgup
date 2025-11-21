@@ -86,6 +86,7 @@ test-*.js
 # IDE and temporary files
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 *~

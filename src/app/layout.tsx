@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Header from "../components/Header";
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: "圖鴨上床(duk.tw)–台灣熱門圖床｜免費上傳、圖片空間分享",
@@ -51,6 +52,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <Header />
         {children}
+        <Analytics />
       </body>
     </html>
   );
