@@ -1527,7 +1527,7 @@
   .modalContent {
     padding: 20px;
     width: calc(100% - 24px);
-    max-width: none;
+    max-width: 400px;
     max-height: calc(100vh - 24px);
     margin: 0;
   }
