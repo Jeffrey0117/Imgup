@@ -16,10 +16,20 @@
       "maxDuration": 10,
       "memory": 256
     },
+    "src/app/api/cron/snapshot/route.ts": {
+      "maxDuration": 60,
+      "memory": 512
+    },
     "src/app/api/*/route.ts": {
       "maxDuration": 10
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/snapshot",
+      "schedule": "0 3 * * *"
+    }
+  ],
   "env": {
     "NODE_ENV": "production",
     "VERCEL_FUNCTION_MAX_SIZE": "50mb"

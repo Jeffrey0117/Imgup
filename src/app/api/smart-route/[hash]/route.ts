@@ -10,7 +10,7 @@ import {
   ImageMapping,
   EdgeDetector
 } from "@/lib/unified-access";
-import { trackingService, TrackingData } from "@/lib/tracking-service";
+import { trackingServiceV2, TrackingData } from "@/lib/tracking-service-v2";
 
 // 初始化 Redis 客戶端（用於快取和統計）
 let redisClient: RedisClientType | null = null;
@@ -140,7 +140,7 @@ const trackingProvider = async (
     clientType: edgeResult.clientType
   };
 
-  await trackingService.track(trackingData);
+  await trackingServiceV2.track(trackingData);
 };
 
 /** 具備超時與重試的抓取工具 */

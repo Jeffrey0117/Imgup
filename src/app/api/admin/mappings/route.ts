@@ -4,6 +4,7 @@ import {
   extractTokenFromRequest,
   verifyAdminSession,
 } from "@/utils/admin-auth";
+import { getBatchViewCounts } from "@/lib/view-count-helper";
 
 type StatusFilter = "valid" | "expired" | "deleted";
 
@@ -185,26 +186,37 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const data = (items as Item[]).map((m: Item) => ({
-      id: m.id,
-      hash: m.hash,
-      filename: m.filename,
-      url: m.url,
-      shortUrl: m.shortUrl,
-      createdAt: m.createdAt.toISOString(),
-      expiresAt: m.expiresAt ? m.expiresAt.toISOString() : null,
-      viewCount: m.viewCount,
-      isDeleted: m.isDeleted,
-      deletedAt: m.deletedAt ? m.deletedAt.toISOString() : null,
-      isExpired: m.expiresAt ? m.expiresAt < now : false,
-      hasPassword: !!m.password,
-      password: m.password, // Admin API 可以回傳實際密碼值
-      lastAccessedAt: m.logs.length > 0 ? m.logs[0].createdAt.toISOString() : null,
-      topReferrers: m.referrerStats.map((r) => ({
-        domain: r.refererDomain || "Direct",
-        count: r.accessCount,
-      })),
-    }));
+    // 批量獲取實時 viewCount（從 Redis，降級到 DB 快照）
+    const viewCountResults = await getBatchViewCounts(
+      (items as Item[]).map((m: Item) => ({
+        hash: m.hash,
+        dbSnapshot: m.viewCount  // DB 快照值作為降級選項
+      }))
+    );
+
+    const data = (items as Item[]).map((m: Item) => {
+      const viewCountResult = viewCountResults.get(m.hash);
+      return {
+        id: m.id,
+        hash: m.hash,
+        filename: m.filename,
+        url: m.url,
+        shortUrl: m.shortUrl,
+        createdAt: m.createdAt.toISOString(),
+        expiresAt: m.expiresAt ? m.expiresAt.toISOString() : null,
+        viewCount: viewCountResult?.viewCount || m.viewCount,  // Redis 優先，降級到 DB
+        isDeleted: m.isDeleted,
+        deletedAt: m.deletedAt ? m.deletedAt.toISOString() : null,
+        isExpired: m.expiresAt ? m.expiresAt < now : false,
+        hasPassword: !!m.password,
+        password: m.password, // Admin API 可以回傳實際密碼值
+        lastAccessedAt: m.logs.length > 0 ? m.logs[0].createdAt.toISOString() : null,
+        topReferrers: m.referrerStats.map((r) => ({
+          domain: r.refererDomain || "Direct",
+          count: r.accessCount,
+        })),
+      };
+    });
 
     let pagination;
     if (ids) {
