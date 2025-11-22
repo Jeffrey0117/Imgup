@@ -298,11 +298,11 @@ export async function GET(
         if (response.url) {
           console.log('Smart Route 代理模式（通過 Cloudflare）- Hash 模式');
 
-          // 新模式：直接使用 hash，Worker 會自己查詢映射
+          // 新模式：直接使用 hash（保留副檔名），Worker 會自己查詢映射
           const proxyBaseUrl = process.env.NEXT_PUBLIC_PROXY_URL || '/api/proxy-image';
-          const proxyUrl = proxyBaseUrl.replace('/image', '') + `/${hashWithoutExt}`;
+          const proxyUrl = proxyBaseUrl.replace('/image', '') + `/${cleanedHash}`;
 
-          console.log('🔐 隱藏 URL 模式:', proxyUrl);
+          console.log('🔐 隱藏 URL 模式 (with extension):', proxyUrl);
 
           const redirectResponse = new NextResponse(null, {
             status: 302,
