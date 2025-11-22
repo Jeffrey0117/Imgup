@@ -12,7 +12,7 @@ workers_dev = true
 # 執行後請更新：wrangler kv:namespace create "RATE_LIMIT_KV"
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
-id = "YOUR_KV_NAMESPACE_ID_HERE"  # 創建 KV 後替換此 ID
+id = "df5941d509a34615874eb89d048cd6f6"
 
 # 自定義域名路由（可選，建議設置）
 # 取消註釋並設置你的域名
