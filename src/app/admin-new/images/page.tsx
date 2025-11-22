@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "../dashboard.module.css";
 import imgStyles from "./images.module.css";
+import AlbumModal from "../albums/components/AlbumModal";
 
 interface ImageItem {
   id: string;
@@ -49,6 +50,10 @@ export default function ImagesPage() {
   const [batchOperation, setBatchOperation] = useState<string>("");
   const [batchPassword, setBatchPassword] = useState("");
   const [batchExpiry, setBatchExpiry] = useState("");
+  const [showAlbumModal, setShowAlbumModal] = useState(false);
+  const [selectedImageId, setSelectedImageId] = useState<string>("");
+  const [hoveredImage, setHoveredImage] = useState<ImageItem | null>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     loadImages();
@@ -123,6 +128,24 @@ export default function ImagesPage() {
     const url = `${window.location.origin}/${hash}`;
     navigator.clipboard.writeText(url);
     alert("網址已複製到剪貼簿");
+  };
+
+  const handleFavorite = (imageId: string) => {
+    setSelectedImageId(imageId);
+    setShowAlbumModal(true);
+  };
+
+  const handleImageHover = (image: ImageItem | null, event?: React.MouseEvent) => {
+    setHoveredImage(image);
+    if (event && image) {
+      setMousePosition({ x: event.clientX, y: event.clientY });
+    }
+  };
+
+  const handleMouseMove = (event: React.MouseEvent) => {
+    if (hoveredImage) {
+      setMousePosition({ x: event.clientX, y: event.clientY });
+    }
   };
 
   const handleSelectImage = (id: string) => {
@@ -457,7 +480,12 @@ export default function ImagesPage() {
                   />
                 </td>
                 <td data-label="預覽">
-                  <div className={imgStyles.thumbnail}>
+                  <div
+                    className={imgStyles.thumbnail}
+                    onMouseEnter={(e) => handleImageHover(image, e)}
+                    onMouseLeave={() => handleImageHover(null)}
+                    onMouseMove={handleMouseMove}
+                  >
                     <img
                       src={image.url}
                       alt={image.filename}
@@ -526,6 +554,14 @@ export default function ImagesPage() {
                 </td>
                 <td data-label="操作">
                   <div className={styles.actions}>
+                    <button
+                      onClick={() => handleFavorite(image.id)}
+                      className={styles.actionButton}
+                      title="收藏到相簿"
+                      style={{ background: "rgba(255, 204, 0, 0.15)", borderColor: "rgba(255, 204, 0, 0.4)" }}
+                    >
+                      ⭐
+                    </button>
                     <button
                       onClick={() => handleCopyUrl(image.hash)}
                       className={styles.actionButton}
@@ -682,6 +718,38 @@ export default function ImagesPage() {
                 取消
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Album Modal */}
+      {showAlbumModal && selectedImageId && (
+        <AlbumModal
+          show={showAlbumModal}
+          mappingId={selectedImageId}
+          onClose={() => {
+            setShowAlbumModal(false);
+            setSelectedImageId("");
+          }}
+          onSuccess={() => {
+            setShowAlbumModal(false);
+            setSelectedImageId("");
+          }}
+        />
+      )}
+
+      {/* Floating Image Preview */}
+      {hoveredImage && (
+        <div
+          className={imgStyles.floatingPreview}
+          style={{
+            left: `${mousePosition.x + 20}px`,
+            top: `${mousePosition.y + 20}px`,
+          }}
+        >
+          <img src={hoveredImage.url} alt={hoveredImage.filename} />
+          <div className={imgStyles.previewInfo}>
+            <div className={imgStyles.previewFilename}>{hoveredImage.filename}</div>
           </div>
         </div>
       )}
