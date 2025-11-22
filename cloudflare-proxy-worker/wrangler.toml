@@ -14,11 +14,10 @@ workers_dev = true
 binding = "RATE_LIMIT_KV"
 id = "df5941d509a34615874eb89d048cd6f6"
 
-# 自定義域名路由（可選，建議設置）
-# 取消註釋並設置你的域名
-# routes = [
-#   { pattern = "proxy.duk.tw/*", zone_name = "duk.tw" }
-# ]
+# 自定義域名路由（已啟用）
+routes = [
+  { pattern = "proxy.duk.tw/*", zone_name = "duk.tw" }
+]
 
 # 環境變數（可選）
 # [vars]

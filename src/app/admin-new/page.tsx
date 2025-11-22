@@ -298,7 +298,7 @@ export default function AdminDashboardPage() {
               <div key={mapping.id} className={styles.galleryItem}>
                 <div className={styles.galleryImageWrap}>
                   <img
-                    src={getProxyImageUrl(mapping.url)}
+                    src={getProxyImageUrl(mapping.hash)}
                     alt={mapping.filename}
                     className={styles.galleryImage}
                     loading="lazy"

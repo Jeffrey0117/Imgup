@@ -71,10 +71,7 @@ export default {
         const hash = pathname.substring(1); // 移除開頭的 '/'
 
         if (!hash || hash === '' || hash === '/') {
-          return jsonResponse({
-            error: 'Usage: /hash or /image?url=xxx',
-            examples: ['/pbQyTD', '/image?url=https://example.com/image.jpg']
-          }, 400);
+          return jsonResponse({ error: 'Not found' }, 404);
         }
 
         console.log('🔍 Hash 模式:', hash);

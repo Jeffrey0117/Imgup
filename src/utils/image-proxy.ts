@@ -9,17 +9,17 @@
  */
 
 /**
- * 生成圖片代理 URL
- * @param originalUrl 原始圖片 URL
+ * 生成圖片代理 URL（Hash 模式）
+ * @param hash 圖片的 hash ID
  * @returns 代理後的 URL
  */
-export function getProxyImageUrl(originalUrl: string): string {
-  // 優先使用 Cloudflare Workers
+export function getProxyImageUrl(hash: string): string {
+  // 優先使用 Cloudflare Workers（hash 模式）
   const proxyBaseUrl =
-    process.env.NEXT_PUBLIC_PROXY_URL || '/api/proxy-image';
+    process.env.NEXT_PUBLIC_PROXY_URL || '/api/smart-route';
 
-  // 構建代理 URL
-  return `${proxyBaseUrl}?url=${encodeURIComponent(originalUrl)}`;
+  // Hash 模式：直接使用 hash，Worker 會自己查詢映射
+  return `${proxyBaseUrl}/${hash}`;
 }
 
 /**
