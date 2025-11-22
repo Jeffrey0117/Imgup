@@ -1,0 +1,25 @@
+# Cloudflare Workers 配置文件
+# duk.tw 圖片代理服務
+
+name = "duktwimg-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Workers 類型
+workers_dev = true
+
+# KV Namespace for Rate Limiting
+# 執行後請更新：wrangler kv:namespace create "RATE_LIMIT_KV"
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "YOUR_KV_NAMESPACE_ID_HERE"  # 創建 KV 後替換此 ID
+
+# 自定義域名路由（可選，建議設置）
+# 取消註釋並設置你的域名
+# routes = [
+#   { pattern = "proxy.duk.tw/*", zone_name = "duk.tw" }
+# ]
+
+# 環境變數（可選）
+# [vars]
+# ENVIRONMENT = "production"

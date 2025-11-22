@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { getProxyImageUrl } from "@/utils/image-proxy";
 import styles from "./dashboard.module.css";
 import ActivityTimeline from "./components/ActivityTimeline";
 
@@ -297,7 +298,7 @@ export default function AdminDashboardPage() {
               <div key={mapping.id} className={styles.galleryItem}>
                 <div className={styles.galleryImageWrap}>
                   <img
-                    src={`/api/proxy-image?url=${encodeURIComponent(mapping.url)}`}
+                    src={getProxyImageUrl(mapping.url)}
                     alt={mapping.filename}
                     className={styles.galleryImage}
                     loading="lazy"

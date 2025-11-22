@@ -1,0 +1,269 @@
+/**
+ * Cloudflare Worker - duk.tw 圖片代理服務
+ *
+ * 用途：解決防外連問題，並大幅降低 Vercel bandwidth 成本
+ * 預期節省：$498/月 → < $5/月（節省 99%）
+ *
+ * 使用方式：
+ * https://proxy.duk.tw/image?url=https://example.com/image.jpg
+ *
+ * 安全措施：
+ * 1. Referer 白名單檢查
+ * 2. User-Agent 黑名單
+ * 3. Rate Limiting（30 次/分鐘/IP）
+ */
+
+// ===== 安全配置 =====
+const ALLOWED_REFERERS = ['duk.tw', 'localhost', '127.0.0.1'];
+
+const BLOCKED_USER_AGENTS = [
+  'ccbot',
+  'gptbot',
+  'amazonbot',
+  'bytespider',
+  'python-requests',
+  'python-urllib',
+  'curl/',
+  'wget/',
+  'go-http-client',
+  'scrapy',
+  'java/',
+  'bot',
+  'spider',
+  'crawler',
+  'scraper',
+  'slurp',
+  'bingbot',
+  'googlebot',
+  'baiduspider',
+  'yandexbot',
+];
+
+// Rate Limiting 配置
+const RATE_LIMIT_PER_MINUTE = 30;
+
+// ===== 類型定義 =====
+interface Env {
+  RATE_LIMIT_KV?: KVNamespace;
+}
+
+interface RateLimitData {
+  count: number;
+  resetTime: number;
+}
+
+// ===== 主要 Handler =====
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // CORS 預檢請求
+    if (request.method === 'OPTIONS') {
+      return handleCORS();
+    }
+
+    // 只接受 GET 請求
+    if (request.method !== 'GET') {
+      return jsonResponse({ error: 'Method not allowed' }, 405);
+    }
+
+    try {
+      // === 安全檢查 1: Referer 驗證 ===
+      const referer = request.headers.get('referer') || request.headers.get('referrer') || '';
+
+      if (!referer) {
+        return jsonResponse({ error: 'Access denied: No referer header' }, 403);
+      }
+
+      const isAllowedReferer = ALLOWED_REFERERS.some(allowed =>
+        referer.toLowerCase().includes(allowed.toLowerCase())
+      );
+
+      if (!isAllowedReferer) {
+        console.log(`❌ Blocked referer: ${referer}`);
+        return jsonResponse({ error: 'Access denied: Invalid referer' }, 403);
+      }
+
+      // === 安全檢查 2: User-Agent 黑名單 ===
+      const userAgent = (request.headers.get('user-agent') || '').toLowerCase();
+      const isBlockedUA = BLOCKED_USER_AGENTS.some(blocked => userAgent.includes(blocked));
+
+      if (isBlockedUA) {
+        console.log(`❌ Blocked User-Agent: ${userAgent}`);
+        return jsonResponse({ error: 'Access denied: Blocked user agent' }, 403);
+      }
+
+      // === 安全檢查 3: Rate Limiting ===
+      const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+
+      if (env.RATE_LIMIT_KV) {
+        const rateLimitCheck = await checkRateLimit(ip, env.RATE_LIMIT_KV);
+        if (!rateLimitCheck.allowed) {
+          console.log(`❌ Rate limit exceeded for IP: ${ip}`);
+          return jsonResponse(
+            { error: 'Too many requests. Please try again later.' },
+            429
+          );
+        }
+      }
+
+      // === 處理圖片代理 ===
+      const url = new URL(request.url);
+      const imageUrl = url.searchParams.get('url');
+
+      if (!imageUrl) {
+        return jsonResponse({ error: 'Missing url parameter' }, 400);
+      }
+
+      // 驗證 URL 格式
+      let parsedUrl: URL;
+      try {
+        parsedUrl = new URL(imageUrl);
+      } catch {
+        return jsonResponse({ error: 'Invalid URL format' }, 400);
+      }
+
+      // 安全檢查：只允許 http/https 協議
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return jsonResponse({ error: 'Only HTTP/HTTPS protocols are allowed' }, 400);
+      }
+
+      // 檢查 Cloudflare Cache
+      const cache = caches.default;
+      const cacheKey = new Request(imageUrl, request);
+      let response = await cache.match(cacheKey);
+
+      if (response) {
+        console.log(`✅ Cache hit for: ${imageUrl}`);
+        // 添加 cache hit header
+        const newHeaders = new Headers(response.headers);
+        newHeaders.set('X-Cache-Status', 'HIT');
+        return new Response(response.body, {
+          status: response.status,
+          headers: newHeaders,
+        });
+      }
+
+      // 從原始 URL 獲取圖片
+      console.log(`📥 Fetching image: ${imageUrl}`);
+      const imageResponse = await fetch(imageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+        },
+        cf: {
+          cacheTtl: 86400, // Cloudflare CDN 緩存 24 小時
+          cacheEverything: true,
+        },
+      });
+
+      if (!imageResponse.ok) {
+        return jsonResponse(
+          { error: `Failed to fetch image: ${imageResponse.status}` },
+          imageResponse.status
+        );
+      }
+
+      // 返回圖片，設置適當的緩存頭
+      const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+
+      const headers = new Headers({
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400', // 瀏覽器緩存 24 小時
+        'CDN-Cache-Control': 'public, max-age=31536000', // Cloudflare CDN 緩存 1 年
+        'Access-Control-Allow-Origin': referer.includes('localhost') ? referer : 'https://duk.tw',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-Cache-Status': 'MISS',
+      });
+
+      const finalResponse = new Response(imageResponse.body, {
+        status: 200,
+        headers,
+      });
+
+      // 存入 Cloudflare Cache
+      ctx.waitUntil(cache.put(cacheKey, finalResponse.clone()));
+
+      return finalResponse;
+
+    } catch (error) {
+      console.error('❌ 圖片代理錯誤:', error);
+
+      if (error instanceof Error) {
+        if (error.name === 'TimeoutError') {
+          return jsonResponse({ error: 'Image fetch timeout' }, 504);
+        }
+      }
+
+      return jsonResponse({ error: 'Failed to proxy image' }, 500);
+    }
+  },
+};
+
+// ===== 輔助函數 =====
+
+/**
+ * Rate Limiting 檢查（使用 Cloudflare KV）
+ */
+async function checkRateLimit(ip: string, kv: KVNamespace): Promise<{ allowed: boolean }> {
+  const now = Date.now();
+  const key = `rate_limit:${ip}`;
+
+  const data = await kv.get<RateLimitData>(key, 'json');
+
+  if (!data || now > data.resetTime) {
+    // 重置或創建新的限制記錄
+    await kv.put(
+      key,
+      JSON.stringify({
+        count: 1,
+        resetTime: now + 60000, // 1 分鐘後重置
+      }),
+      { expirationTtl: 60 }
+    );
+    return { allowed: true };
+  }
+
+  if (data.count >= RATE_LIMIT_PER_MINUTE) {
+    // 超過每分鐘限制
+    return { allowed: false };
+  }
+
+  // 增加計數
+  await kv.put(
+    key,
+    JSON.stringify({
+      count: data.count + 1,
+      resetTime: data.resetTime,
+    }),
+    { expirationTtl: 60 }
+  );
+
+  return { allowed: true };
+}
+
+/**
+ * 處理 CORS 預檢請求
+ */
+function handleCORS(): Response {
+  return new Response(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
+
+/**
+ * 返回 JSON 回應
+ */
+function jsonResponse(data: any, status: number = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
+}
