@@ -10,6 +10,7 @@ import {
   ImageMapping,
   EdgeDetector
 } from "@/lib/unified-access";
+import { getProxyImageUrl } from "@/utils/image-proxy";
 
 // 初始化 Redis 客戶端（用於快取和統計）
 let redisClient: RedisClientType | null = null;
@@ -292,69 +293,29 @@ export async function GET(
         break;
 
       case 'proxy':
-        // 代理模式：直接回傳圖片內容（帶超時與重試），失敗時回傳占位圖避免暴露來源
+        // 代理模式：重定向到 Cloudflare Workers 代理（節省 99% Vercel 帶寬成本）
         if (response.url) {
-          console.log('Smart Route 代理模式:', response.url);
-          try {
-            const imageResponse = await fetchWithRetry(response.url, { timeoutMs: 8000, retries: 2, backoffMs: 300 });
+          console.log('Smart Route 代理模式（通過 Cloudflare）:', response.url);
+          const proxyUrl = getProxyImageUrl(response.url);
 
-            if (!imageResponse.ok) {
-              throw new Error(`Failed to fetch image: ${imageResponse.status}`);
+          const redirectResponse = new NextResponse(null, {
+            status: 302,
+            headers: {
+              'Location': proxyUrl,
+              'Cache-Control': 'public, max-age=86400', // 24 小時緩存
             }
+          });
 
-            const responseHeaders = new Headers();
-
-            // 加入快取控制標頭
-            if (response.headers) {
-              Object.entries(response.headers).forEach(([key, value]) => {
-                responseHeaders.set(key, value);
-              });
-            }
-
-            // 確保有 Content-Type
-            if (!responseHeaders.has('Content-Type')) {
-              const contentType = imageResponse.headers.get('Content-Type');
-              if (contentType) responseHeaders.set('Content-Type', contentType);
-              else responseHeaders.set('Content-Type', 'image/jpeg');
-            }
-
-            // 傳遞 Content-Length
-            const contentLength = imageResponse.headers.get('Content-Length');
-            if (contentLength) {
-              responseHeaders.set('Content-Length', contentLength);
-            }
-
-            // 支援 Range
-            if (imageResponse.headers.get('Accept-Ranges')) {
-              responseHeaders.set('Accept-Ranges', 'bytes');
-            }
-
-            // 安全標頭
-            responseHeaders.set('Referrer-Policy', 'no-referrer');
-            responseHeaders.set('X-Content-Type-Options', 'nosniff');
-
-            return new NextResponse(imageResponse.body, {
-              status: 200,
-              headers: responseHeaders
-            });
-          } catch (error) {
-            console.error('代理圖片失敗，回傳占位圖避免暴露來源:', error);
-
-            const svg = `
-<svg xmlns='http://www.w3.org/2000/svg' width='120' height='60'>
-  <rect width='100%' height='100%' fill='#f2f2f2'/>
-  <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#999' font-size='12'>image unavailable</text>
-</svg>`;
-            return new NextResponse(svg, {
-              status: 502,
-              headers: {
-                'Content-Type': 'image/svg+xml',
-                'Cache-Control': 'no-store',
-                'Referrer-Policy': 'no-referrer',
-                'X-Content-Type-Options': 'nosniff'
+          // 添加其他快取控制標頭（排除 Location）
+          if (response.headers) {
+            Object.entries(response.headers).forEach(([key, value]) => {
+              if (key.toLowerCase() !== 'location') {
+                redirectResponse.headers.set(key, value);
               }
             });
           }
+
+          return redirectResponse;
         }
         break;
 
