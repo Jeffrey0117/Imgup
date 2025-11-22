@@ -85,29 +85,9 @@ export default {
         console.log('✅ 映射查詢成功:', imageUrl.substring(0, 50));
       }
 
-      // === 安全檢查 1: Referer 驗證（圖片嵌入請求放寬限制）===
-      const accept = request.headers.get('accept') || '';
-      const isImageEmbed = accept.includes('image/'); // <img> 標籤嵌入請求
+      // === 安全檢查 1: Referer（已移除驗證，允許所有來源）===
+      // 完全開放圖片訪問，方便各種 APP 和工具使用
       const referer = request.headers.get('referer') || request.headers.get('referrer') || '';
-
-      // 圖片嵌入（如 PTT、巴哈論壇）：跳過 Referer 驗證
-      // 瀏覽器直接訪問：會在 smart-route 被攔截，不會到達這裡
-      if (!isImageEmbed) {
-        if (!referer) {
-          return jsonResponse({ error: 'Access denied: No referer header' }, 403);
-        }
-
-        const isAllowedReferer = ALLOWED_REFERERS.some(allowed =>
-          referer.toLowerCase().includes(allowed.toLowerCase())
-        );
-
-        if (!isAllowedReferer) {
-          console.log(`❌ Blocked referer: ${referer}`);
-          return jsonResponse({ error: 'Access denied: Invalid referer' }, 403);
-        }
-      } else {
-        console.log('✅ Image embed request - skipping referer check');
-      }
 
       // === 安全檢查 2: User-Agent 黑名單 ===
       const userAgent = (request.headers.get('user-agent') || '').toLowerCase();

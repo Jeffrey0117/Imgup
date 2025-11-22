@@ -8,24 +8,32 @@ datasource db {
 }
 
 model Mapping {
-  id              String    @id @default(cuid())
-  hash            String    @unique
+  id              String          @id @default(cuid())
+  hash            String          @unique
   filename        String
   url             String
   shortUrl        String
-  createdAt       DateTime  @default(now())
+  createdAt       DateTime        @default(now())
   expiresAt       DateTime?
   password        String?
   deletedAt       DateTime?
   deletedBy       String?
-  isDeleted       Boolean   @default(false)
+  isDeleted       Boolean         @default(false)
+  viewCount       Int             @default(0)
   fileExtension   String?
   backupUrls      Json?
   providerMetrics Json?
   uploadStats     Json?
+  userId          String?
+  ipAddress       String?
+  AccessLog       AccessLog[]
+  User            User?           @relation(fields: [userId], references: [id])
+  ReferrerStats   ReferrerStats[]
+  albumItems      AlbumItem[]
 
   @@index([createdAt])
   @@index([isDeleted])
+  @@index([userId])
 }
 
 model Admin {
@@ -45,6 +53,7 @@ model Admin {
   updatedAt      DateTime       @updatedAt
   sessions       AdminSession[]
   auditLogs      AuditLog[]
+  albums         Album[]
 
   @@index([email])
   @@index([username])
@@ -97,18 +106,23 @@ model User {
   passwordHash    String
   tier            String          @default("guest")
   isActive        Boolean         @default(true)
-  totalUploads    Int             @default(0)
+  emailVerified   Boolean         @default(false)
   warningCount    Int             @default(0)
+  lastWarningAt   DateTime?
   restrictedUntil DateTime?
   blacklistedAt   DateTime?
+  blacklistReason String?
+  totalUploads    Int             @default(0)
+  lastUploadAt    DateTime?
   createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  sessions        UserSession[]
+  updatedAt       DateTime        @default(now()) @updatedAt
+  Mapping         Mapping[]
   violations      RateViolation[]
+  sessions        UserSession[]
 
   @@index([email])
-  @@index([username])
   @@index([tier])
+  @@index([isActive])
 }
 
 model UserSession {
@@ -120,7 +134,7 @@ model UserSession {
   ipAddress    String
   expiresAt    DateTime
   createdAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id])
 
   @@index([token])
   @@index([userId])
@@ -130,13 +144,83 @@ model RateViolation {
   id            String   @id @default(cuid())
   userId        String?
   ipAddress     String
-  violationType String
   endpoint      String
-  metadata      Json?
+  violationType String
+  severity      String
+  requestCount  Int
+  limit         Int
+  details       Json?
   createdAt     DateTime @default(now())
-  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([ipAddress])
   @@index([createdAt])
+  @@index([violationType])
+}
+
+model AccessLog {
+  id            String   @id
+  mappingId     String
+  ipAddress     String
+  userAgent     String?
+  referer       String?
+  createdAt     DateTime @default(now())
+  accessType    String
+  clientType    String
+  country       String?
+  refererDomain String?
+  region        String?
+  Mapping       Mapping  @relation(fields: [mappingId], references: [id])
+
+  @@index([accessType])
+  @@index([createdAt])
+  @@index([mappingId])
+  @@index([refererDomain])
+}
+
+model ReferrerStats {
+  id            String   @id
+  mappingId     String
+  refererDomain String
+  accessCount   Int      @default(0)
+  lastAccessAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  Mapping       Mapping  @relation(fields: [mappingId], references: [id])
+
+  @@unique([mappingId, refererDomain])
+  @@index([accessCount])
+  @@index([mappingId])
+  @@index([refererDomain])
+}
+
+model Album {
+  id             String      @id @default(cuid())
+  name           String
+  description    String?
+  coverImageHash String?
+  adminId        String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  admin          Admin       @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  items          AlbumItem[]
+
+  @@index([adminId])
+}
+
+model AlbumItem {
+  id        String   @id @default(cuid())
+  albumId   String
+  mappingId String
+  order     Int      @default(0)
+  note      String?
+  createdAt DateTime @default(now())
+
+  album     Album   @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  mapping   Mapping @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+
+  @@unique([albumId, mappingId])
+  @@index([albumId])
+  @@index([mappingId])
 }

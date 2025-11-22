@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import styles from "../../dashboard.module.css";
 import detailStyles from "./detail.module.css";
+import AlbumModal from "../../albums/components/AlbumModal";
 
 interface ImageDetail {
   id: string;
@@ -27,6 +28,7 @@ export default function ImageDetailPage() {
   const [image, setImage] = useState<ImageDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showAlbumModal, setShowAlbumModal] = useState(false);
 
   useEffect(() => {
     if (hash) {
@@ -168,6 +170,12 @@ export default function ImageDetailPage() {
               ⬇️ 下載
             </button>
             <button
+              onClick={() => setShowAlbumModal(true)}
+              className={detailStyles.actionButton}
+            >
+              ⭐ 收藏
+            </button>
+            <button
               onClick={handleDelete}
               className={detailStyles.actionButtonDanger}
             >
@@ -252,6 +260,18 @@ export default function ImageDetailPage() {
 
         </div>
       </div>
+
+      {/* Album Modal */}
+      {showAlbumModal && image && (
+        <AlbumModal
+          show={showAlbumModal}
+          mappingId={image.id}
+          onClose={() => setShowAlbumModal(false)}
+          onSuccess={() => {
+            setShowAlbumModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

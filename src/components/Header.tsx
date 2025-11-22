@@ -11,11 +11,6 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // 在 admin-new 路径下隐藏 Header
-  if (pathname?.startsWith('/admin-new')) {
-    return null;
-  }
-
   // 防止 body 在選單開啟時滾動
   useEffect(() => {
     if (isMenuOpen) {
@@ -29,6 +24,11 @@ export default function Header() {
       document.body.style.overflow = '';
     };
   }, [isMenuOpen]);
+
+  // 在 admin-new 路径下隐藏 Header
+  if (pathname?.startsWith('/admin-new')) {
+    return null;
+  }
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);

@@ -211,10 +211,10 @@ async function recordViolation(
         ipAddress,
         endpoint,
         violationType,
-        metadata: {
-          severity,
-          requestCount,
-          limit,
+        severity,
+        requestCount,
+        limit,
+        details: {
           timestamp: new Date().toISOString(),
           userAgent: 'unknown'
         }

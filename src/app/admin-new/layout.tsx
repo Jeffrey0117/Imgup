@@ -121,6 +121,13 @@ export default function AdminLayout({
             <span className={styles.navText}>圖片管理</span>
           </Link>
           <Link
+            href="/admin-new/albums"
+            className={`${styles.navItem} ${pathname.startsWith("/admin-new/albums") ? styles.active : ""}`}
+          >
+            <span className={styles.navIcon}>📁</span>
+            <span className={styles.navText}>相簿管理</span>
+          </Link>
+          <Link
             href="/admin-new/analytics"
             className={`${styles.navItem} ${pathname.startsWith("/admin-new/analytics") ? styles.active : ""}`}
           >
