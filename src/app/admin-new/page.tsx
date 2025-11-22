@@ -37,6 +37,16 @@ export default function AdminDashboardPage() {
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
+  // URL Upload Modal state
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [urlUploadLoading, setUrlUploadLoading] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [filename, setFilename] = useState("");
+  const [password, setPassword] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [urlUploadSuccess, setUrlUploadSuccess] = useState("");
+  const [urlUploadError, setUrlUploadError] = useState("");
+
   useEffect(() => {
     loadStats();
     loadGalleryImages(1);
@@ -117,6 +127,102 @@ export default function AdminDashboardPage() {
     alert("網址已複製到剪貼簿");
   };
 
+  // URL Upload functions
+  const extractFilenameFromUrl = (url: string): string => {
+    try {
+      const parsed = new URL(url);
+      const segments = parsed.pathname.split("/");
+      const filename = segments[segments.length - 1] || "image";
+      return filename;
+    } catch {
+      return "image";
+    }
+  };
+
+  const handleUrlChange = (url: string) => {
+    setImageUrl(url);
+    if (url && !filename) {
+      setFilename(extractFilenameFromUrl(url));
+    }
+  };
+
+  const resetUrlModal = () => {
+    setImageUrl("");
+    setFilename("");
+    setPassword("");
+    setExpiresAt("");
+    setUrlUploadSuccess("");
+    setUrlUploadError("");
+  };
+
+  const handleOpenUrlModal = () => {
+    resetUrlModal();
+    setShowUrlModal(true);
+  };
+
+  const handleCloseUrlModal = () => {
+    setShowUrlModal(false);
+    setTimeout(resetUrlModal, 300);
+  };
+
+  const handleUrlUpload = async () => {
+    if (!imageUrl.trim()) {
+      setUrlUploadError("請輸入圖片網址");
+      return;
+    }
+
+    try {
+      new URL(imageUrl);
+    } catch {
+      setUrlUploadError("無效的網址格式");
+      return;
+    }
+
+    if (!filename.trim()) {
+      setUrlUploadError("請輸入檔案名稱");
+      return;
+    }
+
+    setUrlUploadLoading(true);
+    setUrlUploadError("");
+    setUrlUploadSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/shorten-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          url: imageUrl,
+          filename: filename,
+          password: password || undefined,
+          expiresAt: expiresAt || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setUrlUploadSuccess(data.shortUrl);
+        loadStats();
+        loadGalleryImages(1);
+
+        setTimeout(() => {
+          handleCloseUrlModal();
+        }, 3000);
+      } else {
+        setUrlUploadError(data.error || "上傳失敗");
+      }
+    } catch (error) {
+      console.error("URL上傳失敗:", error);
+      setUrlUploadError("網路錯誤，請稍後再試");
+    } finally {
+      setUrlUploadLoading(false);
+    }
+  };
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -164,6 +270,9 @@ export default function AdminDashboardPage() {
           <p className={styles.pageSubtitle}>管理您的圖片服務平台</p>
         </div>
         <div className={styles.topBarActions}>
+          <button onClick={handleOpenUrlModal} className={styles.refreshButton}>
+            🌐 網址上傳
+          </button>
           <button onClick={loadStats} className={styles.refreshButton}>
             🔄 刷新數據
           </button>
@@ -188,7 +297,7 @@ export default function AdminDashboardPage() {
               <div key={mapping.id} className={styles.galleryItem}>
                 <div className={styles.galleryImageWrap}>
                   <img
-                    src={mapping.url}
+                    src={`/api/proxy-image?url=${encodeURIComponent(mapping.url)}`}
                     alt={mapping.filename}
                     className={styles.galleryImage}
                     loading="lazy"
@@ -310,6 +419,120 @@ export default function AdminDashboardPage() {
           />
         </div>
       </div>
+
+      {/* URL Upload Modal */}
+      {showUrlModal && (
+        <div className={styles.modalOverlay} onClick={handleCloseUrlModal}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>🌐 網址上傳</h3>
+              <button onClick={handleCloseUrlModal} className={styles.closeButton}>
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              {!urlUploadSuccess ? (
+                <>
+                  <div className={styles.formGroup}>
+                    <label>圖片網址 *</label>
+                    <input
+                      type="url"
+                      placeholder="https://example.com/image.jpg"
+                      value={imageUrl}
+                      onChange={(e) => handleUrlChange(e.target.value)}
+                      className={styles.input}
+                      disabled={urlUploadLoading}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>檔案名稱 *</label>
+                    <input
+                      type="text"
+                      placeholder="image.jpg"
+                      value={filename}
+                      onChange={(e) => setFilename(e.target.value)}
+                      className={styles.input}
+                      disabled={urlUploadLoading}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>密碼保護（選填）</label>
+                    <input
+                      type="password"
+                      placeholder="設定密碼"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={styles.input}
+                      disabled={urlUploadLoading}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>過期時間（選填）</label>
+                    <input
+                      type="datetime-local"
+                      value={expiresAt}
+                      onChange={(e) => setExpiresAt(e.target.value)}
+                      className={styles.input}
+                      disabled={urlUploadLoading}
+                    />
+                  </div>
+
+                  {urlUploadError && (
+                    <div className={styles.errorMessage}>{urlUploadError}</div>
+                  )}
+
+                  <div className={styles.modalActions}>
+                    <button
+                      onClick={handleCloseUrlModal}
+                      className={styles.cancelButton}
+                      disabled={urlUploadLoading}
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={handleUrlUpload}
+                      className={styles.submitButton}
+                      disabled={urlUploadLoading}
+                    >
+                      {urlUploadLoading ? "上傳中..." : "生成短網址"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className={styles.successMessage}>
+                    ✅ 短網址生成成功！
+                  </div>
+                  <div className={styles.resultUrl}>
+                    <input
+                      type="text"
+                      value={urlUploadSuccess}
+                      readOnly
+                      className={styles.resultInput}
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(urlUploadSuccess);
+                        alert("已複製到剪貼簿");
+                      }}
+                      className={styles.copyButton}
+                    >
+                      📋 複製
+                    </button>
+                  </div>
+                  <div className={styles.autoCloseNotice}>
+                    3 秒後自動關閉...
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

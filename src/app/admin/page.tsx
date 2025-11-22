@@ -22,6 +22,7 @@ interface StatsData {
   totalMappings: number;
   todayUploads: number;
   activeMappings: number;
+  totalViews: number;
   recentUploads: MappingItem[];
   weeklyStats: { date: string; count: number }[];
 }
@@ -39,6 +40,16 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // URL Upload Modal state
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [urlUploadLoading, setUrlUploadLoading] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [filename, setFilename] = useState("");
+  const [password, setPassword] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [urlUploadSuccess, setUrlUploadSuccess] = useState("");
+  const [urlUploadError, setUrlUploadError] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -95,8 +106,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleCopyUrl = (hash: string) => {
-    const url = `${window.location.origin}/${hash}`;
+  const handleCopyUrl = (url: string) => {
     navigator.clipboard.writeText(url);
     alert("網址已複製到剪貼簿");
   };
@@ -122,6 +132,103 @@ export default function AdminDashboard() {
     }
   };
 
+  // URL Upload functions
+  const extractFilenameFromUrl = (url: string): string => {
+    try {
+      const parsed = new URL(url);
+      const segments = parsed.pathname.split("/");
+      const filename = segments[segments.length - 1] || "image";
+      return filename;
+    } catch {
+      return "image";
+    }
+  };
+
+  const handleUrlChange = (url: string) => {
+    setImageUrl(url);
+    if (url && !filename) {
+      setFilename(extractFilenameFromUrl(url));
+    }
+  };
+
+  const resetUrlModal = () => {
+    setImageUrl("");
+    setFilename("");
+    setPassword("");
+    setExpiresAt("");
+    setUrlUploadSuccess("");
+    setUrlUploadError("");
+  };
+
+  const handleOpenUrlModal = () => {
+    resetUrlModal();
+    setShowUrlModal(true);
+  };
+
+  const handleCloseUrlModal = () => {
+    setShowUrlModal(false);
+    setTimeout(resetUrlModal, 300); // 延遲重置以避免閃爍
+  };
+
+  const handleUrlUpload = async () => {
+    // 驗證
+    if (!imageUrl.trim()) {
+      setUrlUploadError("請輸入圖片網址");
+      return;
+    }
+
+    try {
+      new URL(imageUrl);
+    } catch {
+      setUrlUploadError("無效的網址格式");
+      return;
+    }
+
+    if (!filename.trim()) {
+      setUrlUploadError("請輸入檔案名稱");
+      return;
+    }
+
+    setUrlUploadLoading(true);
+    setUrlUploadError("");
+    setUrlUploadSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/shorten-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          url: imageUrl,
+          filename: filename,
+          password: password || undefined,
+          expiresAt: expiresAt || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setUrlUploadSuccess(data.shortUrl);
+        loadStats(); // 重新載入列表
+
+        // 3秒後自動關閉
+        setTimeout(() => {
+          handleCloseUrlModal();
+        }, 3000);
+      } else {
+        setUrlUploadError(data.error || "上傳失敗");
+      }
+    } catch (error) {
+      console.error("URL上傳失敗:", error);
+      setUrlUploadError("網路錯誤，請稍後再試");
+    } finally {
+      setUrlUploadLoading(false);
+    }
+  };
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -138,7 +245,6 @@ export default function AdminDashboard() {
 
   const getSystemStatus = () => {
     if (!stats) return "loading";
-    // 簡單的系統狀態判斷邏輯
     if (stats.totalMappings > 1000) return "warning";
     return "online";
   };
@@ -214,6 +320,13 @@ export default function AdminDashboard() {
                 <div className={styles.statLabel}>活躍檔案</div>
               </div>
             </div>
+            <div className={styles.statCard}>
+              <div className={styles.statIcon}>👁️</div>
+              <div className={styles.statMeta}>
+                <div className={styles.statNumber}>{stats.totalViews}</div>
+                <div className={styles.statLabel}>總瀏覽數</div>
+              </div>
+            </div>
           </div>
 
           {/* 主要內容區域 */}
@@ -266,7 +379,7 @@ export default function AdminDashboard() {
                         <td data-label="操作">
                           <div className={styles.uploadActions}>
                             <button
-                              onClick={() => handleCopyUrl(mapping.hash)}
+                              onClick={() => handleCopyUrl(`${window.location.origin}/${mapping.hash}`)}
                               className={styles.actionButton}
                             >
                               複製
@@ -310,6 +423,12 @@ export default function AdminDashboard() {
                   className={styles.quickAction}
                 >
                   🖼️ 上傳檔案
+                </button>
+                <button
+                  onClick={handleOpenUrlModal}
+                  className={styles.quickAction}
+                >
+                  🌐 網址上傳
                 </button>
                 <button onClick={loadStats} className={styles.quickAction}>
                   🔄 刷新數據
@@ -374,6 +493,122 @@ export default function AdminDashboard() {
             </div>
           </div>
         </>
+      )}
+
+      {/* URL Upload Modal */}
+      {showUrlModal && (
+        <div className={styles.modalOverlay} onClick={handleCloseUrlModal}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>
+                🌐 網址上傳
+              </h3>
+              <button
+                className={styles.modalClose}
+                onClick={handleCloseUrlModal}
+                aria-label="關閉"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              {urlUploadSuccess && (
+                <div className={styles.successMessage}>
+                  ✅ 短網址已生成！
+                  <button onClick={() => handleCopyUrl(urlUploadSuccess)}>
+                    複製網址
+                  </button>
+                </div>
+              )}
+
+              {urlUploadError && (
+                <div className={styles.errorMessage}>
+                  ❌ {urlUploadError}
+                </div>
+              )}
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  圖片網址 <span style={{ color: "#f55" }}>*</span>
+                </label>
+                <input
+                  type="url"
+                  className={styles.formInput}
+                  placeholder="https://example.com/image.jpg"
+                  value={imageUrl}
+                  onChange={(e) => handleUrlChange(e.target.value)}
+                  disabled={urlUploadLoading || !!urlUploadSuccess}
+                />
+                <span className={styles.formHint}>
+                  輸入完整的圖片網址（支援 JPG, PNG, GIF, WebP 等）
+                </span>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  檔案名稱 <span style={{ color: "#f55" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  className={styles.formInput}
+                  placeholder="image.jpg"
+                  value={filename}
+                  onChange={(e) => setFilename(e.target.value)}
+                  disabled={urlUploadLoading || !!urlUploadSuccess}
+                />
+                <span className={styles.formHint}>
+                  自動從網址提取，也可以手動修改
+                </span>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>密碼保護（選填）</label>
+                <input
+                  type="password"
+                  className={styles.formInput}
+                  placeholder="設定密碼後需要輸入才能訪問"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={urlUploadLoading || !!urlUploadSuccess}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>過期時間（選填）</label>
+                <input
+                  type="datetime-local"
+                  className={styles.formInput}
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                  disabled={urlUploadLoading || !!urlUploadSuccess}
+                />
+                <span className={styles.formHint}>
+                  設定後，超過此時間將無法訪問
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button
+                className={`${styles.modalButton} ${styles.modalButtonSecondary}`}
+                onClick={handleCloseUrlModal}
+                disabled={urlUploadLoading}
+              >
+                {urlUploadSuccess ? "關閉" : "取消"}
+              </button>
+              {!urlUploadSuccess && (
+                <button
+                  className={styles.modalButton}
+                  onClick={handleUrlUpload}
+                  disabled={urlUploadLoading || !imageUrl || !filename}
+                >
+                  {urlUploadLoading ? "上傳中..." : "生成短網址"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -22,9 +22,15 @@ export default function AdminLayout({
   const router = useRouter();
   const [adminData, setAdminData] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     checkAuth();
+    // 從 localStorage 載入側邊欄狀態
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved !== null) {
+      setIsSidebarCollapsed(saved === 'true');
+    }
   }, []);
 
   const checkAuth = async () => {
@@ -44,6 +50,12 @@ export default function AdminLayout({
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleSidebar = () => {
+    const newState = !isSidebarCollapsed;
+    setIsSidebarCollapsed(newState);
+    localStorage.setItem('sidebarCollapsed', String(newState));
   };
 
   const handleLogout = async () => {
@@ -69,7 +81,7 @@ export default function AdminLayout({
   return (
     <div className={styles.layout}>
       {/* Dark Sidebar */}
-      <aside className={styles.sidebar}>
+      <aside className={`${styles.sidebar} ${isSidebarCollapsed ? styles.collapsed : ''}`}>
         <div className={styles.logo}>
           <div className={styles.logoIcon}>
             <Image
@@ -136,14 +148,22 @@ export default function AdminLayout({
               <div className={styles.adminRole}>管理員</div>
             </div>
           </div>
+          <button
+            onClick={toggleSidebar}
+            className={styles.toggleButton}
+            aria-label={isSidebarCollapsed ? "展開側邊欄" : "收起側邊欄"}
+            aria-expanded={!isSidebarCollapsed}
+          >
+            {isSidebarCollapsed ? "▶" : "◀"}
+          </button>
           <button onClick={handleLogout} className={styles.logoutButton}>
-            登出
+            {isSidebarCollapsed ? "➡️" : "登出"}
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className={styles.main}>{children}</main>
+      <main className={`${styles.main} ${isSidebarCollapsed ? styles.expanded : ''}`}>{children}</main>
     </div>
   );
 }

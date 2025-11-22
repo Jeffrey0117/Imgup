@@ -39,7 +39,11 @@ export default function ImagesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateStart, setDateStart] = useState<string>("");
+  const [dateEnd, setDateEnd] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [pwFilter, setPwFilter] = useState<string>("all");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [showBatchMenu, setShowBatchMenu] = useState(false);
   const [batchOperation, setBatchOperation] = useState<string>("");
@@ -55,16 +59,17 @@ export default function ImagesPage() {
       setLoading(true);
       const page = parseInt(searchParams.get("page") || "1");
       const pageSize = parseInt(searchParams.get("pageSize") || "20");
-      const search = searchParams.get("search") || "";
-      const status = searchParams.get("status") || "";
 
       const params = new URLSearchParams({
         page: page.toString(),
         pageSize: pageSize.toString(),
       });
 
-      if (search) params.append("search", search);
-      if (status && status !== "all") params.append("status", status);
+      if (searchQuery) params.append("search", searchQuery);
+      if (dateStart) params.append("dateStart", dateStart);
+      if (dateEnd) params.append("dateEnd", dateEnd);
+      if (statusFilter && statusFilter !== "all") params.append("status", statusFilter);
+      if (pwFilter && pwFilter !== "all") params.append("pwFilter", pwFilter);
 
       const response = await fetch(`/api/admin/mappings?${params}`, {
         credentials: "include",
@@ -85,14 +90,16 @@ export default function ImagesPage() {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateURL({ search: searchQuery, page: "1" });
+  const handleApplyFilters = () => {
+    loadImages();
   };
 
-  const handleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-    updateURL({ status: status === "all" ? "" : status, page: "1" });
+  const resetFilters = () => {
+    setSearchQuery("");
+    setDateStart("");
+    setDateEnd("");
+    setStatusFilter("all");
+    setPwFilter("all");
   };
 
   const handlePageChange = (newPage: number) => {
@@ -140,14 +147,24 @@ export default function ImagesPage() {
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+    const hours = Math.floor(diff / (1000 * 60 * 60));
 
-    if (days > 0) return `${days} 天前`;
-    if (hours > 0) return `${hours} 小時前`;
-    if (minutes > 0) return `${minutes} 分鐘前`;
-    return "剛剛";
+    // 24 小時內：顯示相對時間
+    if (hours < 24) {
+      const minutes = Math.floor(diff / (1000 * 60));
+      if (hours > 0) return `${hours} 小時前`;
+      if (minutes > 0) return `${minutes} 分鐘前`;
+      return "剛剛";
+    }
+
+    // 超過 24 小時：顯示完整日期 + 時間
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hour = String(date.getHours()).padStart(2, '0');
+    const minute = String(date.getMinutes()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hour}:${minute}`;
   };
 
   const formatFileSize = (url: string) => {
@@ -327,44 +344,81 @@ export default function ImagesPage() {
 
       {/* Filters */}
       <div className={imgStyles.filterBar}>
-        <form onSubmit={handleSearch} className={imgStyles.searchForm}>
-          <input
-            type="text"
-            placeholder="搜尋檔名..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={imgStyles.searchInput}
-          />
-          <button type="submit" className={imgStyles.searchButton}>
-            🔍 搜尋
-          </button>
-        </form>
+        <div className={imgStyles.filtersGrid}>
+          <div className={imgStyles.filterGroup}>
+            <label className={imgStyles.filterLabel}>檔名搜尋</label>
+            <input
+              type="text"
+              className={imgStyles.filterInput}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="輸入檔名關鍵字"
+            />
+          </div>
 
-        <div className={imgStyles.statusFilters}>
-          <button
-            onClick={() => handleStatusFilter("all")}
-            className={`${imgStyles.filterButton} ${
-              statusFilter === "all" ? imgStyles.active : ""
-            }`}
-          >
-            全部
-          </button>
-          <button
-            onClick={() => handleStatusFilter("valid")}
-            className={`${imgStyles.filterButton} ${
-              statusFilter === "valid" ? imgStyles.active : ""
-            }`}
-          >
-            有效
-          </button>
-          <button
-            onClick={() => handleStatusFilter("expired")}
-            className={`${imgStyles.filterButton} ${
-              statusFilter === "expired" ? imgStyles.active : ""
-            }`}
-          >
-            已過期
-          </button>
+          <div className={imgStyles.filterGroup}>
+            <label className={imgStyles.filterLabel}>開始日期</label>
+            <input
+              type="date"
+              className={imgStyles.filterInput}
+              value={dateStart}
+              onChange={(e) => setDateStart(e.target.value)}
+            />
+          </div>
+
+          <div className={imgStyles.filterGroup}>
+            <label className={imgStyles.filterLabel}>結束日期</label>
+            <input
+              type="date"
+              className={imgStyles.filterInput}
+              value={dateEnd}
+              onChange={(e) => setDateEnd(e.target.value)}
+            />
+          </div>
+
+          <div className={imgStyles.filterGroup}>
+            <label className={imgStyles.filterLabel}>狀態</label>
+            <select
+              className={imgStyles.filterSelect}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">全部</option>
+              <option value="valid">有效</option>
+              <option value="expired">已過期</option>
+            </select>
+          </div>
+
+          <div className={imgStyles.filterGroup}>
+            <label className={imgStyles.filterLabel}>密碼保護</label>
+            <select
+              className={imgStyles.filterSelect}
+              value={pwFilter}
+              onChange={(e) => setPwFilter(e.target.value)}
+            >
+              <option value="all">全部</option>
+              <option value="protected">已保護</option>
+              <option value="unprotected">未保護</option>
+            </select>
+          </div>
+
+          <div className={imgStyles.filterActions}>
+            <button
+              onClick={handleApplyFilters}
+              className={imgStyles.applyButton}
+            >
+              套用
+            </button>
+            <button
+              onClick={() => {
+                resetFilters();
+                setTimeout(loadImages, 0);
+              }}
+              className={imgStyles.resetButton}
+            >
+              重置
+            </button>
+          </div>
         </div>
       </div>
 
@@ -381,12 +435,12 @@ export default function ImagesPage() {
                   className={imgStyles.checkbox}
                 />
               </th>
-              <th style={{ width: "60px" }}>預覽</th>
+              <th style={{ width: "50px" }}>預覽</th>
               <th style={{ width: "200px" }}>檔名</th>
               <th style={{ width: "100px" }}>短鏈</th>
               <th style={{ width: "120px" }}>原始 URL</th>
               <th style={{ width: "100px" }}>密碼</th>
-              <th style={{ width: "140px" }}>上傳時間</th>
+              <th style={{ width: "160px" }}>上傳時間</th>
               <th style={{ width: "80px" }}>狀態</th>
               <th style={{ width: "160px" }}>操作</th>
             </tr>
@@ -448,7 +502,9 @@ export default function ImagesPage() {
                     <span style={{ color: "#99a0ab" }}>無</span>
                   )}
                 </td>
-                <td data-label="上傳時間">{formatTime(image.createdAt)}</td>
+                <td data-label="上傳時間" style={{ whiteSpace: "nowrap" }}>
+                  {formatTime(image.createdAt)}
+                </td>
                 <td data-label="狀態">
                   <div className={styles.statusBadges}>
                     {image.hasPassword && (

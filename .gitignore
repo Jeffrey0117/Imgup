@@ -43,6 +43,9 @@ node_modules
 *.md
 !README.md
 
+# Private research and confidential documents
+/private-research/
+
 # Database files
 *.db
 dev.db
