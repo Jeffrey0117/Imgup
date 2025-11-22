@@ -316,9 +316,10 @@ export class EdgeDetector {
     // 檢查是否為圖片副檔名
     const hasImageExtension = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff?|avif|heic|heif)$/i.test(hash);
 
-    // 判斷是否為瀏覽器請求
-    const isBrowserRequest = accept.includes('text/html') ||
-      (userAgent.includes('Mozilla') && !userAgent.includes('curl') && !userAgent.includes('wget'));
+    // 判斷是否為瀏覽器導航請求（而非圖片嵌入）
+    // 關鍵：必須 Accept 包含 text/html 才是真正的瀏覽器訪問
+    // <img> 標籤只會發送 Accept: image/*，不會有 text/html
+    const isBrowserRequest = accept.includes('text/html');
 
     // 判斷是否為圖片請求
     // 若 Accept 包含 text/html，則優先視為瀏覽器導航，而非圖片請求
