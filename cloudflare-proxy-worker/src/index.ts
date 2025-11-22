@@ -88,12 +88,11 @@ export default {
       // === 安全檢查 1: Referer 驗證（圖片嵌入請求放寬限制）===
       const accept = request.headers.get('accept') || '';
       const isImageEmbed = accept.includes('image/'); // <img> 標籤嵌入請求
+      const referer = request.headers.get('referer') || request.headers.get('referrer') || '';
 
       // 圖片嵌入（如 PTT、巴哈論壇）：跳過 Referer 驗證
       // 瀏覽器直接訪問：會在 smart-route 被攔截，不會到達這裡
       if (!isImageEmbed) {
-        const referer = request.headers.get('referer') || request.headers.get('referrer') || '';
-
         if (!referer) {
           return jsonResponse({ error: 'Access denied: No referer header' }, 403);
         }
@@ -123,13 +122,18 @@ export default {
       const ip = request.headers.get('cf-connecting-ip') || 'unknown';
 
       if (env.RATE_LIMIT_KV) {
-        const rateLimitCheck = await checkRateLimit(ip, env.RATE_LIMIT_KV);
-        if (!rateLimitCheck.allowed) {
-          console.log(`❌ Rate limit exceeded for IP: ${ip}`);
-          return jsonResponse(
-            { error: 'Too many requests. Please try again later.' },
-            429
-          );
+        try {
+          const rateLimitCheck = await checkRateLimit(ip, env.RATE_LIMIT_KV);
+          if (!rateLimitCheck.allowed) {
+            console.log(`❌ Rate limit exceeded for IP: ${ip}`);
+            return jsonResponse(
+              { error: 'Too many requests. Please try again later.' },
+              429
+            );
+          }
+        } catch (error) {
+          // KV 限制超過時不影響主流程，僅記錄日誌
+          console.warn('⚠️ Rate limiting 失敗（可能超過 KV 限制）:', error);
         }
       }
 
@@ -151,6 +155,8 @@ export default {
 
     } catch (error) {
       console.error('❌ Worker 錯誤:', error);
+      console.error('錯誤詳情:', error instanceof Error ? error.message : String(error));
+      console.error('錯誤堆疊:', error instanceof Error ? error.stack : 'No stack trace');
 
       if (error instanceof Error) {
         if (error.name === 'TimeoutError') {
@@ -158,7 +164,10 @@ export default {
         }
       }
 
-      return jsonResponse({ error: 'Internal server error' }, 500);
+      return jsonResponse({
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : String(error)
+      }, 500);
     }
   },
 };
@@ -215,7 +224,7 @@ async function proxyImage(
 ): Promise<Response> {
   // 檢查 Cloudflare Cache
   const cache = caches.default;
-  const cacheKey = new Request(imageUrl, request);
+  const cacheKey = new Request(imageUrl);
   let response = await cache.match(cacheKey);
 
   if (response) {
