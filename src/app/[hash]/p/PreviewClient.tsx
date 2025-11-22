@@ -102,9 +102,11 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     }
   }, [hash]);
 
-  // 預覽頁面直接使用真實 URL，不走 smart-route
-  // 避免被誤判為圖片嵌入請求
-  const imageUrl = useMemo(() => mapping.url, [mapping.url]);
+  // 預覽頁面使用 Worker 代理 URL，隱藏來源
+  const imageUrl = useMemo(() => {
+    const proxyBaseUrl = process.env.NEXT_PUBLIC_PROXY_URL || 'https://i.duk.tw';
+    return `${proxyBaseUrl}/${hash}${normalizedExt}`;
+  }, [hash, normalizedExt]);
 
   // 檢查是否需要密碼
   useEffect(() => {
