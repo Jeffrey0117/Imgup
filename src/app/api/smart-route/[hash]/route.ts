@@ -294,9 +294,15 @@ export async function GET(
 
       case 'proxy':
         // 代理模式：重定向到 Cloudflare Workers 代理（節省 99% Vercel 帶寬成本）
+        // 🎯 使用 hash 模式隱藏真實 URL
         if (response.url) {
-          console.log('Smart Route 代理模式（通過 Cloudflare）:', response.url);
-          const proxyUrl = getProxyImageUrl(response.url);
+          console.log('Smart Route 代理模式（通過 Cloudflare）- Hash 模式');
+
+          // 新模式：直接使用 hash，Worker 會自己查詢映射
+          const proxyBaseUrl = process.env.NEXT_PUBLIC_PROXY_URL || '/api/proxy-image';
+          const proxyUrl = proxyBaseUrl.replace('/image', '') + `/${hashWithoutExt}`;
+
+          console.log('🔐 隱藏 URL 模式:', proxyUrl);
 
           const redirectResponse = new NextResponse(null, {
             status: 302,

@@ -1,45 +1,25 @@
 /**
- * Cloudflare Worker - duk.tw 圖片代理服務
+ * Cloudflare Worker - duk.tw 圖片代理服務 v2
  *
- * 用途：解決防外連問題，並大幅降低 Vercel bandwidth 成本
+ * 🎯 完美隱藏原始 URL + 節省 99% 成本
+ *
+ * 支援兩種模式：
+ * 1. Hash 模式（隱藏 URL）: https://proxy.duk.tw/pbQyTD
+ * 2. URL 模式（向後兼容）: https://proxy.duk.tw/image?url=xxx
+ *
  * 預期節省：$498/月 → < $5/月（節省 99%）
- *
- * 使用方式：
- * https://proxy.duk.tw/image?url=https://example.com/image.jpg
- *
- * 安全措施：
- * 1. Referer 白名單檢查
- * 2. User-Agent 黑名單
- * 3. Rate Limiting（30 次/分鐘/IP）
  */
 
-// ===== 安全配置 =====
+// ===== 配置 =====
+const API_BASE_URL = 'https://duk.tw'; // Vercel API 基礎 URL
 const ALLOWED_REFERERS = ['duk.tw', 'localhost', '127.0.0.1'];
-
 const BLOCKED_USER_AGENTS = [
-  'ccbot',
-  'gptbot',
-  'amazonbot',
-  'bytespider',
-  'python-requests',
-  'python-urllib',
-  'curl/',
-  'wget/',
-  'go-http-client',
-  'scrapy',
-  'java/',
-  'bot',
-  'spider',
-  'crawler',
-  'scraper',
-  'slurp',
-  'bingbot',
-  'googlebot',
-  'baiduspider',
-  'yandexbot',
+  'ccbot', 'gptbot', 'amazonbot', 'bytespider',
+  'python-requests', 'python-urllib', 'curl/', 'wget/',
+  'go-http-client', 'scrapy', 'java/', 'bot', 'spider',
+  'crawler', 'scraper', 'slurp', 'bingbot', 'googlebot',
+  'baiduspider', 'yandexbot',
 ];
-
-// Rate Limiting 配置
 const RATE_LIMIT_PER_MINUTE = 30;
 
 // ===== 類型定義 =====
@@ -50,6 +30,13 @@ interface Env {
 interface RateLimitData {
   count: number;
   resetTime: number;
+}
+
+interface MappingResponse {
+  hash: string;
+  url: string;
+  filename?: string;
+  error?: string;
 }
 
 // ===== 主要 Handler =====
@@ -66,6 +53,41 @@ export default {
     }
 
     try {
+      const url = new URL(request.url);
+      const pathname = url.pathname;
+
+      // 判斷使用哪種模式
+      let imageUrl: string;
+
+      if (pathname === '/image' || pathname === '/image/') {
+        // 模式 1：URL 參數模式（向後兼容）
+        imageUrl = url.searchParams.get('url') || '';
+        if (!imageUrl) {
+          return jsonResponse({ error: 'Missing url parameter' }, 400);
+        }
+        console.log('📝 URL 模式:', imageUrl.substring(0, 50));
+      } else {
+        // 模式 2：Hash 模式（隱藏 URL）
+        const hash = pathname.substring(1); // 移除開頭的 '/'
+
+        if (!hash || hash === '' || hash === '/') {
+          return jsonResponse({
+            error: 'Usage: /hash or /image?url=xxx',
+            examples: ['/pbQyTD', '/image?url=https://example.com/image.jpg']
+          }, 400);
+        }
+
+        console.log('🔍 Hash 模式:', hash);
+
+        // 從 Vercel API 查詢映射
+        imageUrl = await fetchMappingUrl(hash);
+        if (!imageUrl) {
+          return jsonResponse({ error: 'Hash not found or expired' }, 404);
+        }
+
+        console.log('✅ 映射查詢成功:', imageUrl.substring(0, 50));
+      }
+
       // === 安全檢查 1: Referer 驗證 ===
       const referer = request.headers.get('referer') || request.headers.get('referrer') || '';
 
@@ -105,15 +127,7 @@ export default {
         }
       }
 
-      // === 處理圖片代理 ===
-      const url = new URL(request.url);
-      const imageUrl = url.searchParams.get('url');
-
-      if (!imageUrl) {
-        return jsonResponse({ error: 'Missing url parameter' }, 400);
-      }
-
-      // 驗證 URL 格式
+      // === 驗證 URL 格式 ===
       let parsedUrl: URL;
       try {
         parsedUrl = new URL(imageUrl);
@@ -126,80 +140,131 @@ export default {
         return jsonResponse({ error: 'Only HTTP/HTTPS protocols are allowed' }, 400);
       }
 
-      // 檢查 Cloudflare Cache
-      const cache = caches.default;
-      const cacheKey = new Request(imageUrl, request);
-      let response = await cache.match(cacheKey);
-
-      if (response) {
-        console.log(`✅ Cache hit for: ${imageUrl}`);
-        // 添加 cache hit header
-        const newHeaders = new Headers(response.headers);
-        newHeaders.set('X-Cache-Status', 'HIT');
-        return new Response(response.body, {
-          status: response.status,
-          headers: newHeaders,
-        });
-      }
-
-      // 從原始 URL 獲取圖片
-      console.log(`📥 Fetching image: ${imageUrl}`);
-      const imageResponse = await fetch(imageUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-        },
-        cf: {
-          cacheTtl: 86400, // Cloudflare CDN 緩存 24 小時
-          cacheEverything: true,
-        },
-      });
-
-      if (!imageResponse.ok) {
-        return jsonResponse(
-          { error: `Failed to fetch image: ${imageResponse.status}` },
-          imageResponse.status
-        );
-      }
-
-      // 返回圖片，設置適當的緩存頭
-      const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
-
-      const headers = new Headers({
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=86400', // 瀏覽器緩存 24 小時
-        'CDN-Cache-Control': 'public, max-age=31536000', // Cloudflare CDN 緩存 1 年
-        'Access-Control-Allow-Origin': referer.includes('localhost') ? referer : 'https://duk.tw',
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'SAMEORIGIN',
-        'X-Cache-Status': 'MISS',
-      });
-
-      const finalResponse = new Response(imageResponse.body, {
-        status: 200,
-        headers,
-      });
-
-      // 存入 Cloudflare Cache
-      ctx.waitUntil(cache.put(cacheKey, finalResponse.clone()));
-
-      return finalResponse;
+      // === 圖片代理處理 ===
+      return await proxyImage(imageUrl, request, ctx, referer);
 
     } catch (error) {
-      console.error('❌ 圖片代理錯誤:', error);
+      console.error('❌ Worker 錯誤:', error);
 
       if (error instanceof Error) {
         if (error.name === 'TimeoutError') {
-          return jsonResponse({ error: 'Image fetch timeout' }, 504);
+          return jsonResponse({ error: 'Request timeout' }, 504);
         }
       }
 
-      return jsonResponse({ error: 'Failed to proxy image' }, 500);
+      return jsonResponse({ error: 'Internal server error' }, 500);
     }
   },
 };
 
 // ===== 輔助函數 =====
+
+/**
+ * 從 Vercel API 查詢 hash 對應的真實 URL
+ */
+async function fetchMappingUrl(hash: string): Promise<string | null> {
+  try {
+    // 移除副檔名（如果有）
+    const cleanHash = hash.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i, '');
+
+    const apiUrl = `${API_BASE_URL}/api/mapping/${cleanHash}`;
+    console.log('📡 調用 API:', apiUrl);
+
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Accept': 'application/json',
+      },
+      cf: {
+        cacheTtl: 300, // 緩存 5 分鐘
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`❌ API 錯誤: ${response.status}`);
+      return null;
+    }
+
+    const data: MappingResponse = await response.json();
+
+    if (data.error || !data.url) {
+      console.error('❌ 映射不存在或已過期');
+      return null;
+    }
+
+    return data.url;
+  } catch (error) {
+    console.error('❌ API 調用失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * 代理圖片
+ */
+async function proxyImage(
+  imageUrl: string,
+  request: Request,
+  ctx: ExecutionContext,
+  referer: string
+): Promise<Response> {
+  // 檢查 Cloudflare Cache
+  const cache = caches.default;
+  const cacheKey = new Request(imageUrl, request);
+  let response = await cache.match(cacheKey);
+
+  if (response) {
+    console.log(`✅ Cache HIT: ${imageUrl.substring(0, 50)}`);
+    const newHeaders = new Headers(response.headers);
+    newHeaders.set('X-Cache-Status', 'HIT');
+    return new Response(response.body, {
+      status: response.status,
+      headers: newHeaders,
+    });
+  }
+
+  // 從原始 URL 獲取圖片
+  console.log(`📥 Cache MISS, 正在獲取: ${imageUrl.substring(0, 50)}`);
+  const imageResponse = await fetch(imageUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+    },
+    cf: {
+      cacheTtl: 86400, // Cloudflare CDN 緩存 24 小時
+      cacheEverything: true,
+    },
+  });
+
+  if (!imageResponse.ok) {
+    return jsonResponse(
+      { error: `Failed to fetch image: ${imageResponse.status}` },
+      imageResponse.status
+    );
+  }
+
+  // 返回圖片，設置適當的緩存頭
+  const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+
+  const headers = new Headers({
+    'Content-Type': contentType,
+    'Cache-Control': 'public, max-age=86400', // 瀏覽器緩存 24 小時
+    'CDN-Cache-Control': 'public, max-age=31536000', // Cloudflare CDN 緩存 1 年
+    'Access-Control-Allow-Origin': referer.includes('localhost') ? referer : 'https://duk.tw',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'X-Cache-Status': 'MISS',
+  });
+
+  const finalResponse = new Response(imageResponse.body, {
+    status: 200,
+    headers,
+  });
+
+  // 存入 Cloudflare Cache
+  ctx.waitUntil(cache.put(cacheKey, finalResponse.clone()));
+
+  return finalResponse;
+}
 
 /**
  * Rate Limiting 檢查（使用 Cloudflare KV）
