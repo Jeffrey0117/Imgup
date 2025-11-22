@@ -73,11 +73,11 @@ function checkRateLimit(ip: string): boolean {
 // 定期清理過期的 rate limit 記錄（每 5 分鐘）
 setInterval(() => {
   const now = Date.now();
-  for (const [ip, limit] of rateLimitMap.entries()) {
+  rateLimitMap.forEach((limit, ip) => {
     if (now > limit.resetTime) {
       rateLimitMap.delete(ip);
     }
-  }
+  });
 }, 300000);
 
 export async function GET(request: NextRequest) {
