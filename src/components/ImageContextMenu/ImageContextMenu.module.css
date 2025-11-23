@@ -1,0 +1,21 @@
+.contextMenu {
+  position: fixed;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  padding: 8px 0;
+  z-index: 10000;
+  min-width: 180px;
+}
+
+.menuItem {
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #333;
+}
+
+.menuItem:hover {
+  background: #f0f0f0;
+}

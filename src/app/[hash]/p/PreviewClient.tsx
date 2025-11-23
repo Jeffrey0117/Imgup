@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import PasswordForm from "@/components/PasswordForm";
+import ImageContextMenu, { ContextMenuAction } from "@/components/ImageContextMenu";
+import ImageViewer from "@/components/ImageViewer";
 import styles from "../page.module.css";
 
 export interface Mapping {
@@ -23,9 +26,13 @@ interface PreviewClientProps {
 export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   const [error, setError] = useState<string | null>(null);
   const [passwordRequired, setPasswordRequired] = useState(false);
-  const [passwordInput, setPasswordInput] = useState("");
   const [isPasswordVerified, setIsPasswordVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [contextMenu, setContextMenu] = useState<{
+    show: boolean;
+    position: { x: number; y: number };
+  }>({ show: false, position: { x: 0, y: 0 } });
+
   const imageRef = useRef<HTMLImageElement>(null);
 
   // 規範化副檔名：優先 fileExtension，否則 fallback filename -> url 推導；白名單過濾
@@ -113,11 +120,11 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     const checkPasswordStatus = async () => {
       try {
         const needsPassword = !!mapping.hasPassword;
-        
+
         const cookieAuth = document.cookie
           .split('; ')
           .find(row => row.startsWith(`auth_${hash}=`));
-        
+
         if (cookieAuth) {
           setIsPasswordVerified(true);
           setPasswordRequired(false);
@@ -138,85 +145,32 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
     checkPasswordStatus();
   }, [hash, mapping.hasPassword]);
 
-  // 右鍵自訂選單（僅在客戶端掛載）
-  useEffect(() => {
-    const handleContextMenu = (e: MouseEvent) => {
-      if (imageRef.current && imageRef.current.contains(e.target as Node)) {
-        e.preventDefault();
+  // 處理右鍵選單
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (imageRef.current && imageRef.current.contains(e.target as Node)) {
+      e.preventDefault();
+      setContextMenu({
+        show: true,
+        position: { x: e.pageX, y: e.pageY },
+      });
+    }
+  };
 
-        const existingMenu = document.getElementById("custom-context-menu");
-        if (existingMenu) existingMenu.remove();
+  const contextMenuActions: ContextMenuAction[] = [
+    {
+      label: "在新分頁開啟圖片",
+      onClick: () => window.open(imageUrl, "_blank"),
+    },
+    {
+      label: "複製圖片連結",
+      onClick: () => {
+        navigator.clipboard.writeText(imageUrl);
+        alert("圖片連結已複製到剪貼簿");
+      },
+    },
+  ];
 
-        const menu = document.createElement("div");
-        menu.id = "custom-context-menu";
-        menu.style.cssText = `
-          position: fixed;
-          left: ${e.pageX}px;
-          top: ${e.pageY}px;
-          background: white;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-          padding: 8px 0;
-          z-index: 10000;
-          min-width: 180px;
-        `;
-
-        const openItem = document.createElement("div");
-        openItem.textContent = "在新分頁開啟圖片";
-        openItem.style.cssText = `
-          padding: 8px 16px;
-          cursor: pointer;
-          transition: background 0.2s;
-        `;
-        openItem.onmouseover = () => (openItem.style.background = "#f0f0f0");
-        openItem.onmouseout = () => (openItem.style.background = "transparent");
-        openItem.onclick = () => {
-          window.open(imageUrl, "_blank");
-          menu.remove();
-        };
-
-        const copyItem = document.createElement("div");
-        copyItem.textContent = "複製圖片連結";
-        copyItem.style.cssText = `
-          padding: 8px 16px;
-          cursor: pointer;
-          transition: background 0.2s;
-        `;
-        copyItem.onmouseover = () => (copyItem.style.background = "#f0f0f0");
-        copyItem.onmouseout = () => (copyItem.style.background = "transparent");
-        copyItem.onclick = () => {
-          navigator.clipboard.writeText(imageUrl);
-          alert("圖片連結已複製到剪貼簿");
-          menu.remove();
-        };
-
-        menu.appendChild(openItem);
-        menu.appendChild(copyItem);
-        document.body.appendChild(menu);
-
-        const closeMenu = (ev: MouseEvent) => {
-          if (!menu.contains(ev.target as Node)) {
-            menu.remove();
-            document.removeEventListener("click", closeMenu);
-          }
-        };
-        setTimeout(() => {
-          document.addEventListener("click", closeMenu);
-        }, 0);
-      }
-    };
-
-    document.addEventListener("contextmenu", handleContextMenu);
-    return () => {
-      document.removeEventListener("contextmenu", handleContextMenu);
-    };
-  }, [imageUrl, shortUrlWithExt]);
-
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!mapping) return;
-    
+  const handlePasswordSubmit = async (password: string) => {
     setError(null);
     try {
       const response = await fetch("/api/verify-password", {
@@ -226,7 +180,7 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
         },
         body: JSON.stringify({
           hash,
-          password: passwordInput,
+          password,
         }),
       });
 
@@ -236,11 +190,12 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
         setError(null);
       } else {
         const data = await response.json();
-        setError(data.error || "密碼錯誤");
+        throw new Error(data.error || "密碼錯誤");
       }
-    } catch (error) {
-      console.error("密碼驗證錯誤:", error);
-      setError("驗證失敗，請稍後再試");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "驗證失敗，請稍後再試";
+      setError(message);
+      throw err; // Re-throw to let PasswordForm handle loading state
     }
   };
 
@@ -255,28 +210,12 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} onContextMenu={handleContextMenu}>
       {passwordRequired && !isPasswordVerified ? (
-        <div className={styles.passwordForm}>
-          <h2>🔒 需要密碼</h2>
-          <p>這張圖片受到密碼保護</p>
-          <form onSubmit={handlePasswordSubmit}>
-            <input
-              type="text"
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              placeholder="請輸入 4 位數密碼"
-              pattern="[0-9]{4}"
-              maxLength={4}
-              className={styles.passwordInput}
-              required
-            />
-            <button type="submit" className={styles.submitBtn}>
-              確認
-            </button>
-          </form>
-          {error && <p className={styles.errorText}>{error}</p>}
-        </div>
+        <PasswordForm
+          onSubmit={handlePasswordSubmit}
+          error={error}
+        />
       ) : (
         <div className={styles.imageContainer}>
           <div className={styles.header}>
@@ -303,29 +242,13 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
           </div>
 
           <div className={styles.imageWrapper}>
-            <img
+            <ImageViewer
               ref={imageRef}
               src={imageUrl}
               alt={mapping.filename}
+              fallbackSrc={shortUrlNoExt}
+              onError={setError}
               className={styles.image}
-              onError={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                if (!img.dataset.triedNoExt) {
-                  img.dataset.triedNoExt = "true";
-                  img.src = shortUrlNoExt;
-                  return;
-                }
-                if (!img.dataset.failedOnce) {
-                  img.dataset.failedOnce = "true";
-                  img.src =
-                    "data:image/svg+xml;charset=utf-8," +
-                    encodeURIComponent(
-                      "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='100%' height='100%' fill='transparent'/></svg>"
-                    );
-                }
-                setError("圖片載入失敗");
-              }}
-              onDragStart={(e) => e.preventDefault()}
             />
           </div>
 
@@ -357,6 +280,13 @@ export default function PreviewClient({ mapping, hash }: PreviewClientProps) {
           )}
         </div>
       )}
+
+      <ImageContextMenu
+        show={contextMenu.show}
+        position={contextMenu.position}
+        onClose={() => setContextMenu({ show: false, position: { x: 0, y: 0 } })}
+        actions={contextMenuActions}
+      />
     </div>
   );
 }
