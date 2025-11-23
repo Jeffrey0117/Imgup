@@ -39,14 +39,14 @@ export default function AdminLayout({
         credentials: "include",
       });
       if (!response.ok) {
-        router.push("/admin/login");
+        router.push("/admin-new/login");
         return;
       }
       const data = await response.json();
       setAdminData(data.admin);
     } catch (error) {
       console.error("身份驗證失敗:", error);
-      router.push("/admin/login");
+      router.push("/admin-new/login");
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export default function AdminLayout({
         method: "POST",
         credentials: "include",
       });
-      router.push("/admin/login");
+      router.push("/admin-new/login");
     } catch (error) {
       console.error("登出失敗:", error);
     }
