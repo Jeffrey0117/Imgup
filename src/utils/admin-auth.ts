@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { randomBytes } from "crypto";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { generateCsrfTokenPair } from "@/utils/csrf";
 
 // JWT 相關配置
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -30,6 +31,8 @@ export interface LoginResult {
     };
     accessToken: string;
     refreshToken: string;
+    csrfToken: string;
+    csrfSignature: string;
   };
   error?: string;
 }
@@ -306,7 +309,7 @@ export async function loginAdmin(
       userAgent || null,
       ipAddress || "127.0.0.1"
     );
-    
+
     // 生成包含 session ID 的正確 JWT tokens
     const tokens = generateTokens({
       adminId: admin.id,
@@ -315,13 +318,18 @@ export async function loginAdmin(
       role: admin.role,
       sessionId: session.id,
     });
-    
-    // 更新 session 以儲存正確的 JWT tokens
+
+    // 生成 CSRF token pair
+    const csrfTokenPair = generateCsrfTokenPair(session.id);
+
+    // 更新 session 以儲存正確的 JWT tokens 和 CSRF tokens
     await prisma.adminSession.update({
       where: { id: session.id },
       data: {
         token: tokens.accessToken,
         refreshToken: tokens.refreshToken,
+        csrfToken: csrfTokenPair.token,
+        csrfSignature: csrfTokenPair.signature,
       },
     });
 
@@ -362,6 +370,8 @@ export async function loginAdmin(
         },
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
+        csrfToken: csrfTokenPair.token,
+        csrfSignature: csrfTokenPair.signature,
       },
     };
   } catch (error) {
@@ -440,12 +450,17 @@ export async function refreshTokens(refreshToken: string): Promise<{
       sessionId: session.id,
     });
 
+    // 生成新的 CSRF token pair
+    const newCsrfTokenPair = generateCsrfTokenPair(session.id);
+
     // 更新 session
     await prisma.adminSession.update({
       where: { id: session.id },
       data: {
         token: newTokens.accessToken,
         refreshToken: newTokens.refreshToken,
+        csrfToken: newCsrfTokenPair.token,
+        csrfSignature: newCsrfTokenPair.signature,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 延長 7 天
       },
     });
@@ -528,8 +543,15 @@ export async function verifyAdminSession(token: string): Promise<{
  * 統一的管理員驗證函數 - 用於 API 路由
  * 從 request 中提取並驗證 token，返回管理員資訊
  * 如果驗證失敗，拋出包含狀態碼和錯誤訊息的錯誤
+ *
+ * @param request - NextRequest 對象
+ * @param options - 配置選項
+ * @param options.requireCsrf - 是否需要 CSRF 保護（默認 false，向後兼容）
  */
-export async function authenticateAdmin(request: any): Promise<{
+export async function authenticateAdmin(
+  request: any,
+  options?: { requireCsrf?: boolean }
+): Promise<{
   admin: {
     id: string;
     email: string;
@@ -572,6 +594,71 @@ export async function authenticateAdmin(request: any): Promise<{
     const error: any = new Error("身份驗證失敗");
     error.status = 401;
     throw error;
+  }
+
+  // CSRF 保護檢查（如果啟用）
+  if (options?.requireCsrf) {
+    const method = request.method?.toUpperCase();
+    const protectedMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+
+    if (protectedMethods.includes(method)) {
+      // 動態導入 CSRF 工具以避免循環依賴
+      const { extractCsrfTokenFromHeaders, verifyCsrfToken } = await import("@/utils/csrf");
+
+      // 從 header 提取 CSRF token 和 signature
+      const { token: csrfToken, signature: csrfSignature } =
+        extractCsrfTokenFromHeaders(request.headers);
+
+      if (!csrfToken || !csrfSignature) {
+        const error: any = new Error("CSRF token 缺失");
+        error.status = 403;
+        throw error;
+      }
+
+      if (!authResult.sessionId) {
+        const error: any = new Error("Session ID 缺失");
+        error.status = 401;
+        throw error;
+      }
+
+      // 從資料庫獲取 session 以驗證 CSRF token
+      const session = await prisma.adminSession.findUnique({
+        where: { id: authResult.sessionId },
+        select: {
+          csrfToken: true,
+          csrfSignature: true,
+        },
+      });
+
+      if (!session || !session.csrfToken || !session.csrfSignature) {
+        const error: any = new Error("CSRF token 未初始化");
+        error.status = 403;
+        throw error;
+      }
+
+      // 驗證提交的 token 是否與 session 中存儲的一致
+      if (
+        csrfToken !== session.csrfToken ||
+        csrfSignature !== session.csrfSignature
+      ) {
+        const error: any = new Error("CSRF token 驗證失敗");
+        error.status = 403;
+        throw error;
+      }
+
+      // 雙重驗證：使用 HMAC 驗證簽名
+      const isValid = verifyCsrfToken(
+        csrfToken,
+        csrfSignature,
+        authResult.sessionId
+      );
+
+      if (!isValid) {
+        const error: any = new Error("CSRF token 簽名無效");
+        error.status = 403;
+        throw error;
+      }
+    }
   }
 
   return {

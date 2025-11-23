@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateAdmin } from "@/utils/admin-auth";
+import { withPermissionAndCsrf } from "@/middleware/admin-auth";
+import { PERMISSIONS } from "@/utils/rbac";
 import { prisma } from "@/lib/prisma";
+import { getClientIp } from "@/utils/admin-auth";
 
-export async function DELETE(request: NextRequest) {
-  try {
-    // 驗證管理員身份
-    const authResult = await authenticateAdmin(request);
+// 批量刪除 - 僅限 admin 角色（啟用 CSRF 保護）
+export const DELETE = withPermissionAndCsrf(PERMISSIONS.MAPPING_BATCH_DELETE)(
+  async (request) => {
+    try {
 
     // 解析請求體
     const body = await request.json().catch(() => ({}));
@@ -44,47 +46,42 @@ export async function DELETE(request: NextRequest) {
       },
     });
 
-    // 記錄批量審計日誌
-    await prisma.auditLog.create({
-      data: {
-        adminId: authResult.admin!.id,
-        action: "BATCH_DELETE",
-        entity: "mapping",
-        entityId: null, // 批量操作無單一 entityId
-        details: {
+      // 記錄批量審計日誌
+      await prisma.auditLog.create({
+        data: {
+          adminId: request.admin!.id,
+          action: "BATCH_DELETE",
+          entity: "mapping",
+          entityId: null, // 批量操作無單一 entityId
+          details: {
+            deletedCount: deleteResult.count,
+            deletedItems: deletedMappings,
+            batchDelete: true,
+            reason: "管理員批量硬刪除",
+          },
+          ipAddress: getClientIp(request),
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `成功刪除 ${deleteResult.count} 個項目`,
+        data: {
           deletedCount: deleteResult.count,
           deletedItems: deletedMappings,
-          batchDelete: true,
-          reason: "管理員批量硬刪除",
         },
-        ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: `成功刪除 ${deleteResult.count} 個項目`,
-      data: {
-        deletedCount: deleteResult.count,
-        deletedItems: deletedMappings,
-      },
-    });
-  } catch (error: any) {
-    // 處理認證錯誤
-    if (error.status === 401) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      });
+    } catch (error: any) {
+      console.error("批量刪除檔案失敗:", error);
+      return NextResponse.json({ error: "批量刪除失敗" }, { status: 500 });
     }
-
-    // 其他錯誤
-    console.error("批量刪除檔案失敗:", error);
-    return NextResponse.json({ error: "批量刪除失敗" }, { status: 500 });
   }
-}
+);
 
-export async function PUT(request: NextRequest) {
-  try {
-    // 驗證管理員身份
-    const authResult = await authenticateAdmin(request);
+// 批量更新 - moderator 和 admin 都可使用（啟用 CSRF 保護）
+export const PUT = withPermissionAndCsrf(PERMISSIONS.MAPPING_BATCH_UPDATE)(
+  async (request) => {
+    try {
 
     // 解析請求體
     const body = await request.json().catch(() => ({}));
@@ -165,40 +162,35 @@ export async function PUT(request: NextRequest) {
 
     successCount = updateResult.count;
 
-    // 記錄批量審計日誌
-    await prisma.auditLog.create({
-      data: {
-        adminId: authResult.admin!.id,
-        action: "BATCH_UPDATE",
-        entity: "mapping",
-        entityId: null, // 批量操作無單一 entityId
-        details: {
+      // 記錄批量審計日誌
+      await prisma.auditLog.create({
+        data: {
+          adminId: request.admin!.id,
+          action: "BATCH_UPDATE",
+          entity: "mapping",
+          entityId: null, // 批量操作無單一 entityId
+          details: {
+            updatedCount: successCount,
+            operation,
+            updateData: Object.keys(updateData).length > 0 ? updateData : null,
+            batchUpdate: true,
+            reason: `管理員批量${operation === "setPassword" ? "設定密碼" : operation === "clearPassword" ? "清除密碼" : "設定過期時間"}`,
+          },
+          ipAddress: getClientIp(request),
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `成功更新 ${successCount} 個項目`,
+        data: {
           updatedCount: successCount,
           operation,
-          updateData: Object.keys(updateData).length > 0 ? updateData : null,
-          batchUpdate: true,
-          reason: `管理員批量${operation === "setPassword" ? "設定密碼" : operation === "clearPassword" ? "清除密碼" : "設定過期時間"}`,
         },
-        ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: `成功更新 ${successCount} 個項目`,
-      data: {
-        updatedCount: successCount,
-        operation,
-      },
-    });
-  } catch (error: any) {
-    // 處理認證錯誤
-    if (error.status === 401) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      });
+    } catch (error: any) {
+      console.error("批量更新檔案失敗:", error);
+      return NextResponse.json({ error: "批量更新失敗" }, { status: 500 });
     }
-
-    // 其他錯誤
-    console.error("批量更新檔案失敗:", error);
-    return NextResponse.json({ error: "批量更新失敗" }, { status: 500 });
   }
-}
+);

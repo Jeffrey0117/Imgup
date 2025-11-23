@@ -60,15 +60,17 @@ model Admin {
 }
 
 model AdminSession {
-  id           String   @id @default(cuid())
-  adminId      String
-  token        String   @unique
-  refreshToken String   @unique
-  userAgent    String?
-  ipAddress    String
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  admin        Admin    @relation(fields: [adminId], references: [id])
+  id            String   @id @default(cuid())
+  adminId       String
+  token         String   @unique
+  refreshToken  String   @unique
+  csrfToken     String?
+  csrfSignature String?
+  userAgent     String?
+  ipAddress     String
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  admin         Admin    @relation(fields: [adminId], references: [id])
 
   @@index([token])
   @@index([adminId])

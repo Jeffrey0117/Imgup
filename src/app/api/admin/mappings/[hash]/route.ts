@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateAdmin } from "@/utils/admin-auth";
+import { withPermission } from "@/middleware/admin-auth";
+import { PERMISSIONS } from "@/utils/rbac";
 import { prisma } from "@/lib/prisma";
+import { getClientIp } from "@/utils/admin-auth";
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ hash: string }> }
-) {
-  try {
-    // 驗證管理員身份
-    const authResult = await authenticateAdmin(request);
-
-    const { hash } = await params;
+export const DELETE = withPermission(PERMISSIONS.MAPPING_DELETE)(
+  async (request, { params }: { params: Promise<{ hash: string }> }) => {
+    try {
+      const { hash } = await params;
 
     // 查找檔案記錄
     const mapping = await prisma.mapping.findUnique({
@@ -26,48 +23,38 @@ export async function DELETE(
       where: { hash },
     });
 
-    // 記錄審計日誌（標記為硬刪除）
-    await prisma.auditLog.create({
-      data: {
-        adminId: authResult.admin!.id,
-        action: "DELETE",
-        entity: "mapping",
-        entityId: mapping.id,
-        details: {
-          hash: mapping.hash,
-          filename: mapping.filename,
-          hardDelete: true,
-          reason: "管理員硬刪除",
+      // 記錄審計日誌（標記為硬刪除）
+      await prisma.auditLog.create({
+        data: {
+          adminId: request.admin!.id,
+          action: "DELETE",
+          entity: "mapping",
+          entityId: mapping.id,
+          details: {
+            hash: mapping.hash,
+            filename: mapping.filename,
+            hardDelete: true,
+            reason: "管理員硬刪除",
+          },
+          ipAddress: getClientIp(request),
         },
-        ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
-      },
-    });
+      });
 
-    return NextResponse.json({
-      success: true,
-      message: "檔案已永久刪除",
-    });
-  } catch (error: any) {
-    // 處理認證錯誤
-    if (error.status === 401) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return NextResponse.json({
+        success: true,
+        message: "檔案已永久刪除",
+      });
+    } catch (error: any) {
+      console.error("刪除檔案失敗:", error);
+      return NextResponse.json({ error: "刪除失敗" }, { status: 500 });
     }
-
-    // 其他錯誤
-    console.error("刪除檔案失敗:", error);
-    return NextResponse.json({ error: "刪除失敗" }, { status: 500 });
   }
-}
+);
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ hash: string }> }
-) {
-  try {
-    // 驗證管理員身份
-    const authResult = await authenticateAdmin(request);
-
-    const { hash } = await params;
+export const GET = withPermission(PERMISSIONS.MAPPING_READ)(
+  async (request, { params }: { params: Promise<{ hash: string }> }) => {
+    try {
+      const { hash } = await params;
 
     // 查找檔案記錄
     const mapping = await prisma.mapping.findUnique({
@@ -89,31 +76,21 @@ export async function GET(
       password: undefined,
     };
 
-    return NextResponse.json({
-      success: true,
-      data: mappingInfo,
-    });
-  } catch (error: any) {
-    // 處理認證錯誤
-    if (error.status === 401) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return NextResponse.json({
+        success: true,
+        data: mappingInfo,
+      });
+    } catch (error: any) {
+      console.error("獲取檔案詳情失敗:", error);
+      return NextResponse.json({ error: "獲取詳情失敗" }, { status: 500 });
     }
-
-    // 其他錯誤
-    console.error("獲取檔案詳情失敗:", error);
-    return NextResponse.json({ error: "獲取詳情失敗" }, { status: 500 });
   }
-}
+);
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ hash: string }> }
-) {
-  try {
-    // 驗證管理員身份
-    const authResult = await authenticateAdmin(request);
-
-    const { hash } = await params;
+export const PUT = withPermission(PERMISSIONS.MAPPING_UPDATE)(
+  async (request, { params }: { params: Promise<{ hash: string }> }) => {
+    try {
+      const { hash } = await params;
     const body = await request.json().catch(() => ({}));
 
     const {
@@ -175,63 +152,58 @@ export async function PUT(
       data: updateData,
     });
 
-    // 審計日誌
-    try {
-      await prisma.auditLog.create({
-        data: {
-          adminId: authResult.admin!.id,
-          action: "UPDATE",
-          entity: "mapping",
-          entityId: updated.id,
-          details: {
-            hash: updated.hash,
-            before: {
-              filename: existing.filename,
-              expiresAt: existing.expiresAt
-                ? existing.expiresAt.toISOString()
-                : null,
-              hasPassword: !!existing.password,
+      // 審計日誌
+      try {
+        await prisma.auditLog.create({
+          data: {
+            adminId: request.admin!.id,
+            action: "UPDATE",
+            entity: "mapping",
+            entityId: updated.id,
+            details: {
+              hash: updated.hash,
+              before: {
+                filename: existing.filename,
+                expiresAt: existing.expiresAt
+                  ? existing.expiresAt.toISOString()
+                  : null,
+                hasPassword: !!existing.password,
+              },
+              after: {
+                filename: updated.filename,
+                expiresAt: updated.expiresAt
+                  ? updated.expiresAt.toISOString()
+                  : null,
+                hasPassword: !!updated.password,
+              },
             },
-            after: {
-              filename: updated.filename,
-              expiresAt: updated.expiresAt
-                ? updated.expiresAt.toISOString()
-                : null,
-              hasPassword: !!updated.password,
-            },
+            ipAddress: getClientIp(request),
           },
-          ipAddress: request.headers.get("x-forwarded-for") || "127.0.0.1",
+        });
+      } catch (e) {
+        // 不阻斷主要流程
+        console.warn("寫入審計日誌失敗:", e);
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: updated.id,
+          hash: updated.hash,
+          filename: updated.filename,
+          url: updated.url,
+          shortUrl: updated.shortUrl,
+          createdAt: updated.createdAt.toISOString(),
+          expiresAt: updated.expiresAt ? updated.expiresAt.toISOString() : null,
+          isDeleted: updated.isDeleted,
+          deletedAt: updated.deletedAt ? updated.deletedAt.toISOString() : null,
+          isExpired: updated.expiresAt ? updated.expiresAt < new Date() : false,
+          hasPassword: !!updated.password,
         },
       });
-    } catch (e) {
-      // 不阻斷主要流程
-      console.warn("寫入審計日誌失敗:", e);
+    } catch (error: any) {
+      console.error("更新檔案失敗:", error);
+      return NextResponse.json({ error: "更新失敗" }, { status: 500 });
     }
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: updated.id,
-        hash: updated.hash,
-        filename: updated.filename,
-        url: updated.url,
-        shortUrl: updated.shortUrl,
-        createdAt: updated.createdAt.toISOString(),
-        expiresAt: updated.expiresAt ? updated.expiresAt.toISOString() : null,
-        isDeleted: updated.isDeleted,
-        deletedAt: updated.deletedAt ? updated.deletedAt.toISOString() : null,
-        isExpired: updated.expiresAt ? updated.expiresAt < new Date() : false,
-        hasPassword: !!updated.password,
-      },
-    });
-  } catch (error: any) {
-    // 處理認證錯誤
-    if (error.status === 401) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
-
-    // 其他錯誤
-    console.error("更新檔案失敗:", error);
-    return NextResponse.json({ error: "更新失敗" }, { status: 500 });
   }
-}
+);

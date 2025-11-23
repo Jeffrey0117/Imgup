@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authenticateAdmin } from "@/utils/admin-auth";
+import { formatApiError, formatDatabaseError, logError } from "@/utils/api-errors";
+import { logErrorWithContext } from "@/utils/secure-logger";
 
 /**
  * GET /api/admin/albums
@@ -46,9 +48,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }
 
-    // 其他錯誤
-    console.error("獲取相簿列表失敗:", error);
-    return NextResponse.json({ error: "獲取列表失敗" }, { status: 500 });
+    // 其他錯誤 - 安全記錄
+    logErrorWithContext('獲取相簿列表', error);
+
+    // 檢查是否為資料庫錯誤
+    if (error instanceof Error && error.message.includes("Prisma")) {
+      const dbError = formatDatabaseError(error);
+      return NextResponse.json(dbError, { status: 500 });
+    }
+
+    return NextResponse.json(formatApiError(error), { status: 500 });
   }
 }
 
@@ -58,8 +67,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 驗證管理員身份
-    const auth = await authenticateAdmin(request);
+    // 驗證管理員身份並啟用 CSRF 保護
+    const auth = await authenticateAdmin(request, { requireCsrf: true });
 
     // 解析請求體
     const body = await request.json().catch(() => ({}));
@@ -111,8 +120,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }
 
-    // 其他錯誤
-    console.error("創建相簿失敗:", error);
-    return NextResponse.json({ error: "創建相簿失敗" }, { status: 500 });
+    // 其他錯誤 - 安全記錄
+    logErrorWithContext('創建相簿', error);
+
+    // 檢查是否為資料庫錯誤
+    if (error instanceof Error && error.message.includes("Prisma")) {
+      const dbError = formatDatabaseError(error);
+      return NextResponse.json(dbError, { status: 500 });
+    }
+
+    return NextResponse.json(formatApiError(error), { status: 500 });
   }
 }

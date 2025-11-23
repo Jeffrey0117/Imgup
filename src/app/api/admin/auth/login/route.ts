@@ -6,6 +6,7 @@ import {
   checkRateLimit,
   getRandomDelay
 } from "@/utils/api-security";
+import { logAdminAction } from "@/utils/secure-logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,6 +63,8 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       admin: result.data!.admin,
+      csrfToken: result.data!.csrfToken,
+      csrfSignature: result.data!.csrfSignature,
     });
 
     // Cookie 安全設定：生產環境強制使用 HTTPS
@@ -87,15 +90,18 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
-    console.log("🔐 登入 API:", {
-      email,
+    // 使用安全日誌記錄登入事件，避免洩漏電子郵件等敏感資訊
+    logAdminAction('login', {
+      adminId: result.data!.admin.id,
       success: true,
       nodeEnv: process.env.NODE_ENV,
       isProduction,
       cookieSecure,
       cookieSameSite,
-      adminTokenLength: result.data!.accessToken.length,
-      refreshTokenLength: result.data!.refreshToken.length,
+      tokenInfo: {
+        accessTokenLength: result.data!.accessToken.length,
+        refreshTokenLength: result.data!.refreshToken.length,
+      }
     });
 
     return response;

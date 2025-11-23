@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateUniqueHash } from "../../../utils/hash";
 import { PrismaClient } from "@prisma/client";
+import { formatApiError, formatDatabaseError, logError } from "@/utils/api-errors";
+import { logErrorWithContext } from "@/utils/secure-logger";
 
 const prisma = new PrismaClient();
 
@@ -109,35 +111,17 @@ export async function POST(request: NextRequest) {
       mapping,
     });
   } catch (error) {
-    // 安全修復：移除可能洩露敏感資訊的 debug logs
-    console.error("短網址生成錯誤:", {
-      error: error instanceof Error ? error.message : String(error),
-      name: error instanceof Error ? error.name : undefined,
-      NODE_ENV: process.env.NODE_ENV,
-    });
+    // 安全記錄錯誤，避免洩漏敏感資訊
+    logErrorWithContext('短網址生成', error);
 
-    // 根據錯誤類型返回更具體的訊息
-    if (error instanceof Error) {
-      if (error.message.includes("Prisma")) {
-        return NextResponse.json(
-          { error: "資料庫連接錯誤", details: error.message },
-          { status: 500 }
-        );
-      }
-      if (error.message.includes("DATABASE_URL")) {
-        return NextResponse.json(
-          { error: "資料庫配置錯誤", details: "DATABASE_URL 未正確設定" },
-          { status: 500 }
-        );
-      }
+    // 檢查是否為資料庫相關錯誤
+    if (error instanceof Error && error.message.includes("Prisma")) {
+      const dbError = formatDatabaseError(error);
+      return NextResponse.json(dbError, { status: 500 });
     }
 
-    return NextResponse.json(
-      {
-        error: "Internal server error",
-        details: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
+    // 返回安全的錯誤訊息
+    const safeError = formatApiError(error);
+    return NextResponse.json(safeError, { status: 500 });
   }
 }

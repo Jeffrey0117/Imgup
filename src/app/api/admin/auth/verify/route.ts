@@ -4,6 +4,7 @@ import {
   extractTokenFromRequest,
   refreshTokens,
 } from "@/utils/admin-auth";
+import { logAdminAction } from "@/utils/secure-logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -76,8 +77,9 @@ export async function GET(request: NextRequest) {
         }
       );
 
-      console.log("🔄 Token 自動刷新成功:", {
-        email: result.admin.email,
+      // 使用安全日誌記錄 token 刷新事件
+      logAdminAction('token_refresh', {
+        adminId: result.admin.id,
         refreshed: true,
       });
 

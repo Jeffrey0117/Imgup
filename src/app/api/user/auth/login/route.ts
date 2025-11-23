@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { 
-  verifyPassword, 
-  createUserSession, 
-  cleanupOldSessions 
+import {
+  verifyPassword,
+  createUserSession,
+  cleanupOldSessions
 } from '@/utils/user-auth';
 import { getClientIP, strictRateLimiter } from '@/utils/rate-limit';
+import { formatApiError, logError } from '@/utils/api-errors';
+import { logErrorWithContext, logSecurityEvent } from '@/utils/secure-logger';
 
 export async function POST(req: NextRequest) {
   const clientIP = getClientIP(req);
@@ -81,6 +83,13 @@ export async function POST(req: NextRequest) {
       userAgent
     );
 
+    // 記錄安全事件 - 使用者成功登入
+    logSecurityEvent('user_login_success', {
+      userId: user.id,
+      clientIP,
+      userAgent
+    });
+
     const response = NextResponse.json({
       success: true,
       user: {
@@ -108,9 +117,11 @@ export async function POST(req: NextRequest) {
     return response;
 
   } catch (error) {
-    console.error('[User Login] Error:', error);
+    // 安全記錄錯誤，避免洩漏敏感資訊
+    logErrorWithContext('[User Login]', error, { clientIP });
+
     return NextResponse.json(
-      { error: '登入失敗，請稍後再試' },
+      formatApiError(error),
       { status: 500 }
     );
   }

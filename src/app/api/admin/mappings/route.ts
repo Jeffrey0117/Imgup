@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authenticateAdmin } from "@/utils/admin-auth";
+import { formatApiError, formatDatabaseError } from "@/utils/api-errors";
+import { logErrorWithContext } from "@/utils/secure-logger";
 
 type StatusFilter = "valid" | "expired" | "deleted";
 
@@ -176,8 +178,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 401 });
     }
 
-    // 其他錯誤
-    console.error("取得映射列表失敗:", error);
-    return NextResponse.json({ error: "取得列表失敗" }, { status: 500 });
+    // 其他錯誤 - 安全記錄
+    logErrorWithContext('取得映射列表', error);
+
+    // 檢查是否為資料庫錯誤
+    if (error instanceof Error && error.message.includes("Prisma")) {
+      const dbError = formatDatabaseError(error);
+      return NextResponse.json(dbError, { status: 500 });
+    }
+
+    return NextResponse.json(formatApiError(error), { status: 500 });
   }
 }

@@ -25,6 +25,10 @@ import { generateShortHash, generateUniqueHash } from '@/utils/hash';
 // 加入 Upload Manager
 import { UploadManager, MeteorProvider } from '@/utils/upload-providers';
 
+// 加入安全錯誤處理和日誌
+import { formatApiError, logError } from '@/utils/api-errors';
+import { logFileOperation, logErrorWithContext } from '@/utils/secure-logger';
+
 // 記錄上傳嘗試（用於監控和分析）
 async function logUploadAttempt(
   ip: string,
@@ -451,20 +455,21 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     // 捕獲所有未預期的錯誤
-    console.error('[Upload] Unexpected error:', error);
+    logErrorWithContext('[Upload] Unexpected error', error, {
+      clientIP,
+      userAgent
+    });
     await logUploadAttempt(clientIP, false, 'Internal error', userAgent);
 
-    // 不要洩漏錯誤詳情給客戶端
-    {
-      return NextResponse.json(
-        {
-          status: 0,
-          message: "Upload failed",
-          detail: String(error),
-        },
-        { status: 500 }
-      );
-    }
+    // 安全地返回錯誤，開發環境包含詳情，生產環境只返回通用訊息
+    const errorResponse = formatApiError(error);
+    return NextResponse.json(
+      {
+        status: 0,
+        ...errorResponse,
+      },
+      { status: 500 }
+    );
   }
 }
 
