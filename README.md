@@ -1,22 +1,18 @@
-# Upimg Next.js
+# Image Service
 
-A Next.js based image upload tool.
+A web-based image hosting service.
 
 ## Setup
 
 ```bash
 npm install
-```
-
-## Development
-
-```bash
 npm run dev
 ```
 
-## Tech Stack
+## Environment
 
-- Next.js 14
-- TypeScript
-- Prisma + PostgreSQL
-- Redis
+Create a `.env` file with required configurations.
+
+## License
+
+Private Project
