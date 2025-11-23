@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import styles from "../albums.module.css";
+import { getProxyImageUrl } from "@/utils/image-proxy";
 
 interface Album {
   id: string;
@@ -68,7 +69,7 @@ export default function AlbumGrid({ albums, onDelete, onCreate }: AlbumGridProps
           <div className={styles.albumCover}>
             {album.coverImageHash ? (
               <img
-                src={`/${album.coverImageHash}`}
+                src={getProxyImageUrl(album.coverImageHash)}
                 alt={album.name}
                 className={styles.albumCoverImage}
                 loading="lazy"

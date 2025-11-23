@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./layout.module.css";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 interface AdminData {
   id: string;
@@ -72,105 +73,109 @@ export default function AdminLayout({
 
   if (loading) {
     return (
-      <div className={styles.loadingScreen}>
-        <div className={styles.loader}>載入中...</div>
-      </div>
+      <ToastProvider>
+        <div className={styles.loadingScreen}>
+          <div className={styles.loader}>載入中...</div>
+        </div>
+      </ToastProvider>
     );
   }
 
   return (
-    <div className={styles.layout}>
-      {/* Dark Sidebar */}
-      <aside className={`${styles.sidebar} ${isSidebarCollapsed ? styles.collapsed : ''}`}>
-        <div className={styles.logo}>
-          <div className={styles.logoIcon}>
-            <Image
-              src="/logo-imgup.png"
-              alt="duk.tw Logo"
-              width={36}
-              height={36}
-              priority
-            />
-          </div>
-          <div className={styles.logoText}>
-            <div className={styles.brandName}>duk.tw</div>
-            <div className={styles.brandSub}>Admin Panel</div>
-          </div>
-        </div>
-
-        <nav className={styles.nav}>
-          <Link
-            href="/admin-new"
-            className={`${styles.navItem} ${pathname === "/admin-new" ? styles.active : ""}`}
-          >
-            <span className={styles.navIcon}>📊</span>
-            <span className={styles.navText}>Dashboard</span>
-          </Link>
-          <Link
-            href="/admin-new/users"
-            className={`${styles.navItem} ${pathname.startsWith("/admin-new/users") ? styles.active : ""}`}
-          >
-            <span className={styles.navIcon}>👥</span>
-            <span className={styles.navText}>用戶管理</span>
-          </Link>
-          <Link
-            href="/admin-new/images"
-            className={`${styles.navItem} ${pathname.startsWith("/admin-new/images") ? styles.active : ""}`}
-          >
-            <span className={styles.navIcon}>🖼️</span>
-            <span className={styles.navText}>圖片管理</span>
-          </Link>
-          <Link
-            href="/admin-new/albums"
-            className={`${styles.navItem} ${pathname.startsWith("/admin-new/albums") ? styles.active : ""}`}
-          >
-            <span className={styles.navIcon}>📁</span>
-            <span className={styles.navText}>相簿管理</span>
-          </Link>
-          <Link
-            href="/admin-new/analytics"
-            className={`${styles.navItem} ${pathname.startsWith("/admin-new/analytics") ? styles.active : ""}`}
-          >
-            <span className={styles.navIcon}>📈</span>
-            <span className={styles.navText}>數據分析</span>
-          </Link>
-          <Link
-            href="/admin-new/security"
-            className={`${styles.navItem} ${pathname.startsWith("/admin-new/security") ? styles.active : ""}`}
-          >
-            <span className={styles.navIcon}>🔐</span>
-            <span className={styles.navText}>安全管理</span>
-          </Link>
-        </nav>
-
-        <div className={styles.sidebarFooter}>
-          <div className={styles.adminInfo}>
-            <div className={styles.adminAvatar}>
-              {adminData?.username?.[0]?.toUpperCase() || "A"}
+    <ToastProvider>
+      <div className={styles.layout}>
+        {/* Dark Sidebar */}
+        <aside className={`${styles.sidebar} ${isSidebarCollapsed ? styles.collapsed : ''}`}>
+          <div className={styles.logo}>
+            <div className={styles.logoIcon}>
+              <Image
+                src="/logo-imgup.png"
+                alt="duk.tw Logo"
+                width={36}
+                height={36}
+                priority
+              />
             </div>
-            <div className={styles.adminDetails}>
-              <div className={styles.adminName}>
-                {adminData?.username || "Admin"}
+            <div className={styles.logoText}>
+              <div className={styles.brandName}>duk.tw</div>
+              <div className={styles.brandSub}>Admin Panel</div>
+            </div>
+          </div>
+
+          <nav className={styles.nav}>
+            <Link
+              href="/admin-new"
+              className={`${styles.navItem} ${pathname === "/admin-new" ? styles.active : ""}`}
+            >
+              <span className={styles.navIcon}>📊</span>
+              <span className={styles.navText}>Dashboard</span>
+            </Link>
+            <Link
+              href="/admin-new/users"
+              className={`${styles.navItem} ${pathname.startsWith("/admin-new/users") ? styles.active : ""}`}
+            >
+              <span className={styles.navIcon}>👥</span>
+              <span className={styles.navText}>用戶管理</span>
+            </Link>
+            <Link
+              href="/admin-new/images"
+              className={`${styles.navItem} ${pathname.startsWith("/admin-new/images") ? styles.active : ""}`}
+            >
+              <span className={styles.navIcon}>🖼️</span>
+              <span className={styles.navText}>圖片管理</span>
+            </Link>
+            <Link
+              href="/admin-new/albums"
+              className={`${styles.navItem} ${pathname.startsWith("/admin-new/albums") ? styles.active : ""}`}
+            >
+              <span className={styles.navIcon}>📁</span>
+              <span className={styles.navText}>相簿管理</span>
+            </Link>
+            <Link
+              href="/admin-new/analytics"
+              className={`${styles.navItem} ${pathname.startsWith("/admin-new/analytics") ? styles.active : ""}`}
+            >
+              <span className={styles.navIcon}>📈</span>
+              <span className={styles.navText}>數據分析</span>
+            </Link>
+            <Link
+              href="/admin-new/security"
+              className={`${styles.navItem} ${pathname.startsWith("/admin-new/security") ? styles.active : ""}`}
+            >
+              <span className={styles.navIcon}>🔐</span>
+              <span className={styles.navText}>安全管理</span>
+            </Link>
+          </nav>
+
+          <div className={styles.sidebarFooter}>
+            <div className={styles.adminInfo}>
+              <div className={styles.adminAvatar}>
+                {adminData?.username?.[0]?.toUpperCase() || "A"}
               </div>
-              <div className={styles.adminRole}>管理員</div>
+              <div className={styles.adminDetails}>
+                <div className={styles.adminName}>
+                  {adminData?.username || "Admin"}
+                </div>
+                <div className={styles.adminRole}>管理員</div>
+              </div>
             </div>
+            <button
+              onClick={toggleSidebar}
+              className={styles.toggleButton}
+              aria-label={isSidebarCollapsed ? "展開側邊欄" : "收起側邊欄"}
+              aria-expanded={!isSidebarCollapsed}
+            >
+              {isSidebarCollapsed ? "▶" : "◀"}
+            </button>
+            <button onClick={handleLogout} className={styles.logoutButton}>
+              {isSidebarCollapsed ? "➡️" : "登出"}
+            </button>
           </div>
-          <button
-            onClick={toggleSidebar}
-            className={styles.toggleButton}
-            aria-label={isSidebarCollapsed ? "展開側邊欄" : "收起側邊欄"}
-            aria-expanded={!isSidebarCollapsed}
-          >
-            {isSidebarCollapsed ? "▶" : "◀"}
-          </button>
-          <button onClick={handleLogout} className={styles.logoutButton}>
-            {isSidebarCollapsed ? "➡️" : "登出"}
-          </button>
-        </div>
-      </aside>
+        </aside>
 
-      {/* Main Content */}
-      <main className={`${styles.main} ${isSidebarCollapsed ? styles.expanded : ''}`}>{children}</main>
-    </div>
+        {/* Main Content */}
+        <main className={`${styles.main} ${isSidebarCollapsed ? styles.expanded : ''}`}>{children}</main>
+      </div>
+    </ToastProvider>
   );
 }

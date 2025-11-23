@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/contexts/ToastContext";
 import styles from "../dashboard.module.css";
 import albumStyles from "./albums.module.css";
 import AlbumGrid from "./components/AlbumGrid";
@@ -19,6 +20,7 @@ interface Album {
 
 export default function AlbumsPage() {
   const router = useRouter();
+  const toast = useToast();
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -53,7 +55,7 @@ export default function AlbumsPage() {
 
   const handleCreateAlbum = async () => {
     if (!newAlbumName.trim()) {
-      alert("請輸入相簿名稱");
+      toast.warning("請輸入相簿名稱");
       return;
     }
 
@@ -78,11 +80,11 @@ export default function AlbumsPage() {
         setNewAlbumDescription("");
         loadAlbums();
       } else {
-        alert(`創建失敗: ${data.error}`);
+        toast.error(`創建失敗: ${data.error}`);
       }
     } catch (error) {
       console.error("創建相簿失敗:", error);
-      alert("創建相簿失敗");
+      toast.error("創建相簿失敗");
     }
   };
 
@@ -101,11 +103,11 @@ export default function AlbumsPage() {
       if (data.success) {
         loadAlbums();
       } else {
-        alert(`刪除失敗: ${data.error}`);
+        toast.error(`刪除失敗: ${data.error}`);
       }
     } catch (error) {
       console.error("刪除相簿失敗:", error);
-      alert("刪除相簿失敗");
+      toast.error("刪除相簿失敗");
     }
   };
 

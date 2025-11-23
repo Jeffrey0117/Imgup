@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import styles from "../../images/images.module.css";
 
 interface Album {
@@ -22,6 +23,7 @@ export default function AlbumModal({
   onClose,
   onSuccess,
 }: AlbumModalProps) {
+  const toast = useToast();
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>("");
@@ -47,11 +49,11 @@ export default function AlbumModal({
       if (data.success) {
         setAlbums(data.data);
       } else {
-        alert("載入相簿失敗");
+        toast.error("載入相簿失敗");
       }
     } catch (error) {
       console.error("載入相簿失敗:", error);
-      alert("載入相簿失敗");
+      toast.error("載入相簿失敗");
     } finally {
       setLoading(false);
     }
@@ -59,17 +61,23 @@ export default function AlbumModal({
 
   const handleConfirm = async () => {
     if (!selectedAlbumId && !showNewAlbumInput) {
-      alert("請選擇一個相簿");
+      toast.warning("請選擇一個相簿");
       return;
     }
 
     if (showNewAlbumInput && !newAlbumName.trim()) {
-      alert("請輸入新相簿名稱");
+      toast.warning("請輸入新相簿名稱");
       return;
     }
 
     try {
       setSubmitting(true);
+
+      // 先驗證並刷新 token
+      await fetch("/api/admin/auth/verify", {
+        credentials: "include",
+      });
+
       let targetAlbumId = selectedAlbumId;
 
       // 如果選擇新建相簿
@@ -88,7 +96,7 @@ export default function AlbumModal({
         const createData = await createResponse.json();
 
         if (!createData.success) {
-          alert(`創建相簿失敗: ${createData.error}`);
+          toast.error(`創建相簿失敗: ${createData.error}`);
           setSubmitting(false);
           return;
         }
@@ -115,15 +123,15 @@ export default function AlbumModal({
       const addData = await addResponse.json();
 
       if (addData.success) {
-        alert("收藏成功！");
+        toast.success("收藏成功！");
         onSuccess();
         onClose();
       } else {
-        alert(`收藏失敗: ${addData.error}`);
+        toast.error(`收藏失敗: ${addData.error}`);
       }
     } catch (error) {
       console.error("收藏失敗:", error);
-      alert("收藏失敗");
+      toast.error("收藏失敗");
     } finally {
       setSubmitting(false);
     }

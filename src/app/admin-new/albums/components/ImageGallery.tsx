@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import styles from "../albums.module.css";
 import ImageViewer from "./ImageViewer";
 
@@ -19,13 +20,18 @@ interface ImageGalleryProps {
   items: ImageItem[];
   albumId: string;
   onRemove?: (itemId: string) => void;
+  onSetCover?: (hash: string) => void;
+  currentCoverHash?: string | null;
 }
 
 export default function ImageGallery({
   items,
   albumId,
   onRemove,
+  onSetCover,
+  currentCoverHash,
 }: ImageGalleryProps) {
+  const toast = useToast();
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -52,6 +58,13 @@ export default function ImageGallery({
 
     if (onRemove) {
       onRemove(itemId);
+    }
+  };
+
+  const handleSetCover = (e: React.MouseEvent, hash: string) => {
+    e.stopPropagation();
+    if (onSetCover) {
+      onSetCover(hash);
     }
   };
 
@@ -83,11 +96,11 @@ export default function ImageGallery({
           )
         );
       } else {
-        alert("更新失敗");
+        toast.error("更新失敗");
       }
     } catch (error) {
       console.error("更新標題失敗:", error);
-      alert("更新標題失敗");
+      toast.error("更新標題失敗");
     } finally {
       setIsSaving(false);
       setEditingItemId(null);
@@ -149,15 +162,34 @@ export default function ImageGallery({
                     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23111' width='100' height='100'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='%23444' font-size='14'%3E載入失敗%3C/text%3E%3C/svg%3E";
                 }}
               />
-              {onRemove && (
-                <button
-                  className={styles.imageRemove}
-                  onClick={(e) => handleRemove(e, item.id)}
-                  title="從相簿移除"
-                >
-                  ✕
-                </button>
-              )}
+              <div className={styles.imageItemActions}>
+                {onSetCover && (
+                  <button
+                    className={`${styles.imageActionBtn} ${
+                      currentCoverHash === item.mapping.hash
+                        ? styles.imageActionBtnActive
+                        : ""
+                    }`}
+                    onClick={(e) => handleSetCover(e, item.mapping.hash)}
+                    title={
+                      currentCoverHash === item.mapping.hash
+                        ? "目前封面"
+                        : "設為封面"
+                    }
+                  >
+                    {currentCoverHash === item.mapping.hash ? "★" : "☆"}
+                  </button>
+                )}
+                {onRemove && (
+                  <button
+                    className={styles.imageRemove}
+                    onClick={(e) => handleRemove(e, item.id)}
+                    title="從相簿移除"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* 標題顯示/編輯區域 */}

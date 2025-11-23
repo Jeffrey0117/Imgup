@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/contexts/ToastContext";
 import styles from "./ActivityTimeline.module.css";
 
 interface TimelineItem {
@@ -22,6 +23,8 @@ export default function ActivityTimeline({
   recentUploads,
   weeklyStats,
 }: ActivityTimelineProps) {
+  const toast = useToast();
+
   // Format time ago
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -115,7 +118,7 @@ export default function ActivityTimeline({
                     navigator.clipboard.writeText(
                       `${window.location.origin}/${item.hash}`
                     );
-                    alert("已複製連結");
+                    toast.success("已複製連結");
                   }}
                   title="複製連結"
                 >

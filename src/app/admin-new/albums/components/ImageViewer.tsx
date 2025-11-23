@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/contexts/ToastContext";
 
 interface ImageData {
   url: string;
@@ -19,6 +20,7 @@ export default function ImageViewer({
   initialIndex,
   onClose,
 }: ImageViewerProps) {
+  const toast = useToast();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
   useEffect(() => {
@@ -240,7 +242,7 @@ export default function ImageViewer({
             navigator.clipboard.writeText(
               `${window.location.origin}/${currentImage.hash}`
             );
-            alert("已複製連結");
+            toast.success("已複製連結");
           }}
           style={{
             padding: "10px 20px",

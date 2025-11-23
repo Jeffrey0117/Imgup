@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useToast } from "@/contexts/ToastContext";
 import styles from "../dashboard.module.css";
 import imgStyles from "./images.module.css";
 import AlbumModal from "../albums/components/AlbumModal";
+import BatchAlbumSelector from "./components/BatchAlbumSelector";
 
 interface ImageItem {
   id: string;
@@ -30,6 +32,7 @@ interface PaginationInfo {
 export default function ImagesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
   const [images, setImages] = useState<ImageItem[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo>({
     page: 1,
@@ -52,6 +55,7 @@ export default function ImagesPage() {
   const [batchExpiry, setBatchExpiry] = useState("");
   const [showAlbumModal, setShowAlbumModal] = useState(false);
   const [selectedImageId, setSelectedImageId] = useState<string>("");
+  const [showBatchAlbumModal, setShowBatchAlbumModal] = useState(false);
   const [hoveredImage, setHoveredImage] = useState<ImageItem | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
@@ -127,12 +131,17 @@ export default function ImagesPage() {
   const handleCopyUrl = (hash: string) => {
     const url = `${window.location.origin}/${hash}`;
     navigator.clipboard.writeText(url);
-    alert("網址已複製到剪貼簿");
+    toast.success("網址已複製到剪貼簿");
   };
 
   const handleFavorite = (imageId: string) => {
     setSelectedImageId(imageId);
     setShowAlbumModal(true);
+  };
+
+  const handleBatchFavorite = () => {
+    if (selectedImages.size === 0) return;
+    setShowBatchAlbumModal(true);
   };
 
   const handleImageHover = (image: ImageItem | null, event?: React.MouseEvent) => {
@@ -222,15 +231,15 @@ export default function ImagesPage() {
 
       const data = await response.json();
       if (data.success) {
-        alert(`成功刪除 ${data.data.deletedCount} 張圖片`);
+        toast.success(`成功刪除 ${data.data.deletedCount} 張圖片`);
         setSelectedImages(new Set());
         loadImages();
       } else {
-        alert(`刪除失敗: ${data.error}`);
+        toast.error(`刪除失敗: ${data.error}`);
       }
     } catch (error) {
       console.error("批量刪除失敗:", error);
-      alert("批量刪除失敗");
+      toast.error("批量刪除失敗");
     }
   };
 
@@ -251,7 +260,7 @@ export default function ImagesPage() {
 
     if (batchOperation === "setPassword") {
       if (!batchPassword.trim()) {
-        alert("請輸入密碼");
+        toast.warning("請輸入密碼");
         return;
       }
       requestBody.password = batchPassword.trim();
@@ -271,18 +280,18 @@ export default function ImagesPage() {
 
       const data = await response.json();
       if (data.success) {
-        alert(data.message);
+        toast.success(data.message);
         setSelectedImages(new Set());
         setShowBatchMenu(false);
         setBatchPassword("");
         setBatchExpiry("");
         loadImages();
       } else {
-        alert(`操作失敗: ${data.error}`);
+        toast.error(`操作失敗: ${data.error}`);
       }
     } catch (error) {
       console.error("批量操作失敗:", error);
-      alert("批量操作失敗");
+      toast.error("批量操作失敗");
     }
   };
 
@@ -339,22 +348,11 @@ export default function ImagesPage() {
             🗑️ 刪除 ({selectedImages.size})
           </button>
           <button
-            onClick={() => handleBatchOperation("setPassword")}
+            onClick={handleBatchFavorite}
             className={imgStyles.batchButton}
+            style={{ background: "rgba(255, 204, 0, 0.3)", borderColor: "rgba(255, 204, 0, 0.6)" }}
           >
-            🔒 設置密碼
-          </button>
-          <button
-            onClick={() => handleBatchOperation("clearPassword")}
-            className={imgStyles.batchButton}
-          >
-            🔓 清除密碼
-          </button>
-          <button
-            onClick={() => handleBatchOperation("setExpiry")}
-            className={imgStyles.batchButton}
-          >
-            ⏰ 設置過期
+            ⭐ 加入收藏 ({selectedImages.size})
           </button>
           <button
             onClick={() => setSelectedImages(new Set())}
@@ -734,6 +732,20 @@ export default function ImagesPage() {
           onSuccess={() => {
             setShowAlbumModal(false);
             setSelectedImageId("");
+          }}
+        />
+      )}
+
+      {/* Batch Album Modal */}
+      {showBatchAlbumModal && (
+        <BatchAlbumSelector
+          show={showBatchAlbumModal}
+          mappingIds={Array.from(selectedImages)}
+          onClose={() => setShowBatchAlbumModal(false)}
+          onSuccess={() => {
+            setShowBatchAlbumModal(false);
+            setSelectedImages(new Set());
+            loadImages();
           }}
         />
       )}

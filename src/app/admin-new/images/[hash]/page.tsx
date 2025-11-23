@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useToast } from "@/contexts/ToastContext";
 import styles from "../../dashboard.module.css";
 import detailStyles from "./detail.module.css";
 import AlbumModal from "../../albums/components/AlbumModal";
@@ -24,6 +25,7 @@ export default function ImageDetailPage() {
   const router = useRouter();
   const params = useParams();
   const hash = params.hash as string;
+  const toast = useToast();
 
   const [image, setImage] = useState<ImageDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,7 @@ export default function ImageDetailPage() {
     if (!image) return;
     const url = `${window.location.origin}/${image.hash}`;
     navigator.clipboard.writeText(url);
-    alert("網址已複製到剪貼簿");
+    toast.success("網址已複製到剪貼簿");
   };
 
   const handleDelete = async () => {
@@ -78,14 +80,14 @@ export default function ImageDetailPage() {
       const data = await response.json();
 
       if (data.success) {
-        alert("圖片已刪除");
+        toast.success("圖片已刪除");
         router.push("/admin-new/images");
       } else {
-        alert(`刪除失敗: ${data.error}`);
+        toast.error(`刪除失敗: ${data.error}`);
       }
     } catch (error) {
       console.error("刪除失敗:", error);
-      alert("刪除失敗");
+      toast.error("刪除失敗");
     }
   };
 

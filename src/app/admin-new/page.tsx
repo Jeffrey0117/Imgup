@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getProxyImageUrl } from "@/utils/image-proxy";
+import { useToast } from "@/contexts/ToastContext";
 import styles from "./dashboard.module.css";
 import ActivityTimeline from "./components/ActivityTimeline";
 
@@ -28,6 +29,7 @@ interface StatsData {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const toast = useToast();
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -125,7 +127,7 @@ export default function AdminDashboardPage() {
   const handleCopyUrl = (hash: string) => {
     const url = `${window.location.origin}/${hash}`;
     navigator.clipboard.writeText(url);
-    alert("網址已複製到剪貼簿");
+    toast.success("網址已複製到剪貼簿");
   };
 
   // URL Upload functions
@@ -518,7 +520,7 @@ export default function AdminDashboardPage() {
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(urlUploadSuccess);
-                        alert("已複製到剪貼簿");
+                        toast.success("已複製到剪貼簿");
                       }}
                       className={styles.copyButton}
                     >

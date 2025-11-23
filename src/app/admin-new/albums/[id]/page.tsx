@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useToast } from "@/contexts/ToastContext";
 import styles from "../../dashboard.module.css";
 import albumStyles from "../albums.module.css";
 import ImageGallery from "../components/ImageGallery";
@@ -43,10 +44,13 @@ export default function AlbumDetailPage() {
   const router = useRouter();
   const params = useParams();
   const albumId = params.id as string;
+  const toast = useToast();
 
   const [data, setData] = useState<AlbumDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState("");
 
   useEffect(() => {
     loadAlbumDetail();
@@ -58,6 +62,13 @@ export default function AlbumDetailPage() {
       const response = await fetch(`/api/admin/albums/${albumId}/items`, {
         credentials: "include",
       });
+
+      // 檢查是否未授權，直接跳轉登入頁
+      if (response.status === 401) {
+        router.push("/admin-new/login");
+        return;
+      }
+
       const result = await response.json();
 
       if (result.success) {
@@ -88,12 +99,91 @@ export default function AlbumDetailPage() {
       if (result.success) {
         loadAlbumDetail(); // Reload to update the list
       } else {
-        alert(`移除失敗: ${result.error}`);
+        toast.error(`移除失敗: ${result.error}`);
       }
     } catch (error) {
       console.error("移除失敗:", error);
-      alert("移除失敗");
+      toast.error("移除失敗");
     }
+  };
+
+  const handleSetCover = async (hash: string) => {
+    try {
+      const response = await fetch(`/api/admin/albums/${albumId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ coverImageHash: hash }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update local state
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                album: { ...prev.album, coverImageHash: hash },
+              }
+            : null
+        );
+        toast.success("封面已更新");
+      } else {
+        toast.error(`設定封面失敗: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("設定封面失敗:", error);
+      toast.error("設定封面失敗");
+    }
+  };
+
+  const handleTitleEdit = () => {
+    if (!data) return;
+    setEditedTitle(data.album.name);
+    setIsEditingTitle(true);
+  };
+
+  const handleTitleSave = async () => {
+    if (!data || !editedTitle.trim()) return;
+
+    try {
+      const response = await fetch(`/api/admin/albums/${albumId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ name: editedTitle.trim() }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update local state
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                album: { ...prev.album, name: editedTitle.trim() },
+              }
+            : null
+        );
+        setIsEditingTitle(false);
+      } else {
+        toast.error(`更新名稱失敗: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("更新名稱失敗:", error);
+      toast.error("更新名稱失敗");
+    }
+  };
+
+  const handleTitleCancel = () => {
+    setIsEditingTitle(false);
+    setEditedTitle("");
   };
 
   const formatDate = (dateString: string) => {
@@ -129,7 +219,64 @@ export default function AlbumDetailPage() {
       {/* Album Header */}
       <div className={albumStyles.albumDetailHeader}>
         <div className={albumStyles.albumDetailInfo}>
-          <h1 className={albumStyles.albumDetailTitle}>{data.album.name}</h1>
+          {isEditingTitle ? (
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleTitleSave();
+                  if (e.key === "Escape") handleTitleCancel();
+                }}
+                style={{
+                  fontSize: "2rem",
+                  fontWeight: "bold",
+                  padding: "4px 8px",
+                  border: "2px solid #4a9eff",
+                  borderRadius: "4px",
+                  background: "#1a1a1a",
+                  color: "#fff",
+                }}
+                autoFocus
+              />
+              <button
+                onClick={handleTitleSave}
+                style={{
+                  padding: "4px 12px",
+                  background: "#4a9eff",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                ✓
+              </button>
+              <button
+                onClick={handleTitleCancel}
+                style={{
+                  padding: "4px 12px",
+                  background: "#666",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <h1
+              className={albumStyles.albumDetailTitle}
+              onClick={handleTitleEdit}
+              style={{ cursor: "pointer" }}
+              title="點擊編輯標題"
+            >
+              {data.album.name}
+            </h1>
+          )}
           {data.album.description && (
             <p className={albumStyles.albumDetailDescription}>
               {data.album.description}
@@ -158,6 +305,8 @@ export default function AlbumDetailPage() {
         items={data.items}
         albumId={albumId}
         onRemove={handleRemoveItem}
+        onSetCover={handleSetCover}
+        currentCoverHash={data.album.coverImageHash}
       />
     </div>
   );
