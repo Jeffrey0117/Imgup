@@ -64,10 +64,10 @@ export async function POST(request: NextRequest) {
       admin: result.data!.admin,
     });
 
-    // 開發環境：放鬆 Cookie 安全設定以支援本地開發
+    // Cookie 安全設定：生產環境強制使用 HTTPS
     const isProduction = process.env.NODE_ENV === "production";
-    const cookieSameSite = "lax"; // 改為 lax 以支援跨請求
-    const cookieSecure = false; // 開發環境不強制 secure
+    const cookieSameSite = "lax"; // lax 以支援跨請求
+    const cookieSecure = isProduction; // 生產環境強制 secure (HTTPS only)
 
     // 設定 access token cookie (15 分鐘)
     response.cookies.set("admin_token", result.data!.accessToken, {

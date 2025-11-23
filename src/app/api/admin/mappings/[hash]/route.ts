@@ -85,8 +85,8 @@ export async function GET(
       deletedAt: mapping.deletedAt?.toISOString() || null,
       isExpired: mapping.expiresAt ? mapping.expiresAt < new Date() : false,
       hasPassword: !!mapping.password,
-      // Admin API 可以回傳實際密碼值
-      password: mapping.password,
+      // 安全性：不回傳明文密碼，避免資料洩漏
+      password: undefined,
     };
 
     return NextResponse.json({
