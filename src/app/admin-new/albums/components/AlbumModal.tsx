@@ -27,6 +27,7 @@ export default function AlbumModal({
   const [selectedAlbumId, setSelectedAlbumId] = useState<string>("");
   const [showNewAlbumInput, setShowNewAlbumInput] = useState(false);
   const [newAlbumName, setNewAlbumName] = useState("");
+  const [imageTitle, setImageTitle] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -106,6 +107,7 @@ export default function AlbumModal({
           },
           body: JSON.stringify({
             mappingId,
+            note: imageTitle.trim() || null,
           }),
         }
       );
@@ -255,7 +257,7 @@ export default function AlbumModal({
 
             {/* New Album Input */}
             {showNewAlbumInput && (
-              <div>
+              <div style={{ marginBottom: "16px" }}>
                 <label className={styles.modalLabel}>新相簿名稱</label>
                 <input
                   type="text"
@@ -267,6 +269,27 @@ export default function AlbumModal({
                 />
               </div>
             )}
+
+            {/* Image Title Input */}
+            <div>
+              <label className={styles.modalLabel}>圖片標題（可選）</label>
+              <input
+                type="text"
+                value={imageTitle}
+                onChange={(e) => setImageTitle(e.target.value)}
+                placeholder="為這張圖片添加標題..."
+                className={styles.modalInput}
+                maxLength={200}
+              />
+              <div style={{
+                fontSize: "12px",
+                color: "#99a0ab",
+                marginTop: "6px",
+                fontStyle: "italic"
+              }}>
+                設定標題方便日後搜尋和管理
+              </div>
+            </div>
           </div>
         )}
 
