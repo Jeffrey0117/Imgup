@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import {
-  extractTokenFromRequest,
-  verifyAdminSession,
-} from "@/utils/admin-auth";
+import { authenticateAdmin } from "@/utils/admin-auth";
 
 /**
  * GET /api/admin/albums
@@ -12,31 +9,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     // 驗證管理員身份
-    let token = extractTokenFromRequest(request);
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-      if (!token) {
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: "未授權訪問" }, { status: 401 });
-    }
-
-    const auth = await verifyAdminSession(token);
-    if (!auth.valid || !auth.admin) {
-      return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
-    }
+    const auth = await authenticateAdmin(request);
 
     // 獲取所有相簿
     const albums = await prisma.album.findMany({
@@ -67,7 +40,13 @@ export async function GET(request: NextRequest) {
       success: true,
       data,
     });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("獲取相簿列表失敗:", error);
     return NextResponse.json({ error: "獲取列表失敗" }, { status: 500 });
   }
@@ -80,31 +59,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // 驗證管理員身份
-    let token = extractTokenFromRequest(request);
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-      if (!token) {
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: "未授權訪問" }, { status: 401 });
-    }
-
-    const auth = await verifyAdminSession(token);
-    if (!auth.valid || !auth.admin) {
-      return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
-    }
+    const auth = await authenticateAdmin(request);
 
     // 解析請求體
     const body = await request.json().catch(() => ({}));
@@ -150,7 +105,13 @@ export async function POST(request: NextRequest) {
         updatedAt: album.updatedAt.toISOString(),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("創建相簿失敗:", error);
     return NextResponse.json({ error: "創建相簿失敗" }, { status: 500 });
   }

@@ -1,43 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  extractTokenFromRequest,
-  verifyAdminSession,
-} from "@/utils/admin-auth";
+import { authenticateAdmin } from "@/utils/admin-auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
-    // 從 Authorization header 或 cookies 中提取 token
-    let token = extractTokenFromRequest(request);
-
-    // 如果 Authorization header 沒有 token，嘗試從 cookies 中獲取
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-
-      // 如果還是沒有，從 Cookie header 手動解析
-      if (!token) {
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: "未授權訪問" }, { status: 401 });
-    }
-
     // 驗證管理員身份
-    const authResult = await verifyAdminSession(token);
-    if (!authResult.valid) {
-      return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
-    }
+    await authenticateAdmin(request);
 
     // 獲取統計數據
     const [totalMappings, todayUploads, activeMappings] =
@@ -123,7 +91,13 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json({ success: true, data: stats });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("獲取統計數據失敗:", error);
     return NextResponse.json({ error: "獲取統計數據失敗" }, { status: 500 });
   }

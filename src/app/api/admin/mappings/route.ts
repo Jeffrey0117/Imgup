@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import {
-  extractTokenFromRequest,
-  verifyAdminSession,
-} from "@/utils/admin-auth";
+import { authenticateAdmin } from "@/utils/admin-auth";
 
 type StatusFilter = "valid" | "expired" | "deleted";
 
@@ -30,32 +27,8 @@ function parseBool(value: string | null): boolean | null {
 
 export async function GET(request: NextRequest) {
   try {
-    // 驗證管理員身份（支援 Header Bearer 與 Cookie）
-    let token = extractTokenFromRequest(request);
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-      if (!token) {
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: "未授權訪問" }, { status: 401 });
-    }
-
-    const auth = await verifyAdminSession(token);
-    if (!auth.valid) {
-      return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
-    }
+    // 驗證管理員身份
+    await authenticateAdmin(request);
 
     // 解析查詢參數
     const { searchParams } = new URL(request.url);
@@ -197,7 +170,13 @@ export async function GET(request: NextRequest) {
         pagination,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("取得映射列表失敗:", error);
     return NextResponse.json({ error: "取得列表失敗" }, { status: 500 });
   }

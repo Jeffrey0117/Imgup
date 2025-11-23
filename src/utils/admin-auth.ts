@@ -523,3 +523,59 @@ export async function verifyAdminSession(token: string): Promise<{
     return { valid: false };
   }
 }
+
+/**
+ * 統一的管理員驗證函數 - 用於 API 路由
+ * 從 request 中提取並驗證 token，返回管理員資訊
+ * 如果驗證失敗，拋出包含狀態碼和錯誤訊息的錯誤
+ */
+export async function authenticateAdmin(request: any): Promise<{
+  admin: {
+    id: string;
+    email: string;
+    username: string;
+    role: string;
+  };
+  sessionId?: string;
+}> {
+  // 提取 token
+  let token = extractTokenFromRequest(request);
+
+  // 如果 Authorization header 沒有 token，嘗試從 cookies 中獲取
+  if (!token) {
+    token = request.cookies.get("admin_token")?.value || null;
+
+    // 如果還是沒有，從 Cookie header 手動解析
+    if (!token) {
+      const cookieHeader = request.headers.get("cookie");
+      if (cookieHeader) {
+        const cookies = cookieHeader.split(";").map((c: string) => c.trim());
+        for (const cookie of cookies) {
+          if (cookie.startsWith("admin_token=")) {
+            token = cookie.split("=")[1];
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!token) {
+    const error: any = new Error("未授權訪問");
+    error.status = 401;
+    throw error;
+  }
+
+  // 驗證 session
+  const authResult = await verifyAdminSession(token);
+  if (!authResult.valid || !authResult.admin) {
+    const error: any = new Error("身份驗證失敗");
+    error.status = 401;
+    throw error;
+  }
+
+  return {
+    admin: authResult.admin,
+    sessionId: authResult.sessionId,
+  };
+}

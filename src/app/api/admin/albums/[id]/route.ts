@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import {
-  extractTokenFromRequest,
-  verifyAdminSession,
-} from "@/utils/admin-auth";
+import { authenticateAdmin } from "@/utils/admin-auth";
 
 /**
  * GET /api/admin/albums/[id]
@@ -15,31 +12,7 @@ export async function GET(
 ) {
   try {
     // 驗證管理員身份
-    let token = extractTokenFromRequest(request);
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-      if (!token) {
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: "未授權訪問" }, { status: 401 });
-    }
-
-    const auth = await verifyAdminSession(token);
-    if (!auth.valid || !auth.admin) {
-      return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
-    }
+    const auth = await authenticateAdmin(request);
 
     const { id } = await params;
 
@@ -74,7 +47,13 @@ export async function GET(
         updatedAt: album.updatedAt.toISOString(),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("獲取相簿失敗:", error);
     return NextResponse.json({ error: "獲取相簿失敗" }, { status: 500 });
   }
@@ -90,31 +69,7 @@ export async function PUT(
 ) {
   try {
     // 驗證管理員身份
-    let token = extractTokenFromRequest(request);
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-      if (!token) {
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: "未授權訪問" }, { status: 401 });
-    }
-
-    const auth = await verifyAdminSession(token);
-    if (!auth.valid || !auth.admin) {
-      return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
-    }
+    const auth = await authenticateAdmin(request);
 
     const { id } = await params;
 
@@ -209,7 +164,13 @@ export async function PUT(
         updatedAt: updated.updatedAt.toISOString(),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("更新相簿失敗:", error);
     return NextResponse.json({ error: "更新相簿失敗" }, { status: 500 });
   }
@@ -225,31 +186,7 @@ export async function DELETE(
 ) {
   try {
     // 驗證管理員身份
-    let token = extractTokenFromRequest(request);
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-      if (!token) {
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: "未授權訪問" }, { status: 401 });
-    }
-
-    const auth = await verifyAdminSession(token);
-    if (!auth.valid || !auth.admin) {
-      return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
-    }
+    const auth = await authenticateAdmin(request);
 
     const { id } = await params;
 
@@ -297,7 +234,13 @@ export async function DELETE(
       success: true,
       message: "相簿已刪除",
     });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("刪除相簿失敗:", error);
     return NextResponse.json({ error: "刪除相簿失敗" }, { status: 500 });
   }

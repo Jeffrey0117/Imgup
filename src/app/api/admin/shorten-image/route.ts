@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateUniqueHash } from "@/utils/hash";
 import { prisma } from "@/lib/prisma";
-import {
-  extractTokenFromRequest,
-  verifyAdminSession,
-} from "@/utils/admin-auth";
+import { authenticateAdmin } from "@/utils/admin-auth";
 
 /**
  * Admin 專用的「網址轉短網址」API
@@ -17,40 +14,8 @@ import {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. 驗證 Admin 權限（從 cookie 或 header 取得 admin_token）
-    let token = extractTokenFromRequest(request);
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-      if (!token) {
-        // 嘗試從 cookie header 中解析
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json(
-        { error: "Unauthorized: Missing admin token" },
-        { status: 401 }
-      );
-    }
-
-    // 驗證 admin session
-    const auth = await verifyAdminSession(token);
-    if (!auth.valid || !auth.admin) {
-      return NextResponse.json(
-        { error: "Unauthorized: Invalid or expired session" },
-        { status: 401 }
-      );
-    }
+    // 驗證管理員身份
+    const auth = await authenticateAdmin(request);
 
     // 2. 解析請求參數
     const body = await request.json();
@@ -160,7 +125,13 @@ export async function POST(request: NextRequest) {
         hasPassword: !!mapping.password,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("Admin shorten-image error:", error);
 
     // 根據錯誤類型返回更具體的訊息

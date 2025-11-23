@@ -2,42 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { createObjectCsvStringifier } from "csv-writer";
 import { prisma } from "@/lib/prisma";
-import {
-  extractTokenFromRequest,
-  verifyAdminSession,
-  getClientIp,
-} from "@/utils/admin-auth";
+import { authenticateAdmin, getClientIp } from "@/utils/admin-auth";
 
 type ExportFormat = "csv" | "excel";
 
 export async function GET(request: NextRequest) {
   try {
     // 驗證管理員身份
-    let token = extractTokenFromRequest(request);
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-      if (!token) {
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: "未授權訪問" }, { status: 401 });
-    }
-
-    const auth = await verifyAdminSession(token);
-    if (!auth.valid) {
-      return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
-    }
+    const auth = await authenticateAdmin(request);
 
     // 解析查詢參數
     const { searchParams } = new URL(request.url);
@@ -165,7 +137,13 @@ export async function GET(request: NextRequest) {
 
     // 不應該到達這裡
     return NextResponse.json({ error: "不支援的格式" }, { status: 400 });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("匯出映射資料失敗:", error);
     return NextResponse.json({ error: "匯出失敗" }, { status: 500 });
   }

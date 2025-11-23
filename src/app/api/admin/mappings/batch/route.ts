@@ -1,40 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  extractTokenFromRequest,
-  verifyAdminSession,
-} from "@/utils/admin-auth";
+import { authenticateAdmin } from "@/utils/admin-auth";
 import { prisma } from "@/lib/prisma";
 
 export async function DELETE(request: NextRequest) {
   try {
     // 驗證管理員身份
-    let token = extractTokenFromRequest(request);
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-
-      // 如果還是沒有，從 Cookie header 手動解析
-      if (!token) {
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: "未授權訪問" }, { status: 401 });
-    }
-
-    const authResult = await verifyAdminSession(token);
-    if (!authResult.valid) {
-      return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
-    }
+    const authResult = await authenticateAdmin(request);
 
     // 解析請求體
     const body = await request.json().catch(() => ({}));
@@ -98,7 +69,13 @@ export async function DELETE(request: NextRequest) {
         deletedItems: deletedMappings,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("批量刪除檔案失敗:", error);
     return NextResponse.json({ error: "批量刪除失敗" }, { status: 500 });
   }
@@ -107,33 +84,7 @@ export async function DELETE(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     // 驗證管理員身份
-    let token = extractTokenFromRequest(request);
-    if (!token) {
-      token = request.cookies.get("admin_token")?.value || null;
-
-      // 如果還是沒有，從 Cookie header 手動解析
-      if (!token) {
-        const cookieHeader = request.headers.get("cookie");
-        if (cookieHeader) {
-          const cookies = cookieHeader.split(";").map((c) => c.trim());
-          for (const cookie of cookies) {
-            if (cookie.startsWith("admin_token=")) {
-              token = cookie.split("=")[1];
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (!token) {
-      return NextResponse.json({ error: "未授權訪問" }, { status: 401 });
-    }
-
-    const authResult = await verifyAdminSession(token);
-    if (!authResult.valid) {
-      return NextResponse.json({ error: "身份驗證失敗" }, { status: 401 });
-    }
+    const authResult = await authenticateAdmin(request);
 
     // 解析請求體
     const body = await request.json().catch(() => ({}));
@@ -240,7 +191,13 @@ export async function PUT(request: NextRequest) {
         operation,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // 處理認證錯誤
+    if (error.status === 401) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // 其他錯誤
     console.error("批量更新檔案失敗:", error);
     return NextResponse.json({ error: "批量更新失敗" }, { status: 500 });
   }
