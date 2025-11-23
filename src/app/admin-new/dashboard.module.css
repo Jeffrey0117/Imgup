@@ -862,3 +862,162 @@
     transform: translateY(0) scale(1);
   }
 }
+
+/* 批量上傳 Modal */
+.batchModal {
+  background: #1a1d23;
+  border-radius: 16px;
+  max-width: 720px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.textarea {
+  width: 100%;
+  padding: 12px;
+  background: #0f1115;
+  border: 1px solid #2a2d33;
+  border-radius: 8px;
+  color: #e5e7eb;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 160px;
+  transition: all 0.2s ease;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #58c258;
+  box-shadow: 0 0 0 3px rgba(88, 194, 88, 0.1);
+}
+
+.textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.textarea::placeholder {
+  color: #4a4f5a;
+}
+
+.formRow {
+  display: flex;
+  gap: 16px;
+}
+
+/* 結果列表 */
+.resultsSection {
+  margin-top: 24px;
+  border: 1px solid #2a2d33;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #15171d;
+}
+
+.resultsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #1f2126;
+  border-bottom: 1px solid #2a2d33;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.resultsList {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.resultItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #2a2d33;
+  transition: background 0.2s ease;
+}
+
+.resultItem:last-child {
+  border-bottom: none;
+}
+
+.resultItem:hover {
+  background: #1a1d23;
+}
+
+.resultIcon {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.resultContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.resultUrl {
+  font-family: monospace;
+  font-size: 13px;
+  color: #99a0ab;
+  word-break: break-all;
+  margin-bottom: 6px;
+}
+
+.resultShortUrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #0f1115;
+  border: 1px solid #2a2d33;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 13px;
+  color: #58c258;
+  margin-top: 6px;
+}
+
+.miniCopyBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+  font-size: 14px;
+}
+
+.miniCopyBtn:hover {
+  background: #2a2d33;
+}
+
+.resultError {
+  color: #ff9f88;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* 狀態樣式 */
+.resultItem.success {
+  background: rgba(88, 194, 88, 0.02);
+}
+
+.resultItem.failed {
+  background: rgba(255, 88, 88, 0.02);
+}
+
+.resultItem.pending {
+  background: rgba(59, 130, 246, 0.02);
+}

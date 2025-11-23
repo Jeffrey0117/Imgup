@@ -40,15 +40,14 @@ export default function AdminDashboardPage() {
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
-  // URL Upload Modal state
+  // URL Upload Modal state - 批量上傳
   const [showUrlModal, setShowUrlModal] = useState(false);
   const [urlUploadLoading, setUrlUploadLoading] = useState(false);
-  const [imageUrl, setImageUrl] = useState("");
-  const [filename, setFilename] = useState("");
+  const [urlsText, setUrlsText] = useState(""); // 改成多行文字
   const [password, setPassword] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
-  const [urlUploadSuccess, setUrlUploadSuccess] = useState("");
-  const [urlUploadError, setUrlUploadError] = useState("");
+  const [uploadResults, setUploadResults] = useState<{url: string; status: 'pending' | 'success' | 'failed'; shortUrl?: string; error?: string}[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     loadStats();
@@ -142,20 +141,12 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleUrlChange = (url: string) => {
-    setImageUrl(url);
-    if (url && !filename) {
-      setFilename(extractFilenameFromUrl(url));
-    }
-  };
-
   const resetUrlModal = () => {
-    setImageUrl("");
-    setFilename("");
+    setUrlsText("");
     setPassword("");
     setExpiresAt("");
-    setUrlUploadSuccess("");
-    setUrlUploadError("");
+    setUploadResults([]);
+    setIsProcessing(false);
   };
 
   const handleOpenUrlModal = () => {
@@ -168,61 +159,107 @@ export default function AdminDashboardPage() {
     setTimeout(resetUrlModal, 300);
   };
 
-  const handleUrlUpload = async () => {
-    if (!imageUrl.trim()) {
-      setUrlUploadError("請輸入圖片網址");
+  // 批量處理網址上傳
+  const handleBatchUrlUpload = async () => {
+    if (!urlsText.trim()) {
+      toast.error("請輸入至少一個圖片網址");
       return;
     }
 
-    try {
-      new URL(imageUrl);
-    } catch {
-      setUrlUploadError("無效的網址格式");
+    // 解析網址（每行一個）
+    const urls = urlsText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    if (urls.length === 0) {
+      toast.error("請輸入有效的網址");
       return;
     }
 
-    if (!filename.trim()) {
-      setUrlUploadError("請輸入檔案名稱");
-      return;
+    // 去重
+    const uniqueUrls = [...new Set(urls)];
+
+    // 初始化結果
+    const initialResults = uniqueUrls.map(url => ({
+      url,
+      status: 'pending' as const
+    }));
+    setUploadResults(initialResults);
+    setIsProcessing(true);
+
+    // 批量處理（每次 3 個並發）
+    const BATCH_SIZE = 3;
+    const results = [...initialResults];
+
+    for (let i = 0; i < uniqueUrls.length; i += BATCH_SIZE) {
+      const batch = uniqueUrls.slice(i, i + BATCH_SIZE);
+
+      await Promise.allSettled(
+        batch.map(async (url, idx) => {
+          const globalIdx = i + idx;
+
+          try {
+            // 驗證 URL 格式
+            new URL(url);
+
+            const filename = extractFilenameFromUrl(url);
+
+            const response = await fetch("/api/admin/shorten-image", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+              body: JSON.stringify({
+                url,
+                filename,
+                password: password || undefined,
+                expiresAt: expiresAt || undefined,
+              }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+              results[globalIdx] = {
+                url,
+                status: 'success',
+                shortUrl: data.shortUrl
+              };
+            } else {
+              results[globalIdx] = {
+                url,
+                status: 'failed',
+                error: data.error || "上傳失敗"
+              };
+            }
+          } catch (error: any) {
+            results[globalIdx] = {
+              url,
+              status: 'failed',
+              error: error.message || "無效的網址格式"
+            };
+          }
+
+          // 更新結果
+          setUploadResults([...results]);
+        })
+      );
     }
 
-    setUrlUploadLoading(true);
-    setUrlUploadError("");
-    setUrlUploadSuccess("");
+    setIsProcessing(false);
 
-    try {
-      const response = await fetch("/api/admin/shorten-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          url: imageUrl,
-          filename: filename,
-          password: password || undefined,
-          expiresAt: expiresAt || undefined,
-        }),
-      });
+    // 統計結果
+    const successCount = results.filter(r => r.status === 'success').length;
+    const failedCount = results.filter(r => r.status === 'failed').length;
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setUrlUploadSuccess(data.shortUrl);
-        loadStats();
-        loadGalleryImages(1);
-
-        setTimeout(() => {
-          handleCloseUrlModal();
-        }, 3000);
-      } else {
-        setUrlUploadError(data.error || "上傳失敗");
-      }
-    } catch (error) {
-      console.error("URL上傳失敗:", error);
-      setUrlUploadError("網路錯誤，請稍後再試");
-    } finally {
-      setUrlUploadLoading(false);
+    if (successCount > 0) {
+      toast.success(`成功上傳 ${successCount} 張圖片${failedCount > 0 ? `，${failedCount} 張失敗` : ''}`);
+      loadStats();
+      loadGalleryImages(1);
+    } else {
+      toast.error("所有網址上傳失敗");
     }
   };
 
@@ -423,115 +460,131 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* URL Upload Modal */}
+      {/* URL Upload Modal - 批量上傳 */}
       {showUrlModal && (
         <div className={styles.modalOverlay} onClick={handleCloseUrlModal}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.batchModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3>🌐 網址上傳</h3>
+              <h3>🌐 批量網址上傳</h3>
               <button onClick={handleCloseUrlModal} className={styles.closeButton}>
                 ✕
               </button>
             </div>
 
             <div className={styles.modalBody}>
-              {!urlUploadSuccess ? (
-                <>
-                  <div className={styles.formGroup}>
-                    <label>圖片網址 *</label>
-                    <input
-                      type="url"
-                      placeholder="https://example.com/image.jpg"
-                      value={imageUrl}
-                      onChange={(e) => handleUrlChange(e.target.value)}
-                      className={styles.input}
-                      disabled={urlUploadLoading}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>檔案名稱 *</label>
-                    <input
-                      type="text"
-                      placeholder="image.jpg"
-                      value={filename}
-                      onChange={(e) => setFilename(e.target.value)}
-                      className={styles.input}
-                      disabled={urlUploadLoading}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>密碼保護（選填）</label>
-                    <input
-                      type="password"
-                      placeholder="設定密碼"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className={styles.input}
-                      disabled={urlUploadLoading}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>過期時間（選填）</label>
-                    <input
-                      type="datetime-local"
-                      value={expiresAt}
-                      onChange={(e) => setExpiresAt(e.target.value)}
-                      className={styles.input}
-                      disabled={urlUploadLoading}
-                    />
-                  </div>
-
-                  {urlUploadError && (
-                    <div className={styles.errorMessage}>{urlUploadError}</div>
+              <div className={styles.formGroup}>
+                <label>
+                  圖片網址（每行一個）*
+                  {urlsText && (
+                    <span style={{marginLeft: '10px', color: '#666', fontSize: '13px'}}>
+                      {urlsText.split('\n').filter(l => l.trim()).length} 個網址
+                    </span>
                   )}
+                </label>
+                <textarea
+                  placeholder="貼上圖片網址，每行一個&#10;例如：&#10;https://example.com/image1.jpg&#10;https://example.com/image2.png&#10;https://example.com/image3.webp"
+                  value={urlsText}
+                  onChange={(e) => setUrlsText(e.target.value)}
+                  className={styles.textarea}
+                  disabled={isProcessing}
+                  rows={8}
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '13px',
+                    lineHeight: '1.6'
+                  }}
+                />
+              </div>
 
-                  <div className={styles.modalActions}>
-                    <button
-                      onClick={handleCloseUrlModal}
-                      className={styles.cancelButton}
-                      disabled={urlUploadLoading}
-                    >
-                      取消
-                    </button>
-                    <button
-                      onClick={handleUrlUpload}
-                      className={styles.submitButton}
-                      disabled={urlUploadLoading}
-                    >
-                      {urlUploadLoading ? "上傳中..." : "生成短網址"}
-                    </button>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup} style={{flex: 1}}>
+                  <label>密碼保護（選填）</label>
+                  <input
+                    type="password"
+                    placeholder="設定密碼"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={styles.input}
+                    disabled={isProcessing}
+                  />
+                </div>
+
+                <div className={styles.formGroup} style={{flex: 1}}>
+                  <label>過期時間（選填）</label>
+                  <input
+                    type="datetime-local"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    className={styles.input}
+                    disabled={isProcessing}
+                  />
+                </div>
+              </div>
+
+              {/* 結果列表 */}
+              {uploadResults.length > 0 && (
+                <div className={styles.resultsSection}>
+                  <div className={styles.resultsHeader}>
+                    <span>上傳結果</span>
+                    <span>
+                      ✅ {uploadResults.filter(r => r.status === 'success').length} ·
+                      ❌ {uploadResults.filter(r => r.status === 'failed').length} ·
+                      ⏳ {uploadResults.filter(r => r.status === 'pending').length}
+                    </span>
                   </div>
-                </>
-              ) : (
-                <>
-                  <div className={styles.successMessage}>
-                    ✅ 短網址生成成功！
+                  <div className={styles.resultsList}>
+                    {uploadResults.map((result, idx) => (
+                      <div
+                        key={idx}
+                        className={`${styles.resultItem} ${styles[result.status]}`}
+                      >
+                        <div className={styles.resultIcon}>
+                          {result.status === 'success' && '✅'}
+                          {result.status === 'failed' && '❌'}
+                          {result.status === 'pending' && '⏳'}
+                        </div>
+                        <div className={styles.resultContent}>
+                          <div className={styles.resultUrl}>{result.url}</div>
+                          {result.status === 'success' && result.shortUrl && (
+                            <div className={styles.resultShortUrl}>
+                              {result.shortUrl}
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(result.shortUrl!);
+                                  toast.success("已複製");
+                                }}
+                                className={styles.miniCopyBtn}
+                              >
+                                📋
+                              </button>
+                            </div>
+                          )}
+                          {result.status === 'failed' && result.error && (
+                            <div className={styles.resultError}>{result.error}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className={styles.resultUrl}>
-                    <input
-                      type="text"
-                      value={urlUploadSuccess}
-                      readOnly
-                      className={styles.resultInput}
-                    />
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(urlUploadSuccess);
-                        toast.success("已複製到剪貼簿");
-                      }}
-                      className={styles.copyButton}
-                    >
-                      📋 複製
-                    </button>
-                  </div>
-                  <div className={styles.autoCloseNotice}>
-                    3 秒後自動關閉...
-                  </div>
-                </>
+                </div>
               )}
+
+              <div className={styles.modalActions}>
+                <button
+                  onClick={handleCloseUrlModal}
+                  className={styles.cancelButton}
+                  disabled={isProcessing}
+                >
+                  {uploadResults.length > 0 ? '關閉' : '取消'}
+                </button>
+                <button
+                  onClick={handleBatchUrlUpload}
+                  className={styles.submitButton}
+                  disabled={isProcessing || !urlsText.trim()}
+                >
+                  {isProcessing ? "處理中..." : "開始上傳"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

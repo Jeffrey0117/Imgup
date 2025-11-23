@@ -49,6 +49,7 @@ export default function ImagesPage() {
   const [pwFilter, setPwFilter] = useState<string>("all");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
+  const [selectedImageHashes, setSelectedImageHashes] = useState<Map<string, string>>(new Map()); // id -> hash 映射
   const [showBatchMenu, setShowBatchMenu] = useState(false);
   const [batchOperation, setBatchOperation] = useState<string>("");
   const [batchPassword, setBatchPassword] = useState("");
@@ -58,6 +59,7 @@ export default function ImagesPage() {
   const [showBatchAlbumModal, setShowBatchAlbumModal] = useState(false);
   const [hoveredImage, setHoveredImage] = useState<ImageItem | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     loadImages();
@@ -83,6 +85,13 @@ export default function ImagesPage() {
       const response = await fetch(`/api/admin/mappings?${params}`, {
         credentials: "include",
       });
+
+      // 檢查是否未授權
+      if (response.status === 401) {
+        router.push("/admin-new/login");
+        return;
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -144,6 +153,18 @@ export default function ImagesPage() {
     setShowBatchAlbumModal(true);
   };
 
+  const handleBatchCopyUrls = () => {
+    if (selectedImages.size === 0) return;
+
+    // 使用 selectedImageHashes Map 來獲取所有選中圖片的 hash（已包含副檔名）
+    const selectedUrls = Array.from(selectedImageHashes.values())
+      .map(hashWithExt => `${window.location.origin}/${hashWithExt}`)
+      .join('\n');
+
+    navigator.clipboard.writeText(selectedUrls);
+    toast.success(`已複製 ${selectedImages.size} 個網址到剪貼簿`);
+  };
+
   const handleImageHover = (image: ImageItem | null, event?: React.MouseEvent) => {
     setHoveredImage(image);
     if (event && image) {
@@ -157,21 +178,59 @@ export default function ImagesPage() {
     }
   };
 
-  const handleSelectImage = (id: string) => {
+  const handleSelectImage = (id: string, index: number, event?: React.MouseEvent) => {
     const newSelected = new Set(selectedImages);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
+    const newHashes = new Map(selectedImageHashes);
+
+    // Shift 連續選取
+    if (event?.shiftKey && lastClickedIndex !== null) {
+      const start = Math.min(lastClickedIndex, index);
+      const end = Math.max(lastClickedIndex, index);
+
+      // 選取範圍內所有圖片
+      for (let i = start; i <= end; i++) {
+        const img = images[i];
+        const ext = getFileExtension(img.filename);
+        const hashWithExt = ext ? `${img.hash}.${ext}` : img.hash;
+        newSelected.add(img.id);
+        newHashes.set(img.id, hashWithExt); // 記錄 hash + 副檔名
+      }
+      setSelectedImages(newSelected);
+      setSelectedImageHashes(newHashes);
+      setLastClickedIndex(index);
     } else {
-      newSelected.add(id);
+      // 單個選取/取消
+      if (newSelected.has(id)) {
+        newSelected.delete(id);
+        newHashes.delete(id); // 同步刪除 hash
+      } else {
+        const image = images[index];
+        const ext = getFileExtension(image.filename);
+        const hashWithExt = ext ? `${image.hash}.${ext}` : image.hash;
+        newSelected.add(id);
+        newHashes.set(id, hashWithExt); // 記錄 hash + 副檔名
+      }
+      setSelectedImages(newSelected);
+      setSelectedImageHashes(newHashes);
+      setLastClickedIndex(index);
     }
-    setSelectedImages(newSelected);
   };
 
   const handleSelectAll = () => {
     if (selectedImages.size === images.length) {
       setSelectedImages(new Set());
+      setSelectedImageHashes(new Map());
     } else {
-      setSelectedImages(new Set(images.map((img) => img.id)));
+      const newSelected = new Set(images.map((img) => img.id));
+      const newHashes = new Map(
+        images.map((img) => {
+          const ext = getFileExtension(img.filename);
+          const hashWithExt = ext ? `${img.hash}.${ext}` : img.hash;
+          return [img.id, hashWithExt];
+        })
+      );
+      setSelectedImages(newSelected);
+      setSelectedImageHashes(newHashes);
     }
   };
 
@@ -233,6 +292,7 @@ export default function ImagesPage() {
       if (data.success) {
         toast.success(`成功刪除 ${data.data.deletedCount} 張圖片`);
         setSelectedImages(new Set());
+        setSelectedImageHashes(new Map());
         loadImages();
       } else {
         toast.error(`刪除失敗: ${data.error}`);
@@ -282,6 +342,7 @@ export default function ImagesPage() {
       if (data.success) {
         toast.success(data.message);
         setSelectedImages(new Set());
+        setSelectedImageHashes(new Map());
         setShowBatchMenu(false);
         setBatchPassword("");
         setBatchExpiry("");
@@ -304,13 +365,24 @@ export default function ImagesPage() {
   }
 
   if (error) {
+    const isUnauthorized = error.includes("未授權") || error.includes("Unauthorized");
+
     return (
       <div className={styles.errorContainer}>
         <h3>載入失敗</h3>
         <p>{error}</p>
-        <button onClick={loadImages} className={styles.retryButton}>
-          重新載入
-        </button>
+        {isUnauthorized ? (
+          <button
+            onClick={() => router.push("/admin-new/login")}
+            className={styles.retryButton}
+          >
+            前往登入
+          </button>
+        ) : (
+          <button onClick={loadImages} className={styles.retryButton}>
+            重新載入
+          </button>
+        )}
       </div>
     );
   }
@@ -341,11 +413,11 @@ export default function ImagesPage() {
       {selectedImages.size > 0 && (
         <div className={imgStyles.batchToolbar}>
           <button
-            onClick={handleBatchDelete}
+            onClick={handleBatchCopyUrls}
             className={imgStyles.batchButton}
-            style={{ background: "#dc2626" }}
+            style={{ background: "rgba(88, 194, 88, 0.3)", borderColor: "rgba(88, 194, 88, 0.6)" }}
           >
-            🗑️ 刪除 ({selectedImages.size})
+            📋 複製網址 ({selectedImages.size})
           </button>
           <button
             onClick={handleBatchFavorite}
@@ -355,7 +427,17 @@ export default function ImagesPage() {
             ⭐ 加入收藏 ({selectedImages.size})
           </button>
           <button
-            onClick={() => setSelectedImages(new Set())}
+            onClick={handleBatchDelete}
+            className={imgStyles.batchButton}
+            style={{ background: "#dc2626" }}
+          >
+            🗑️ 刪除 ({selectedImages.size})
+          </button>
+          <button
+            onClick={() => {
+              setSelectedImages(new Set());
+              setSelectedImageHashes(new Map());
+            }}
             className={imgStyles.cancelButton}
           >
             取消選擇
@@ -467,13 +549,13 @@ export default function ImagesPage() {
             </tr>
           </thead>
           <tbody>
-            {images.map((image) => (
+            {images.map((image, index) => (
               <tr key={image.id}>
                 <td data-label="選擇">
                   <input
                     type="checkbox"
                     checked={selectedImages.has(image.id)}
-                    onChange={() => handleSelectImage(image.id)}
+                    onChange={(e) => handleSelectImage(image.id, index, e)}
                     className={imgStyles.checkbox}
                   />
                 </td>
@@ -745,6 +827,7 @@ export default function ImagesPage() {
           onSuccess={() => {
             setShowBatchAlbumModal(false);
             setSelectedImages(new Set());
+            setSelectedImageHashes(new Map());
             loadImages();
           }}
         />
