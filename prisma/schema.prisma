@@ -7,6 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// 原有模型：图片映射
+// ============================================
 model Mapping {
   id              String          @id @default(cuid())
   hash            String          @unique
@@ -30,12 +33,16 @@ model Mapping {
   User            User?           @relation(fields: [userId], references: [id])
   ReferrerStats   ReferrerStats[]
   albumItems      AlbumItem[]
+  uploadRecords   UploadRecord[]  // 新增：追踪关联
 
   @@index([createdAt])
   @@index([isDeleted])
   @@index([userId])
 }
 
+// ============================================
+// 原有模型：管理员
+// ============================================
 model Admin {
   id             String         @id @default(cuid())
   email          String         @unique
@@ -101,6 +108,9 @@ model SystemConfig {
   updatedBy String?
 }
 
+// ============================================
+// 扩展后的用户模型
+// ============================================
 model User {
   id              String          @id @default(cuid())
   email           String          @unique
@@ -109,6 +119,36 @@ model User {
   tier            String          @default("guest")
   isActive        Boolean         @default(true)
   emailVerified   Boolean         @default(false)
+
+  // 新增：身份信息
+  fullName        String?
+  phone           String?
+  phoneVerified   Boolean         @default(false)
+  idType          String?         // "id_card", "passport"
+  idNumber        String?         @unique
+  idVerified      Boolean         @default(false)
+  verificationLevel Int           @default(0) // 0=未验证, 1=邮箱, 2=手机, 3=身份证件
+
+  // 新增：地理和语言
+  country         String?
+  city            String?
+  timezone        String?         @default("Asia/Taipei")
+  language        String?         @default("zh-TW")
+
+  // 新增：安全
+  twoFactorEnabled Boolean        @default(false)
+  twoFactorSecret  String?
+  passwordChangedAt DateTime?
+  lastLoginAt      DateTime?
+  lastLoginIp      String?
+
+  // 新增：隐私合规
+  gdprConsent      Boolean        @default(false)
+  gdprConsentAt    DateTime?
+  marketingConsent Boolean        @default(false)
+  dataRetentionConsent Boolean    @default(true)
+
+  // 原有字段
   warningCount    Int             @default(0)
   lastWarningAt   DateTime?
   restrictedUntil DateTime?
@@ -118,9 +158,22 @@ model User {
   lastUploadAt    DateTime?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @default(now()) @updatedAt
+
+  // Relations
   Mapping         Mapping[]
   violations      RateViolation[]
   sessions        UserSession[]
+  albums          Album[]         // 新增：用户相册
+
+  // 新增 Relations
+  deviceFingerprints DeviceFingerprint[]
+  uploadRecords      UploadRecord[]
+  activityLogs       UserActivityLog[]
+  loginHistory       LoginHistory[]
+  membership         UserMembership?
+  quota              UserQuota?
+  storageStats       UserStorageStats?
+  invoices           Invoice[]
 
   @@index([email])
   @@index([tier])
@@ -161,6 +214,288 @@ model RateViolation {
   @@index([violationType])
 }
 
+// ============================================
+// 新增：设备指纹和身份追踪
+// ============================================
+model DeviceFingerprint {
+  id            String   @id @default(cuid())
+  userId        String?
+  fingerprint   String   @unique // Canvas+WebGL+Audio fingerprint
+  ipAddress     String
+  userAgent     String   @db.Text
+  platform      String
+  language      String
+  timezone      String
+  screenRes     String
+  plugins       String   @db.Text
+  isVpnProxy    Boolean  @default(false)
+  riskScore     Int      @default(0) // 0-100
+  firstSeen     DateTime @default(now())
+  lastSeen      DateTime @updatedAt
+  uploadCount   Int      @default(0)
+
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  uploadRecords UploadRecord[]
+
+  @@index([fingerprint])
+  @@index([userId])
+  @@index([ipAddress])
+}
+
+model UploadRecord {
+  id                String    @id @default(cuid())
+  userId            String?
+  mappingId         String
+  deviceFingerprintId String?
+  ipAddress         String
+  userAgent         String    @db.Text
+  geoCountry        String?
+  geoCity           String?
+  fileSize          Int
+  fileType          String
+  fileName          String
+  uploadMethod      String    @default("web") // web, api, mobile
+  isBlocked         Boolean   @default(false)
+  blockReason       String?
+  uploadedAt        DateTime  @default(now())
+
+  user              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceFingerprint DeviceFingerprint? @relation(fields: [deviceFingerprintId], references: [id])
+  mapping           Mapping   @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([mappingId])
+  @@index([deviceFingerprintId])
+  @@index([uploadedAt])
+}
+
+model UserActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String   // "login", "upload", "delete", "view", "download"
+  resource    String?  // mappingId, albumId, etc.
+  ipAddress   String
+  userAgent   String   @db.Text
+  metadata    Json?    // Additional context
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model LoginHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  ipAddress   String
+  userAgent   String   @db.Text
+  loginMethod String   @default("password") // password, oauth, magic_link
+  isSuccessful Boolean @default(true)
+  failureReason String?
+  geoCountry  String?
+  geoCity     String?
+  deviceFingerprint String?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ============================================
+// 新增：会员系统
+// ============================================
+model MembershipPlan {
+  id              String   @id @default(cuid())
+  name            String   @unique // "basic", "pro", "enterprise"
+  displayName     String   // "Basic Plan", "Pro Plan"
+  price           Int      // 价格（分为单位）
+  currency        String   @default("TWD")
+  billingCycle    String   @default("monthly") // monthly, yearly
+  features        Json     // 功能权限JSON
+  quotas          Json     // 配额限制JSON
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  memberships     UserMembership[]
+}
+
+model UserMembership {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  planId          String
+  status          String   @default("active") // active, expired, cancelled, trial
+  startDate       DateTime @default(now())
+  endDate         DateTime?
+  autoRenew       Boolean  @default(true)
+  trialEndsAt     DateTime?
+  cancelledAt     DateTime?
+  cancellationReason String?
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan            MembershipPlan @relation(fields: [planId], references: [id])
+  invoices        Invoice[]
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  membershipId    String
+  userId          String
+  amount          Int      // 金额（分为单位）
+  currency        String   @default("TWD")
+  status          String   @default("pending") // pending, paid, failed, refunded
+  paymentMethod   String?  // alipay, wechat, stripe, paypal
+  paymentProvider String?
+  providerInvoiceId String?
+  paidAt          DateTime?
+  refundedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  membership      UserMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([membershipId])
+  @@index([status])
+}
+
+// ============================================
+// 新增：配额和限制系统
+// ============================================
+model UserQuota {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+
+  // 当前使用量
+  uploadCountToday     Int      @default(0)
+  uploadCountMonth     Int      @default(0)
+  storageUsed          BigInt   @default(0) // bytes
+  imageCount           Int      @default(0)
+
+  // 限制配额（会根据会员等级动态调整）
+  maxUploadPerDay      Int      @default(50)
+  maxUploadPerMonth    Int      @default(1000)
+  maxStorage           BigInt   @default(104857600) // 100MB
+  maxImageCount        Int      @default(1000)
+
+  // 重置时间
+  lastDailyReset       DateTime @default(now())
+  lastMonthlyReset     DateTime @default(now())
+
+  // 违规记录
+  violationCount       Int      @default(0)
+  lastViolationAt      DateTime?
+  isBanned             Boolean  @default(false)
+  bannedUntil          DateTime?
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RateLimitRecord {
+  id              String   @id @default(cuid())
+  identifier      String   // userId or IP or fingerprint
+  action          String   // "upload", "api_call", "download"
+  windowStart     DateTime
+  windowEnd       DateTime
+  count           Int      @default(1)
+  limit           Int
+
+  @@unique([identifier, action, windowStart])
+  @@index([identifier])
+  @@index([windowStart])
+}
+
+// ============================================
+// 扩展后的相册模型
+// ============================================
+model Album {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  coverImageHash String?
+  adminId     String?  // 改为可选，因为现在有用户相册
+  userId      String?  // 新增：用户ID
+  isDefault   Boolean  @default(false) // 新增：标识默认相册
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  admin       Admin?   @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       AlbumItem[]
+  storageStats UserStorageStats? // 新增：统计关联
+
+  @@unique([userId, isDefault]) // 确保每个用户只有一个默认相册
+  @@index([adminId])
+  @@index([userId])
+}
+
+model AlbumItem {
+  id        String   @id @default(cuid())
+  albumId   String
+  mappingId String
+  order     Int      @default(0)
+  note      String?
+  fileSize  Int?     // 新增：文件大小（bytes）
+  fileType  String?  // 新增：文件类型（image/jpeg, image/png）
+  createdAt DateTime @default(now())
+
+  album     Album   @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  mapping   Mapping @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+
+  @@unique([albumId, mappingId])
+  @@index([albumId])
+  @@index([mappingId])
+}
+
+// ============================================
+// 新增：用户存储统计
+// ============================================
+model UserStorageStats {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  albumId         String   @unique // 默认相册ID
+
+  // 存储统计
+  totalFiles      Int      @default(0)
+  activeFiles     Int      @default(0)
+  deletedFiles    Int      @default(0)
+  totalSize       BigInt   @default(0) // bytes
+
+  // 访问统计
+  totalViews      Int      @default(0)
+  uniqueVisitors  Int      @default(0)
+
+  // 文件类型分布
+  jpegCount       Int      @default(0)
+  pngCount        Int      @default(0)
+  gifCount        Int      @default(0)
+  webpCount       Int      @default(0)
+  otherCount      Int      @default(0)
+
+  lastUploadAt    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  album           Album    @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============================================
+// 原有模型：访问日志
+// ============================================
 model AccessLog {
   id            String   @id
   mappingId     String
@@ -194,35 +529,4 @@ model ReferrerStats {
   @@index([accessCount])
   @@index([mappingId])
   @@index([refererDomain])
-}
-
-model Album {
-  id             String      @id @default(cuid())
-  name           String
-  description    String?
-  coverImageHash String?
-  adminId        String
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-
-  admin          Admin       @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  items          AlbumItem[]
-
-  @@index([adminId])
-}
-
-model AlbumItem {
-  id        String   @id @default(cuid())
-  albumId   String
-  mappingId String
-  order     Int      @default(0)
-  note      String?
-  createdAt DateTime @default(now())
-
-  album     Album   @relation(fields: [albumId], references: [id], onDelete: Cascade)
-  mapping   Mapping @relation(fields: [mappingId], references: [id], onDelete: Cascade)
-
-  @@unique([albumId, mappingId])
-  @@index([albumId])
-  @@index([mappingId])
 }
