@@ -188,6 +188,10 @@ export async function createSessionWithRetry(
 
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 天
 
+      // 生成臨時隨機 token 避免唯一約束衝突
+      const tempToken = generateSecureToken(32);
+      const tempRefreshToken = generateSecureToken(32);
+
       // 先創建 session 以獲取 ID
       const session = await prisma.adminSession.create({
         data: {
@@ -195,8 +199,8 @@ export async function createSessionWithRetry(
           userAgent,
           ipAddress,
           expiresAt,
-          token: '', // 暫時空白，稍後更新
-          refreshToken: '', // 暫時空白，稍後更新
+          token: tempToken, // 使用臨時隨機 token
+          refreshToken: tempRefreshToken, // 使用臨時隨機 refresh token
         },
       });
 
