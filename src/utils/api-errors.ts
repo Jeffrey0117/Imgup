@@ -126,7 +126,7 @@ export function createErrorResponse(
 } {
   const isProd = process.env.NODE_ENV === "production";
 
-  const response: Record<string, any> = { error };
+  const response: { error: string; [key: string]: any } = { error };
 
   // Only add additional fields in development
   if (!isProd && additionalFields) {
