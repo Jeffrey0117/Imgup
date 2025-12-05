@@ -193,8 +193,8 @@ export class AlbumService {
               mapping: {
                 select: {
                   id: true,
-                  shortCode: true,
-                  imageUrl: true,
+                  hash: true,
+                  url: true,
                   filename: true,
                 },
               },
@@ -229,14 +229,11 @@ export class AlbumService {
             mapping: {
               select: {
                 id: true,
-                shortCode: true,
-                imageUrl: true,
+                hash: true,
+                url: true,
                 filename: true,
-                fileSize: true,
-                mimeType: true,
-                width: true,
-                height: true,
-                uploadedAt: true,
+                fileExtension: true,
+                createdAt: true,
               },
             },
           },
