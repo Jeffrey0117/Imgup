@@ -103,9 +103,9 @@ export async function validateUpload(context: UploadValidationContext): Promise<
       }
     }
 
-    // 检查上传频率
+    // 检查上传频率 (简化版 - 基于每日上传量)
     const recentUploads = await QuotaService.getUserQuota(context.userId);
-    if (recentUploads.uploadCountThisHour >= recentUploads.maxUploadPerHour * 0.8) {
+    if (recentUploads.uploadCountToday >= recentUploads.maxUploadPerDay * 0.8) {
       riskFactors.highFrequencyUpload = true;
     }
 
