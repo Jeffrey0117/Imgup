@@ -88,30 +88,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const imageUrl = `${proxyUrl}/${hash}${ext}`;
   const pageUrl = `${baseUrl}/${hash}/p`;
 
-  const title = mapping.filename
-    ? `${mapping.filename} - 圖鴨分享`
-    : "圖鴨分享 - duk.tw";
+  const title = "圖鴨上床 duk.tw - 最好用的免費圖床";
+  const description = "免費圖片分享，支援快速上傳，免註冊即可使用";
 
   return {
     title,
-    description: `在 duk.tw 查看分享的圖片${mapping.filename ? `: ${mapping.filename}` : ""}`,
+    description,
     openGraph: {
       title,
-      description: `在 duk.tw 查看分享的圖片`,
+      description,
       siteName: "duk.tw",
       type: "article",
       url: pageUrl,
       images: [
         {
           url: imageUrl,
-          alt: mapping.filename || "分享圖片",
+          alt: "圖鴨上床分享圖片",
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
       title,
-      description: `在 duk.tw 查看分享的圖片`,
+      description,
       images: [imageUrl],
     },
   };
