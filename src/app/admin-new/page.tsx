@@ -178,7 +178,7 @@ export default function AdminDashboardPage() {
     }
 
     // 去重
-    const uniqueUrls = [...new Set(urls)];
+    const uniqueUrls = Array.from(new Set(urls));
 
     // 初始化結果
     const initialResults = uniqueUrls.map(url => ({
