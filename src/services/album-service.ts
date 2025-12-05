@@ -112,11 +112,10 @@ export class AlbumService {
         },
       });
 
-      // 更新相册的图片计数和更新时间
+      // 更新相册的更新时间
       await prisma.album.update({
         where: { id: params.albumId },
         data: {
-          imageCount: { increment: 1 },
           updatedAt: new Date(),
         },
       });
@@ -164,11 +163,10 @@ export class AlbumService {
           where: { albumId, mappingId },
         });
 
-        // 更新相册计数
+        // 更新相册时间
         await tx.album.update({
           where: { id: albumId },
           data: {
-            imageCount: { decrement: 1 },
             updatedAt: new Date(),
           },
         });
@@ -356,7 +354,6 @@ export class AlbumService {
         await tx.album.update({
           where: { id: albumId },
           data: {
-            imageCount: { increment: mappingIds.length },
             updatedAt: new Date(),
           },
         });
