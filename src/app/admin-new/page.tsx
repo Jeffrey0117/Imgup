@@ -190,7 +190,7 @@ export default function AdminDashboardPage() {
 
     // 批量處理（每次 3 個並發）
     const BATCH_SIZE = 3;
-    const results = [...initialResults];
+    const results: {url: string; status: 'pending' | 'success' | 'failed'; shortUrl?: string; error?: string}[] = [...initialResults];
 
     for (let i = 0; i < uniqueUrls.length; i += BATCH_SIZE) {
       const batch = uniqueUrls.slice(i, i + BATCH_SIZE);
