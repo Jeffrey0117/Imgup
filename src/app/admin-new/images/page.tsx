@@ -555,7 +555,7 @@ export default function ImagesPage() {
                   <input
                     type="checkbox"
                     checked={selectedImages.has(image.id)}
-                    onChange={(e) => handleSelectImage(image.id, index, e)}
+                    onChange={() => handleSelectImage(image.id, index)}
                     className={imgStyles.checkbox}
                   />
                 </td>
