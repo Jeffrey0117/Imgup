@@ -1,0 +1,70 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import prisma from '@/lib/prisma';
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
+    // Get user info
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Get membership info
+    const membership = await prisma.userMembership.findFirst({
+      where: {
+        userId,
+        status: 'active',
+      },
+      include: {
+        plan: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        startDate: 'desc',
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        email: user.email,
+        username: user.username || user.email.split('@')[0],
+        membershipPlan: membership?.plan.name || 'Free Trial',
+        createdAt: user.createdAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Failed to get settings:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

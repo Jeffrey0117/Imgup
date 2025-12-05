@@ -1,0 +1,36 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { deleteUserData } from '@/services/privacy-service';
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getServerSession();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Delete all user data
+    await deleteUserData(session.user.id);
+
+    // Note: In a real application, you would also need to:
+    // 1. Sign out the user (invalidate session)
+    // 2. Delete any stored files/images from storage
+    // 3. Cancel any active subscriptions
+    // 4. Send confirmation email
+
+    return NextResponse.json({
+      success: true,
+      message: 'Account deleted successfully',
+    });
+  } catch (error) {
+    console.error('Failed to delete account:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

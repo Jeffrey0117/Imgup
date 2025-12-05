@@ -1,0 +1,62 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { checkConsent, updateConsent } from '@/services/privacy-service';
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const consent = await checkConsent(session.user.id);
+
+    return NextResponse.json({
+      success: true,
+      data: consent,
+    });
+  } catch (error) {
+    console.error('Failed to get consent:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getServerSession();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { dataCollection, analytics, marketing } = body;
+
+    const consent = await updateConsent(session.user.id, {
+      dataCollection,
+      analytics,
+      marketing,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: consent,
+    });
+  } catch (error) {
+    console.error('Failed to update consent:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

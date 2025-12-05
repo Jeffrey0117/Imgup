@@ -1,0 +1,33 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { InvoiceService } from '@/services/invoice-service';
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const invoices = await InvoiceService.getUserInvoices(session.user.id, {
+      includeDetails: true,
+      orderBy: 'createdAt',
+      order: 'desc',
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: invoices,
+    });
+  } catch (error) {
+    console.error('Failed to get invoices:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,44 @@
+# API测试文件 (使用REST Client扩展)
+# 或直接复制curl命令到终端执行
+
+### 1. 获取配额状态
+GET http://localhost:3000/api/quota
+Content-Type: application/json
+
+### 2. 获取相册列表
+GET http://localhost:3000/api/albums
+Content-Type: application/json
+
+### 3. 创建新相册
+POST http://localhost:3000/api/albums
+Content-Type: application/json
+
+{
+  "name": "测试相册",
+  "description": "这是一个测试相册",
+  "isPublic": false
+}
+
+### 4. 获取会员计划
+GET http://localhost:3000/api/membership/plans
+Content-Type: application/json
+
+### 5. 创建订阅
+POST http://localhost:3000/api/membership/subscribe
+Content-Type: application/json
+
+{
+  "planId": "basic",
+  "billingCycle": "monthly",
+  "paymentMethod": "stripe"
+}
+
+### 6. 创建支付会话
+POST http://localhost:3000/api/payment/checkout
+Content-Type: application/json
+
+{
+  "planId": "basic",
+  "billingCycle": "monthly",
+  "provider": "stripe"
+}

@@ -1,0 +1,35 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { exportUserData } from '@/services/privacy-service';
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userData = await exportUserData(session.user.id);
+
+    // Return as JSON file download
+    const filename = `user-data-export-${session.user.id}-${Date.now()}.json`;
+
+    return new NextResponse(JSON.stringify(userData, null, 2), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to export user data:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
