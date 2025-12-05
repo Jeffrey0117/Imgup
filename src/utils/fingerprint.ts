@@ -159,7 +159,7 @@ export async function generateDeviceFingerprint(): Promise<FingerprintData> {
     screenRes,
     plugins,
     navigator.hardwareConcurrency || 'unknown',
-    navigator.deviceMemory || 'unknown',
+    (navigator as any).deviceMemory || 'unknown',
   ].join('|');
 
   const fingerprint = simpleHash(combinedFingerprint);
