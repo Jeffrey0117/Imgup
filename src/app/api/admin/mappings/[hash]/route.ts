@@ -53,7 +53,8 @@ export const DELETE = withPermission(PERMISSIONS.MAPPING_DELETE)(
 );
 
 export const GET = withPermission(PERMISSIONS.MAPPING_READ)(
-  async (request, { params }: { params: Promise<{ hash: string }> }) => {
+  async (request, context) => {
+    const { params } = context as { params: Promise<{ hash: string }> };
     try {
       const { hash } = await params;
 
@@ -89,7 +90,8 @@ export const GET = withPermission(PERMISSIONS.MAPPING_READ)(
 );
 
 export const PUT = withPermission(PERMISSIONS.MAPPING_UPDATE)(
-  async (request, { params }: { params: Promise<{ hash: string }> }) => {
+  async (request, context) => {
+    const { params } = context as { params: Promise<{ hash: string }> };
     try {
       const { hash } = await params;
     const body = await request.json().catch(() => ({}));
