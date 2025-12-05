@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getClientIp } from "@/utils/admin-auth";
 
 export const DELETE = withPermission(PERMISSIONS.MAPPING_DELETE)(
-  async (request, { params }: { params: Promise<{ hash: string }> }) => {
+  async (request, context) => {
+    const { params } = context as { params: Promise<{ hash: string }> };
     try {
       const { hash } = await params;
 
