@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import Header from "../components/Header";
 import { Analytics } from "@vercel/analytics/react";
@@ -54,6 +55,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-Hant" suppressHydrationWarning>
+      <head>
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4526447705456258"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+      </head>
       <body suppressHydrationWarning>
         <Header />
         {children}
