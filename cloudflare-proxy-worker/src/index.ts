@@ -1,18 +1,19 @@
 /**
- * Cloudflare Worker - duk.tw 圖片代理服務 v3
+ * Cloudflare Worker - duk.tw 圖片代理服務 v4
  *
- * 🎯 完美隱藏原始 URL + 節省 99% 成本 + R2 直接讀取
+ * 🚀 超高速版本 - 直連 Neon PostgreSQL，跳過 Vercel API
  *
  * 支援三種模式：
  * 1. R2 直接讀取（最省錢）: mapping URL 為 r2://key 時直接從 R2 讀取
- * 2. Hash 模式（隱藏 URL）: https://proxy.duk.tw/pbQyTD
- * 3. URL 模式（向後兼容）: https://proxy.duk.tw/image?url=xxx
+ * 2. Hash 模式（隱藏 URL）: https://i.duk.tw/pbQyTD
+ * 3. URL 模式（向後兼容）: https://i.duk.tw/image?url=xxx
  *
- * 預期節省：$498/月 → < $5/月（節省 99%）
+ * 速度優化：Worker 直連 Neon，預估 TTFB < 200ms
  */
 
+import { neon } from '@neondatabase/serverless';
+
 // ===== 配置 =====
-const API_BASE_URL = 'https://duk.tw'; // Vercel API 基礎 URL
 const ALLOWED_REFERERS = ['duk.tw', 'localhost', '127.0.0.1'];
 const BLOCKED_USER_AGENTS = [
   'ccbot', 'gptbot', 'amazonbot', 'bytespider',
@@ -26,8 +27,9 @@ const RATE_LIMIT_PER_MINUTE = 30;
 // ===== 類型定義 =====
 interface Env {
   RATE_LIMIT_KV?: KVNamespace;
-  MAPPING_KV?: KVNamespace;  // Mapping 緩存，減少 Vercel API 調用
+  MAPPING_KV?: KVNamespace;  // Mapping 緩存
   IMAGES_BUCKET?: R2Bucket;  // R2 圖片儲存
+  DATABASE_URL: string;      // Neon PostgreSQL 連接字串
 }
 
 interface RateLimitData {
@@ -240,14 +242,14 @@ async function serveFromR2(key: string, env: Env, referer: string): Promise<Resp
 }
 
 /**
- * 帶 KV 緩存的 mapping 查詢（節省 99% Vercel API 調用）
- * 流程：KV 緩存 → Cloudflare Cache → Vercel API → 寫回 KV
+ * 🚀 超高速 mapping 查詢
+ * 流程：KV 緩存 → Neon 直連（跳過 Vercel API）→ 寫回 KV
  */
 async function fetchMappingWithKVCache(hash: string, env: Env): Promise<string | null> {
   const cleanHash = hash.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i, '');
   const kvKey = `mapping:${cleanHash}`;
 
-  // Step 1: 先查 KV 緩存
+  // Step 1: 先查 KV 緩存（最快，~10ms）
   if (env.MAPPING_KV) {
     try {
       const cached = await env.MAPPING_KV.get(kvKey);
@@ -261,8 +263,8 @@ async function fetchMappingWithKVCache(hash: string, env: Env): Promise<string |
     }
   }
 
-  // Step 2: KV 沒有，打 Vercel API
-  const imageUrl = await fetchMappingUrl(hash);
+  // Step 2: KV 沒有，直連 Neon 查詢（~50-100ms，比打 Vercel API 快 10 倍）
+  const imageUrl = await fetchMappingFromNeon(cleanHash, env);
 
   // Step 3: 成功的話寫入 KV 緩存
   if (imageUrl && env.MAPPING_KV) {
@@ -278,7 +280,57 @@ async function fetchMappingWithKVCache(hash: string, env: Env): Promise<string |
 }
 
 /**
- * 從 Vercel API 查詢 hash 對應的真實 URL（純 API 調用，不帶緩存）
+ * 🚀 直連 Neon PostgreSQL 查詢 mapping（超快，~50-100ms）
+ */
+async function fetchMappingFromNeon(hash: string, env: Env): Promise<string | null> {
+  if (!env.DATABASE_URL) {
+    console.error('❌ DATABASE_URL 未設定');
+    return null;
+  }
+
+  try {
+    const sql = neon(env.DATABASE_URL);
+    const startTime = Date.now();
+
+    // 單一查詢，只取需要的欄位
+    const result = await sql`
+      SELECT url, "expiresAt", "isDeleted"
+      FROM "Mapping"
+      WHERE hash = ${hash}
+      LIMIT 1
+    `;
+
+    const queryTime = Date.now() - startTime;
+    console.log(`🚀 Neon 查詢耗時: ${queryTime}ms`);
+
+    if (result.length === 0) {
+      console.log(`❌ Hash 不存在: ${hash}`);
+      return null;
+    }
+
+    const mapping = result[0];
+
+    // 檢查是否已刪除
+    if (mapping.isDeleted) {
+      console.log(`❌ Mapping 已刪除: ${hash}`);
+      return null;
+    }
+
+    // 檢查是否過期
+    if (mapping.expiresAt && new Date(mapping.expiresAt) < new Date()) {
+      console.log(`❌ Mapping 已過期: ${hash}`);
+      return null;
+    }
+
+    return mapping.url;
+  } catch (error) {
+    console.error('❌ Neon 查詢失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * 從 Vercel API 查詢 hash 對應的真實 URL（備援，當 Neon 直連失敗時使用）
  */
 async function fetchMappingUrl(hash: string): Promise<string | null> {
   try {

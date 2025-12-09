@@ -145,6 +145,13 @@ export default function AdminLayout({
               <span className={styles.navIcon}>🔐</span>
               <span className={styles.navText}>安全管理</span>
             </Link>
+            <Link
+              href="/admin-new/settings"
+              className={`${styles.navItem} ${pathname.startsWith("/admin-new/settings") ? styles.active : ""}`}
+            >
+              <span className={styles.navIcon}>⚙️</span>
+              <span className={styles.navText}>系統設定</span>
+            </Link>
           </nav>
 
           <div className={styles.sidebarFooter}>

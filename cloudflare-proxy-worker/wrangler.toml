@@ -1,9 +1,10 @@
 # Cloudflare Workers 配置文件
-# duk.tw 圖片代理服務
+# duk.tw 圖片代理服務 v4 - 超高速版（直連 Neon）
 
 name = "duktwimg-proxy"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"  # 需要較新日期才能用 nodejs_compat
+compatibility_flags = ["nodejs_compat"]  # 啟用 Node.js 兼容模式（Neon driver 需要）
 
 # Workers 類型
 workers_dev = true
@@ -26,11 +27,16 @@ id = "8bbd5609a9b0406388f98de6bcb8a82b"
 binding = "IMAGES_BUCKET"
 bucket_name = "duk-images"
 
-# 自定義域名路由（已啟用）
+# 自定義域名路由
 routes = [
+  { pattern = "i.duk.tw/*", zone_name = "duk.tw" },
   { pattern = "proxy.duk.tw/*", zone_name = "duk.tw" }
 ]
 
-# 環境變數（可選）
-# [vars]
-# ENVIRONMENT = "production"
+# 環境變數
+# DATABASE_URL 使用 wrangler secret 設定（不要寫在這裡）
+# 執行: wrangler secret put DATABASE_URL
+# 然後貼上 Neon 連接字串
+
+[vars]
+ENVIRONMENT = "production"

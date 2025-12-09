@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Cloudflare Worker 代理 URL
-const PROXY_URL = process.env.NEXT_PUBLIC_PROXY_URL || 'https://proxy.duk.tw';
+// Cloudflare Worker 代理 URL（i.duk.tw 直連 Neon，超快）
+const PROXY_URL = process.env.NEXT_PUBLIC_PROXY_URL || 'https://i.duk.tw';
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
