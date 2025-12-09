@@ -35,8 +35,15 @@ const FILE_SIGNATURES = {
   ico: [0x00, 0x00, 0x01, 0x00],
 };
 
-// 預設最大檔案大小（25MB）
-const DEFAULT_MAX_FILE_SIZE = 25 * 1024 * 1024;
+// 預設最大檔案大小（依身份不同）
+const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 訪客：10MB
+
+// 各身份檔案大小限制
+export const FILE_SIZE_LIMITS = {
+  guest: 10 * 1024 * 1024,    // 訪客：10MB
+  member: 25 * 1024 * 1024,   // 免費會員：25MB
+  premium: 50 * 1024 * 1024,  // 付費會員：50MB
+};
 
 interface FileValidationResult {
   valid: boolean;

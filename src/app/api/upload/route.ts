@@ -12,7 +12,8 @@ import {
 import {
   validateFile,
   validateOrigin,
-  sanitizeFileName
+  sanitizeFileName,
+  FILE_SIZE_LIMITS
 } from '@/utils/file-validation';
 
 // 加入副檔名處理
@@ -225,7 +226,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 步驟 6: 驗證檔案（包含大小、類型、簽名、惡意內容檢查）
+    // 根據用戶身份取得對應的檔案大小限制
+    const userTier = rateLimitResult.userContext?.tier || 'guest';
+    const maxFileSize = FILE_SIZE_LIMITS[userTier as keyof typeof FILE_SIZE_LIMITS] || FILE_SIZE_LIMITS.guest;
+
     const validationResult = await validateFile(image, {
+      maxSize: maxFileSize,
       // 僅當明確設定為 'true' 才啟用嚴格檢查，避免誤殺導致 400/500
       checkSignature: process.env.ENABLE_FILE_SIGNATURE_CHECK === 'true',
       checkMalicious: process.env.ENABLE_MALICIOUS_CHECK === 'true',

@@ -377,12 +377,12 @@ export function createRateLimiter(config: RateLimitConfig) {
 }
 
 export const uploadRateLimiter = createRateLimiter({
-  maxRequests: parseInt(process.env.UPLOAD_RATE_LIMIT_PER_MINUTE || '10'),
+  maxRequests: parseInt(process.env.UPLOAD_RATE_LIMIT_PER_MINUTE || '5'),
   windowMs: 60 * 1000,
   tierLimits: {
-    guest: 10,
-    member: 30,
-    premium: 100
+    guest: 5,      // 訪客：每分鐘 5 張
+    member: 20,    // 免費會員：每分鐘 20 張
+    premium: 60    // 付費會員：每分鐘 60 張
   }
 });
 

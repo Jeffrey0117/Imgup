@@ -10,6 +10,7 @@ import PasswordSettings from "../components/PasswordSettings";
 import TermsModal from "../components/TermsModal";
 import PasteUpload from "../components/PasteUpload";
 import UserStatus from "../components/UserStatus";
+import UploadLimits, { validateFileSize, TIER_LIMITS } from "../components/UploadLimits";
 // 移除 generateShortHash，改為使用後端回傳的資料
 
 interface UploadItem {
@@ -92,28 +93,46 @@ export default function Home() {
     setUploadProgress(overall);
   }, [isUploading, batchTotal, activeBatchIds, queue]);
 
-  // 移除檔案大小限制（因為實際上傳是調用外部 API）
+  // 添加檔案並驗證大小（訪客限制 10MB）
   const addFiles = (files: FileList | File[]) => {
     const fileArray = Array.isArray(files) ? files : Array.from(files);
     const newItems: UploadItem[] = [];
+    const rejectedFiles: { name: string; error: string }[] = [];
+
+    // TODO: 未來可根據登入狀態取得實際 tier
+    const currentTier: "guest" | "member" | "premium" = "guest";
 
     fileArray.forEach((file) => {
-      if (file.type.startsWith("image/")) {
-        newItems.push({
-          id: crypto.randomUUID(),
-          file,
-          done: false,
-          url: null,
-          progress: 0,
-          status: "queued",
-        });
+      if (!file.type.startsWith("image/")) {
+        rejectedFiles.push({ name: file.name, error: "不支援的檔案格式" });
+        return;
       }
+
+      // 驗證檔案大小
+      const validation = validateFileSize(file, currentTier);
+      if (!validation.valid) {
+        rejectedFiles.push({ name: file.name, error: validation.error || "檔案過大" });
+        return;
+      }
+
+      newItems.push({
+        id: crypto.randomUUID(),
+        file,
+        done: false,
+        url: null,
+        progress: 0,
+        status: "queued",
+      });
     });
 
     setQueue((prev) => [...prev, ...newItems]);
 
-    // 顯示貼上成功提示
-    if (newItems.length > 0) {
+    // 顯示結果提示
+    if (rejectedFiles.length > 0) {
+      const rejectedNames = rejectedFiles.map(f => `${f.name}: ${f.error}`).join("\n");
+      showToast(`${newItems.length} 張圖片已添加，${rejectedFiles.length} 張被拒絕`);
+      console.warn("被拒絕的檔案:", rejectedFiles);
+    } else if (newItems.length > 0) {
       showToast(`已添加 ${newItems.length} 張圖片`);
     }
   };
@@ -530,27 +549,27 @@ export default function Home() {
               </div>
               <div className={styles.tooltipContent}>
                 <div className={styles.tooltipItem}>
-                  <strong>檔案限制：</strong> JPG、PNG、WebP、GIF 格式，單檔最大 25MB
+                  <strong>檔案格式：</strong> JPG、PNG、WebP、GIF、BMP、SVG、ICO
                 </div>
                 <div className={styles.tooltipItem}>
-                  <strong>⚡ 訪客限制：</strong> 每分鐘最多上傳 10 張圖片
+                  <strong>⚡ 訪客：</strong> 單檔 10MB、5張/分鐘、50張/天
                 </div>
                 <div className={styles.tooltipItem}>
-                  <strong>👤 會員限制：</strong> 每分鐘最多上傳 30 張圖片
+                  <strong>👤 免費會員：</strong> 單檔 25MB、20張/分鐘、200張/天
                 </div>
                 <div className={styles.tooltipItem}>
-                  <strong>💎 付費會員：</strong> 每分鐘最多上傳 100 張圖片
+                  <strong>💎 付費會員：</strong> 單檔 50MB、60張/分鐘、無限制
                 </div>
                 <div className={styles.tooltipItem}>
-                  <strong>🚨 懲罰機制：</strong>
+                  <strong>🚨 違規處理：</strong>
                   <ul style={{marginTop: '4px', paddingLeft: '16px', fontSize: '12px'}}>
-                    <li>1-2 次違規：警告提示</li>
-                    <li>3-4 次違規：限制 24 小時</li>
-                    <li>5 次以上：永久停用</li>
+                    <li>1-2 次：警告提示</li>
+                    <li>3-4 次：限制 24 小時</li>
+                    <li>5 次以上：帳號停用</li>
                   </ul>
                 </div>
                 <div className={styles.tooltipItem} style={{marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #ddd'}}>
-                  💡 <a href="/register" style={{color: '#4CAF50', textDecoration: 'underline'}}>註冊會員</a> 享有更高上傳限制！
+                  💡 <a href="/register" style={{color: '#4CAF50', textDecoration: 'underline'}}>註冊會員</a> 享有更高限制！
                 </div>
               </div>
             </div>
@@ -622,6 +641,9 @@ export default function Home() {
               <ExpirySettings onExpiryChange={setExpiryDate} />
               <PasswordSettings onPasswordChange={setPassword} />
             </div>
+
+            {/* 上傳限制提示 */}
+            <UploadLimits userTier="guest" />
 
             <div className={styles.actions}>
               <button
