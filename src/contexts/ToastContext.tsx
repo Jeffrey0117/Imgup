@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
+import { createPortal } from "react-dom";
 import ToastContainer from "@/components/Toast/ToastContainer";
 import { ToastProps } from "@/components/Toast/Toast";
 
@@ -16,6 +17,12 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Omit<ToastProps, "onClose">[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  // 確保 Portal 只在 client 端 render
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -67,7 +74,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast, success, error, warning, info }}>
       {children}
-      <ToastContainer toasts={toasts} onClose={removeToast} />
+      {/* 使用 Portal 將 Toast 渲染到 body，確保 z-index 不受父元素限制 */}
+      {mounted && createPortal(
+        <ToastContainer toasts={toasts} onClose={removeToast} />,
+        document.body
+      )}
     </ToastContext.Provider>
   );
 }
