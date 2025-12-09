@@ -1,12 +1,16 @@
 /**
- * Cloudflare Worker - duk.tw 圖片代理服務 v4
+ * Cloudflare Worker - duk.tw 圖片代理服務 v5
  *
- * 🚀 超高速版本 - 直連 Neon PostgreSQL，跳過 Vercel API
+ * 🚀 超高速版本 + 智慧路由
  *
  * 支援三種模式：
  * 1. R2 直接讀取（最省錢）: mapping URL 為 r2://key 時直接從 R2 讀取
  * 2. Hash 模式（隱藏 URL）: https://i.duk.tw/pbQyTD
  * 3. URL 模式（向後兼容）: https://i.duk.tw/image?url=xxx
+ *
+ * 🎯 智慧路由：
+ * - 瀏覽器訪問 → 302 到預覽頁（賺廣告費）
+ * - 論壇/curl/爬蟲 → 直接代理圖片
  *
  * 速度優化：Worker 直連 Neon，預估 TTFB < 200ms
  */
@@ -15,12 +19,25 @@ import { neon } from '@neondatabase/serverless';
 
 // ===== 配置 =====
 const ALLOWED_REFERERS = ['duk.tw', 'localhost', '127.0.0.1'];
+const SITE_BASE_URL = 'https://duk.tw';
+
+// 這些 UA 直接代理圖片（不導到預覽頁）
+const DIRECT_PROXY_USER_AGENTS = [
+  // 論壇/社群爬蟲（需要 embed 圖片）
+  'discoursebot', 'facebookexternalhit', 'twitterbot', 'telegrambot',
+  'whatsapp', 'slackbot', 'linkedinbot', 'discordbot', 'line-poker',
+  // 開發工具
+  'curl/', 'wget/', 'httpie', 'postman', 'insomnia',
+  'python-requests', 'python-urllib', 'go-http-client',
+  // RSS 閱讀器
+  'feedly', 'feedparser',
+];
+
+// 這些 UA 完全封鎖
 const BLOCKED_USER_AGENTS = [
   'ccbot', 'gptbot', 'amazonbot', 'bytespider',
-  'python-requests', 'python-urllib', 'curl/', 'wget/',
-  'go-http-client', 'scrapy', 'java/', 'bot', 'spider',
-  'crawler', 'scraper', 'slurp', 'bingbot', 'googlebot',
-  'baiduspider', 'yandexbot',
+  'scrapy', 'java/', 'spider', 'crawler', 'scraper',
+  'slurp', 'bingbot', 'googlebot', 'baiduspider', 'yandexbot',
 ];
 const RATE_LIMIT_PER_MINUTE = 30;
 
@@ -81,6 +98,34 @@ export default {
 
         console.log('🔍 Hash 模式:', hash);
 
+        // 🎯 智慧路由：判斷是瀏覽器還是爬蟲
+        const userAgent = (request.headers.get('user-agent') || '').toLowerCase();
+        const accept = request.headers.get('accept') || '';
+        const cleanHash = hash.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i, '');
+
+        // 判斷是否為瀏覽器請求
+        const isBrowser = userAgent.includes('mozilla') &&
+                          !DIRECT_PROXY_USER_AGENTS.some(ua => userAgent.includes(ua));
+
+        // 判斷是否為圖片嵌入請求（Accept: image/*）
+        const isImageEmbed = accept.startsWith('image/') ||
+                             accept.includes('image/*') ||
+                             !accept.includes('text/html');
+
+        console.log('🎯 智慧路由判斷:', {
+          isBrowser,
+          isImageEmbed,
+          userAgent: userAgent.substring(0, 50),
+          accept: accept.substring(0, 50)
+        });
+
+        // 瀏覽器直接訪問（非圖片嵌入）→ 導到預覽頁（有廣告）
+        if (isBrowser && !isImageEmbed) {
+          const previewUrl = `${SITE_BASE_URL}/${cleanHash}/p`;
+          console.log('🎯 瀏覽器訪問 → 導到預覽頁:', previewUrl);
+          return Response.redirect(previewUrl, 302);
+        }
+
         // 優先從 KV 緩存查詢（節省 Vercel API 調用）
         imageUrl = await fetchMappingWithKVCache(hash, env);
         if (!imageUrl) {
@@ -94,12 +139,12 @@ export default {
       // 完全開放圖片訪問，方便各種 APP 和工具使用
       const referer = request.headers.get('referer') || request.headers.get('referrer') || '';
 
-      // === 安全檢查 2: User-Agent 黑名單 ===
-      const userAgent = (request.headers.get('user-agent') || '').toLowerCase();
-      const isBlockedUA = BLOCKED_USER_AGENTS.some(blocked => userAgent.includes(blocked));
+      // === 安全檢查 2: User-Agent 黑名單（只在 URL 模式下檢查）===
+      const userAgentCheck = (request.headers.get('user-agent') || '').toLowerCase();
+      const isBlockedUA = BLOCKED_USER_AGENTS.some(blocked => userAgentCheck.includes(blocked));
 
       if (isBlockedUA) {
-        console.log(`❌ Blocked User-Agent: ${userAgent}`);
+        console.log(`❌ Blocked User-Agent: ${userAgentCheck}`);
         return jsonResponse({ error: 'Access denied: Blocked user agent' }, 403);
       }
 
