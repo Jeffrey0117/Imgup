@@ -335,7 +335,7 @@ export async function POST(request: NextRequest) {
       mime?: string;
       key?: string;
       tier?: string;
-    };
+    } | null = null;
     let storageProvider: StorageProvider = 'urusai';
     let storageTier = 'external';
     let storageKey: string | undefined;
@@ -360,29 +360,31 @@ export async function POST(request: NextRequest) {
       } else {
         console.warn(`[Upload] R2 failed: ${r2Result.error}, falling back to external services...`);
         // R2 失敗，降級到舊的上傳服務
-        uploadResult = await fallbackToExternalUpload(image, safeFileName, providerPreference, clientIP, userAgent);
-        if (!uploadResult) {
+        const fallbackResult = await fallbackToExternalUpload(image, safeFileName, providerPreference, clientIP, userAgent);
+        if (!fallbackResult) {
           await logUploadAttempt(clientIP, false, 'All upload providers failed', userAgent);
           return NextResponse.json(
             { status: 0, message: 'Upload failed. Please try again later.' },
             { status: 500 }
           );
         }
-        storageProvider = uploadResult.provider as StorageProvider;
+        uploadResult = fallbackResult;
+        storageProvider = fallbackResult.provider as StorageProvider;
         storageTier = 'external';
       }
     } else {
       // 使用舊的外部服務
       console.log('[Upload] Using external upload services...');
-      uploadResult = await fallbackToExternalUpload(image, safeFileName, providerPreference, clientIP, userAgent);
-      if (!uploadResult) {
+      const fallbackResult = await fallbackToExternalUpload(image, safeFileName, providerPreference, clientIP, userAgent);
+      if (!fallbackResult) {
         await logUploadAttempt(clientIP, false, 'All upload providers failed', userAgent);
         return NextResponse.json(
           { status: 0, message: 'Upload failed. Please try again later.' },
           { status: 500 }
         );
       }
-      storageProvider = uploadResult.provider as StorageProvider;
+      uploadResult = fallbackResult;
+      storageProvider = fallbackResult.provider as StorageProvider;
       storageTier = 'external';
     }
 
@@ -391,6 +393,15 @@ export async function POST(request: NextRequest) {
       tier: storageTier,
       key: storageKey,
     });
+
+    // 確保 uploadResult 不為 null
+    if (!uploadResult) {
+      await logUploadAttempt(clientIP, false, 'Upload result is null', userAgent);
+      return NextResponse.json(
+        { status: 0, message: 'Upload failed. Please try again later.' },
+        { status: 500 }
+      );
+    }
 
     // 記錄成功的上傳
     await logUploadAttempt(clientIP, true, `Success via ${uploadResult.provider}`, userAgent);
@@ -403,7 +414,7 @@ export async function POST(request: NextRequest) {
         {
           status: 0,
           message: "Upload service returned no image URL",
-          detail: { provider: uploadResult?.provider || null, uploadResult },
+          detail: { provider: uploadResult.provider || null, uploadResult },
         },
         { status: 500 }
       );

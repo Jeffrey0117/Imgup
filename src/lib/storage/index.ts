@@ -242,7 +242,7 @@ async function uploadToUrusai(
     }
 
     const formData = new FormData();
-    const blob = new Blob([buffer]);
+    const blob = new Blob([new Uint8Array(buffer)]);
     formData.append('file', blob, filename);
 
     if (process.env.URUSAI_TOKEN) {
@@ -284,7 +284,7 @@ async function uploadToMeteor(
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
     const formData = new FormData();
-    const blob = new Blob([buffer]);
+    const blob = new Blob([new Uint8Array(buffer)]);
     formData.append('file', blob, filename);
 
     const response = await fetch('https://api.imgkr.com/api/v2/files/upload', {

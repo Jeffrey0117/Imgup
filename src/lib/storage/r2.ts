@@ -81,7 +81,14 @@ export async function uploadToR2(
     const finalContentType = contentType || getContentType(key);
 
     // 確保 buffer 是正確的格式
-    const body = buffer instanceof Buffer ? buffer : Buffer.from(buffer);
+    let body: Buffer;
+    if (buffer instanceof Buffer) {
+      body = buffer;
+    } else if (buffer instanceof Uint8Array) {
+      body = Buffer.from(buffer);
+    } else {
+      body = Buffer.from(new Uint8Array(buffer));
+    }
 
     const command = new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
