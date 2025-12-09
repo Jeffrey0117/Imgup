@@ -14,6 +14,12 @@ workers_dev = true
 binding = "RATE_LIMIT_KV"
 id = "df5941d509a34615874eb89d048cd6f6"
 
+# KV Namespace for Mapping Cache (節省 Vercel API 調用)
+# 執行：wrangler kv:namespace create "MAPPING_KV"
+[[kv_namespaces]]
+binding = "MAPPING_KV"
+id = "8bbd5609a9b0406388f98de6bcb8a82b"
+
 # 自定義域名路由（已啟用）
 routes = [
   { pattern = "proxy.duk.tw/*", zone_name = "duk.tw" }

@@ -25,6 +25,7 @@ const RATE_LIMIT_PER_MINUTE = 30;
 // ===== 類型定義 =====
 interface Env {
   RATE_LIMIT_KV?: KVNamespace;
+  MAPPING_KV?: KVNamespace;  // Mapping 緩存，減少 Vercel API 調用
 }
 
 interface RateLimitData {
@@ -76,8 +77,8 @@ export default {
 
         console.log('🔍 Hash 模式:', hash);
 
-        // 從 Vercel API 查詢映射
-        imageUrl = await fetchMappingUrl(hash);
+        // 優先從 KV 緩存查詢（節省 Vercel API 調用）
+        imageUrl = await fetchMappingWithKVCache(hash, env);
         if (!imageUrl) {
           return jsonResponse({ error: 'Hash not found or expired' }, 404);
         }
@@ -154,8 +155,49 @@ export default {
 
 // ===== 輔助函數 =====
 
+// Mapping KV 緩存 TTL（7 天，因為 mapping 很少變動）
+const MAPPING_KV_TTL = 60 * 60 * 24 * 7;
+
 /**
- * 從 Vercel API 查詢 hash 對應的真實 URL
+ * 帶 KV 緩存的 mapping 查詢（節省 99% Vercel API 調用）
+ * 流程：KV 緩存 → Cloudflare Cache → Vercel API → 寫回 KV
+ */
+async function fetchMappingWithKVCache(hash: string, env: Env): Promise<string | null> {
+  const cleanHash = hash.replace(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i, '');
+  const kvKey = `mapping:${cleanHash}`;
+
+  // Step 1: 先查 KV 緩存
+  if (env.MAPPING_KV) {
+    try {
+      const cached = await env.MAPPING_KV.get(kvKey);
+      if (cached) {
+        console.log('💾 KV HIT:', cleanHash);
+        return cached;
+      }
+      console.log('💾 KV MISS:', cleanHash);
+    } catch (e) {
+      console.warn('⚠️ KV 讀取失敗:', e);
+    }
+  }
+
+  // Step 2: KV 沒有，打 Vercel API
+  const imageUrl = await fetchMappingUrl(hash);
+
+  // Step 3: 成功的話寫入 KV 緩存
+  if (imageUrl && env.MAPPING_KV) {
+    try {
+      await env.MAPPING_KV.put(kvKey, imageUrl, { expirationTtl: MAPPING_KV_TTL });
+      console.log('💾 KV SAVED:', cleanHash);
+    } catch (e) {
+      console.warn('⚠️ KV 寫入失敗:', e);
+    }
+  }
+
+  return imageUrl;
+}
+
+/**
+ * 從 Vercel API 查詢 hash 對應的真實 URL（純 API 調用，不帶緩存）
  */
 async function fetchMappingUrl(hash: string): Promise<string | null> {
   try {
@@ -170,7 +212,7 @@ async function fetchMappingUrl(hash: string): Promise<string | null> {
         'Accept': 'application/json',
       },
       cf: {
-        cacheTtl: 300, // 緩存 5 分鐘
+        cacheTtl: 86400, // 緩存 24 小時（配合 KV 緩存進一步減少 API 調用）
       },
     });
 
