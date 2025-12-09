@@ -1,17 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 加速編譯
-  eslint: {
-    // 部署時跳過 ESLint（在本地開發時檢查）
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    // 部署時跳過 TypeScript 檢查（在本地開發時檢查）
-    ignoreBuildErrors: false,
-  },
-  // 優化 bundle
-  swcMinify: true,
-  // 減少 source map 大小
+  // 減少 source map 大小（加速編譯）
   productionBrowserSourceMaps: false,
 
   // App Router is enabled by default in Next.js 13+

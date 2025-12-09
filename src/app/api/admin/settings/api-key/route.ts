@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateAdmin } from "@/utils/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { clearSettingsCache } from "@/lib/system-config";
 import crypto from "crypto";
 
 /**
@@ -75,6 +76,9 @@ export async function PUT(request: NextRequest) {
         ipAddress: request.headers.get("x-forwarded-for") || "unknown",
       },
     });
+
+    // 清除設定快取
+    clearSettingsCache();
 
     return NextResponse.json({
       success: true,

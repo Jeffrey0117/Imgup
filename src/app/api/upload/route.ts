@@ -29,6 +29,9 @@ import { UploadManager, MeteorProvider } from '@/utils/upload-providers';
 // 加入新的統一儲存服務（支援 R2）
 import { uploadFile, isProviderAvailable, StorageProvider } from '@/lib/storage';
 
+// 加入後台系統設定
+import { getUploadSettings } from '@/lib/system-config';
+
 // 加入安全錯誤處理和日誌
 import { formatApiError, logError } from '@/utils/api-errors';
 import { logFileOperation, logErrorWithContext } from '@/utils/secure-logger';
@@ -98,13 +101,23 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get('user-agent');
   const debug = process.env.DEBUG_UPLOAD_ERRORS === 'true' || process.env.NODE_ENV !== 'production';
 
+  // 🔧 讀取後台系統設定（有 60 秒快取）
+  const uploadSettings = await getUploadSettings();
+  console.log('[Upload] System settings loaded:', {
+    defaultProvider: uploadSettings.defaultProvider,
+    enableR2: uploadSettings.enableR2,
+    enableOriginCheck: uploadSettings.enableOriginCheck,
+    enableFileSignatureCheck: uploadSettings.enableFileSignatureCheck,
+  });
+
   // 簡單 API Key 驗證（對本站來源豁免）
   // 規則：
-  //  1) 若未設定 UPLOAD_API_KEY => 不驗證
+  //  1) 若未設定 API Key => 不驗證
   //  2) 若已設定：
   //     - 來自本站網頁（duk.tw 或 NEXT_PUBLIC_BASE_URL 同源）=> 豁免，不需帶 key
   //     - 其他來源（外部工具/腳本）=> 需要帶正確 key
-  const requiredKey = (process.env.UPLOAD_API_KEY || '').trim();
+  // 優先使用後台設定，fallback 到環境變數
+  const requiredKey = uploadSettings.apiKey || (process.env.UPLOAD_API_KEY || '').trim();
 
   // 判斷是否為本站來源
   const host = request.headers.get('host') || '';
@@ -177,8 +190,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 步驟 3: 驗證 Origin/Referer（改為僅當明確開啟時才檢查）
-    if (process.env.ENABLE_ORIGIN_CHECK === 'true' && !validateOrigin(request)) {
+    // 步驟 3: 驗證 Origin/Referer（使用後台設定或環境變數）
+    const shouldCheckOrigin = uploadSettings.enableOriginCheck || process.env.ENABLE_ORIGIN_CHECK === 'true';
+    if (shouldCheckOrigin && !validateOrigin(request)) {
       await logUploadAttempt(clientIP, false, 'Invalid origin', userAgent);
       return NextResponse.json(
         { status: 0, message: 'Invalid request origin' },
@@ -203,12 +217,13 @@ export async function POST(request: NextRequest) {
     const expiresAt = formData.get("expiresAt") as string | null;
 
     // 可選：指定上傳 Provider（例如 ?provider=meteor 或 formData provider=meteor）
-    // 預設先用 Urusai（可用 form/query 或環境變數覆寫）
+    // 優先順序：表單參數 > query 參數 > 後台設定 > 環境變數 > 預設 r2
     const providerPreference =
       (formData.get("provider") as string | null) ||
       request.nextUrl.searchParams.get("provider") ||
+      uploadSettings.defaultProvider ||
       process.env.DEFAULT_UPLOAD_PROVIDER ||
-      'urusai';
+      'r2';
 
     console.log('[Upload] FormData received:', {
       hasImage: !!image,
@@ -232,8 +247,8 @@ export async function POST(request: NextRequest) {
 
     const validationResult = await validateFile(image, {
       maxSize: maxFileSize,
-      // 僅當明確設定為 'true' 才啟用嚴格檢查，避免誤殺導致 400/500
-      checkSignature: process.env.ENABLE_FILE_SIGNATURE_CHECK === 'true',
+      // 使用後台設定或環境變數
+      checkSignature: uploadSettings.enableFileSignatureCheck || process.env.ENABLE_FILE_SIGNATURE_CHECK === 'true',
       checkMalicious: process.env.ENABLE_MALICIOUS_CHECK === 'true',
     });
 
@@ -346,8 +361,10 @@ export async function POST(request: NextRequest) {
     let storageTier = 'external';
     let storageKey: string | undefined;
 
-    // 嘗試使用新的統一儲存服務（R2 優先）
-    if (isProviderAvailable('r2') && (preferredProvider === 'r2' || !isProviderAvailable(preferredProvider))) {
+    // 嘗試使用新的統一儲存服務（根據後台設定決定是否使用 R2）
+    const useR2 = uploadSettings.enableR2 && isProviderAvailable('r2') &&
+                  (preferredProvider === 'r2' || !isProviderAvailable(preferredProvider));
+    if (useR2) {
       console.log('[Upload] Using R2 storage...');
       const r2Result = await uploadFile(fileBuffer, safeFileName, preHash, 'r2');
 

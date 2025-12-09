@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateAdmin } from "@/utils/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { clearSettingsCache } from "@/lib/system-config";
 
 // 預設系統設定
 const DEFAULT_SETTINGS = {
@@ -133,6 +134,9 @@ export async function PUT(request: NextRequest) {
         ipAddress: request.headers.get("x-forwarded-for") || "unknown",
       },
     });
+
+    // 清除設定快取，讓新設定立即生效
+    clearSettingsCache();
 
     return NextResponse.json({
       success: true,
