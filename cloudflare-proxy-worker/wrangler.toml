@@ -20,6 +20,12 @@ id = "df5941d509a34615874eb89d048cd6f6"
 binding = "MAPPING_KV"
 id = "8bbd5609a9b0406388f98de6bcb8a82b"
 
+# R2 Bucket Binding (圖片儲存)
+# Bucket 名稱：duk-images
+[[r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "duk-images"
+
 # 自定義域名路由（已啟用）
 routes = [
   { pattern = "proxy.duk.tw/*", zone_name = "duk.tw" }

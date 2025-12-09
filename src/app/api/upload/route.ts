@@ -22,12 +22,50 @@ import { detectFileExtensionComprehensive, generateHashedFilename } from '@/util
 import { prisma } from '@/lib/prisma';
 import { generateShortHash, generateUniqueHash } from '@/utils/hash';
 
-// 加入 Upload Manager
+// 加入 Upload Manager（舊的外部服務）
 import { UploadManager, MeteorProvider } from '@/utils/upload-providers';
+
+// 加入新的統一儲存服務（支援 R2）
+import { uploadFile, isProviderAvailable, StorageProvider } from '@/lib/storage';
 
 // 加入安全錯誤處理和日誌
 import { formatApiError, logError } from '@/utils/api-errors';
 import { logFileOperation, logErrorWithContext } from '@/utils/secure-logger';
+
+// Fallback 到舊的外部上傳服務
+async function fallbackToExternalUpload(
+  image: File,
+  safeFileName: string,
+  providerPreference: string,
+  clientIP: string,
+  userAgent: string | null
+): Promise<{ provider: string; url: string; filename?: string; mime?: string } | null> {
+  const uploadManager = new UploadManager();
+  console.log(`[Upload] External providers: ${uploadManager.getAvailableProviders().join(', ')}`);
+
+  try {
+    const result = await uploadManager.upload(image, safeFileName, providerPreference || undefined);
+    console.log(`[Upload] External upload result:`, {
+      provider: result.provider,
+      url: result.url,
+    });
+    return result;
+  } catch (uploadError) {
+    console.error('[Upload] UploadManager failed, attempting Meteor emergency fallback:', uploadError);
+    try {
+      const meteor = new MeteorProvider();
+      if (!meteor.enabled) {
+        (meteor as any).enabled = true;
+      }
+      const result = await meteor.upload(image, safeFileName);
+      console.log('[Upload] Meteor emergency fallback succeeded');
+      return result;
+    } catch (meteorError) {
+      console.error('[Upload] Meteor emergency fallback failed:', meteorError);
+      return null;
+    }
+  }
+}
 
 // 記錄上傳嘗試（用於監控和分析）
 async function logUploadAttempt(
@@ -269,74 +307,12 @@ export async function POST(request: NextRequest) {
       console.warn('[Upload] Duplicate filename guard error:', e);
     }
 
-    // 步驟 8: 使用 Upload Manager 上傳
+    // 步驟 8: 使用統一儲存服務上傳（優先 R2，支援 fallback）
     console.log(`[Upload] Processing file: ${safeFileName} (${image.size} bytes) from ${clientIP}`);
 
-    const uploadManager = new UploadManager();
-    console.log(`[Upload] Available providers: ${uploadManager.getAvailableProviders().join(', ')}`);
-
-    let uploadResult;
-    try {
-      uploadResult = await uploadManager.upload(image, safeFileName, providerPreference || undefined);
-      console.log(`[Upload] Upload result:`, {
-        provider: uploadResult.provider,
-        url: uploadResult.url,
-        filename: uploadResult.filename,
-      });
-    } catch (uploadError) {
-      console.error('[Upload] UploadManager failed, attempting Meteor emergency fallback:', uploadError);
-      try {
-        const meteor = new MeteorProvider();
-        if (!meteor.enabled) {
-          console.warn('[Upload] Meteor provider is disabled by config, overriding for emergency fallback');
-          // 強制嘗試（即便環境變數關閉）
-          (meteor as any).enabled = true;
-        }
-        uploadResult = await meteor.upload(image, safeFileName);
-        console.log('[Upload] Meteor emergency fallback succeeded');
-      } catch (meteorError) {
-        console.error('[Upload] Meteor emergency fallback failed:', meteorError);
-        await logUploadAttempt(clientIP, false, 'Upload failed', userAgent);
-        return NextResponse.json(
-          {
-            status: 0,
-            message: 'Upload failed. Please try again later.',
-            detail: String(meteorError),
-          },
-          { status: 500 }
-        );
-      }
-    }
-
-    // 記錄成功的上傳
-    await logUploadAttempt(clientIP, true, `Success via ${uploadResult.provider}`, userAgent);
-
-    // 步驟 9: 提取圖片 URL
-    const imageUrl = uploadResult.url;
-    if (!imageUrl) {
-      await logUploadAttempt(clientIP, false, 'No image URL in response', userAgent);
-      {
-        return NextResponse.json(
-          {
-            status: 0,
-            message: "Upload service returned no image URL",
-            detail: { provider: uploadResult?.provider || null, uploadResult },
-          },
-          { status: 500 }
-        );
-      }
-    }
-
-    // 步驟 10: 檢測檔案副檔名
-    const fileExtension = detectFileExtensionComprehensive(
-      uploadResult.mime || image.type,
-      imageUrl
-    );
-    console.log(`[Upload] Detected file extension: ${fileExtension}`);
-
-    // 步驟 11: 生成短 hash
-    const hash = await generateUniqueHash(
-      `${imageUrl}_${Date.now()}`,
+    // 先生成 hash（用於 R2 檔名）
+    const preHash = await generateUniqueHash(
+      `${safeFileName}_${Date.now()}_${Math.random()}`,
       async (hashToCheck: string) => {
         const existing = await prisma.mapping.findUnique({
           where: { hash: hashToCheck }
@@ -344,7 +320,105 @@ export async function POST(request: NextRequest) {
         return existing !== null;
       }
     );
-    console.log(`[Upload] Generated hash: ${hash}`);
+
+    // 讀取檔案內容
+    const fileBuffer = Buffer.from(await image.arrayBuffer());
+
+    // 決定使用哪個 provider
+    const preferredProvider = (providerPreference as StorageProvider) || 'r2';
+    console.log(`[Upload] Preferred provider: ${preferredProvider}, R2 available: ${isProviderAvailable('r2')}`);
+
+    let uploadResult: {
+      provider: string;
+      url: string;
+      filename?: string;
+      mime?: string;
+      key?: string;
+      tier?: string;
+    };
+    let storageProvider: StorageProvider = 'urusai';
+    let storageTier = 'external';
+    let storageKey: string | undefined;
+
+    // 嘗試使用新的統一儲存服務（R2 優先）
+    if (isProviderAvailable('r2') && (preferredProvider === 'r2' || !isProviderAvailable(preferredProvider))) {
+      console.log('[Upload] Using R2 storage...');
+      const r2Result = await uploadFile(fileBuffer, safeFileName, preHash, 'r2');
+
+      if (r2Result.success) {
+        console.log(`[Upload] R2 upload success: ${r2Result.key}`);
+        storageProvider = 'r2';
+        storageTier = 'hot';
+        storageKey = r2Result.key;
+        uploadResult = {
+          provider: 'r2',
+          url: `r2://${r2Result.key}`, // 內部標記，實際讀取走 Worker
+          filename: safeFileName,
+          key: r2Result.key,
+          tier: 'hot',
+        };
+      } else {
+        console.warn(`[Upload] R2 failed: ${r2Result.error}, falling back to external services...`);
+        // R2 失敗，降級到舊的上傳服務
+        uploadResult = await fallbackToExternalUpload(image, safeFileName, providerPreference, clientIP, userAgent);
+        if (!uploadResult) {
+          await logUploadAttempt(clientIP, false, 'All upload providers failed', userAgent);
+          return NextResponse.json(
+            { status: 0, message: 'Upload failed. Please try again later.' },
+            { status: 500 }
+          );
+        }
+        storageProvider = uploadResult.provider as StorageProvider;
+        storageTier = 'external';
+      }
+    } else {
+      // 使用舊的外部服務
+      console.log('[Upload] Using external upload services...');
+      uploadResult = await fallbackToExternalUpload(image, safeFileName, providerPreference, clientIP, userAgent);
+      if (!uploadResult) {
+        await logUploadAttempt(clientIP, false, 'All upload providers failed', userAgent);
+        return NextResponse.json(
+          { status: 0, message: 'Upload failed. Please try again later.' },
+          { status: 500 }
+        );
+      }
+      storageProvider = uploadResult.provider as StorageProvider;
+      storageTier = 'external';
+    }
+
+    console.log(`[Upload] Final result:`, {
+      provider: storageProvider,
+      tier: storageTier,
+      key: storageKey,
+    });
+
+    // 記錄成功的上傳
+    await logUploadAttempt(clientIP, true, `Success via ${uploadResult.provider}`, userAgent);
+
+    // 步驟 9: 提取圖片 URL（R2 用內部標記，外部用真實 URL）
+    const imageUrl = uploadResult.url;
+    if (!imageUrl) {
+      await logUploadAttempt(clientIP, false, 'No image URL in response', userAgent);
+      return NextResponse.json(
+        {
+          status: 0,
+          message: "Upload service returned no image URL",
+          detail: { provider: uploadResult?.provider || null, uploadResult },
+        },
+        { status: 500 }
+      );
+    }
+
+    // 步驟 10: 檢測檔案副檔名
+    const fileExtension = detectFileExtensionComprehensive(
+      uploadResult.mime || image.type,
+      storageProvider === 'r2' ? safeFileName : imageUrl
+    );
+    console.log(`[Upload] Detected file extension: ${fileExtension}`);
+
+    // 步驟 11: 使用預先生成的 hash（R2 已經用這個 hash 存檔了）
+    const hash = preHash;
+    console.log(`[Upload] Using hash: ${hash}`);
 
     // 步驟 12: 儲存到資料庫
     try {
@@ -389,6 +463,12 @@ export async function POST(request: NextRequest) {
         password: password || null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         fileExtension: fileExtension || null,
+        // 新增：儲存相關資訊
+        storageProvider: storageProvider,
+        storageTier: storageTier,
+        storageKey: storageKey || null,
+        fileSize: image.size || null,
+        contentType: image.type || null,
         uploadStats: {
           userId: userId || null,
           ipAddress: clientIP,

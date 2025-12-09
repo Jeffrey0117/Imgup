@@ -1,11 +1,12 @@
 /**
- * Cloudflare Worker - duk.tw 圖片代理服務 v2
+ * Cloudflare Worker - duk.tw 圖片代理服務 v3
  *
- * 🎯 完美隱藏原始 URL + 節省 99% 成本
+ * 🎯 完美隱藏原始 URL + 節省 99% 成本 + R2 直接讀取
  *
- * 支援兩種模式：
- * 1. Hash 模式（隱藏 URL）: https://proxy.duk.tw/pbQyTD
- * 2. URL 模式（向後兼容）: https://proxy.duk.tw/image?url=xxx
+ * 支援三種模式：
+ * 1. R2 直接讀取（最省錢）: mapping URL 為 r2://key 時直接從 R2 讀取
+ * 2. Hash 模式（隱藏 URL）: https://proxy.duk.tw/pbQyTD
+ * 3. URL 模式（向後兼容）: https://proxy.duk.tw/image?url=xxx
  *
  * 預期節省：$498/月 → < $5/月（節省 99%）
  */
@@ -26,6 +27,7 @@ const RATE_LIMIT_PER_MINUTE = 30;
 interface Env {
   RATE_LIMIT_KV?: KVNamespace;
   MAPPING_KV?: KVNamespace;  // Mapping 緩存，減少 Vercel API 調用
+  IMAGES_BUCKET?: R2Bucket;  // R2 圖片儲存
 }
 
 interface RateLimitData {
@@ -118,6 +120,14 @@ export default {
         }
       }
 
+      // === 檢查是否為 R2 儲存 ===
+      if (imageUrl.startsWith('r2://')) {
+        // R2 直接讀取模式（最省錢，無外部請求）
+        const r2Key = imageUrl.replace('r2://', '');
+        console.log('🗄️ R2 模式:', r2Key);
+        return await serveFromR2(r2Key, env, referer);
+      }
+
       // === 驗證 URL 格式 ===
       let parsedUrl: URL;
       try {
@@ -131,7 +141,7 @@ export default {
         return jsonResponse({ error: 'Only HTTP/HTTPS protocols are allowed' }, 400);
       }
 
-      // === 圖片代理處理 ===
+      // === 圖片代理處理（外部 URL）===
       return await proxyImage(imageUrl, request, ctx, referer);
 
     } catch (error) {
@@ -157,6 +167,77 @@ export default {
 
 // Mapping KV 緩存 TTL（7 天，因為 mapping 很少變動）
 const MAPPING_KV_TTL = 60 * 60 * 24 * 7;
+
+// Content-Type 對照表
+const CONTENT_TYPE_MAP: Record<string, string> = {
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'png': 'image/png',
+  'gif': 'image/gif',
+  'webp': 'image/webp',
+  'svg': 'image/svg+xml',
+  'bmp': 'image/bmp',
+  'ico': 'image/x-icon',
+};
+
+/**
+ * 從檔名取得 Content-Type
+ */
+function getContentTypeFromKey(key: string): string {
+  const ext = key.split('.').pop()?.toLowerCase() || '';
+  return CONTENT_TYPE_MAP[ext] || 'application/octet-stream';
+}
+
+/**
+ * 從 R2 直接讀取圖片並回傳（零外部請求，最省錢）
+ */
+async function serveFromR2(key: string, env: Env, referer: string): Promise<Response> {
+  if (!env.IMAGES_BUCKET) {
+    console.error('❌ R2 bucket 未綁定');
+    return jsonResponse({ error: 'Storage not configured' }, 500);
+  }
+
+  try {
+    const object = await env.IMAGES_BUCKET.get(key);
+
+    if (!object) {
+      console.log(`❌ R2 找不到檔案: ${key}`);
+      return jsonResponse({ error: 'Image not found' }, 404);
+    }
+
+    console.log(`✅ R2 讀取成功: ${key} (${object.size} bytes)`);
+
+    // 從 R2 metadata 或檔名推斷 Content-Type
+    const contentType = object.httpMetadata?.contentType || getContentTypeFromKey(key);
+
+    const headers = new Headers({
+      'Content-Type': contentType,
+      'Content-Length': String(object.size),
+      'Cache-Control': 'public, max-age=31536000, immutable', // 1 年快取（內容不變）
+      'CDN-Cache-Control': 'public, max-age=31536000',
+      'Access-Control-Allow-Origin': referer.includes('localhost') ? referer : '*',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Storage': 'r2', // 標記來源
+      'ETag': object.etag,
+    });
+
+    // 如果有 uploaded 時間，加入 Last-Modified
+    if (object.uploaded) {
+      headers.set('Last-Modified', object.uploaded.toUTCString());
+    }
+
+    return new Response(object.body, {
+      status: 200,
+      headers,
+    });
+  } catch (error) {
+    console.error('❌ R2 讀取失敗:', error);
+    return jsonResponse({
+      error: 'Failed to read from storage',
+      details: error instanceof Error ? error.message : String(error),
+    }, 500);
+  }
+}
 
 /**
  * 帶 KV 緩存的 mapping 查詢（節省 99% Vercel API 調用）

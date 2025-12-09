@@ -29,6 +29,14 @@ model Mapping {
   uploadStats     Json?
   userId          String?
   ipAddress       String?
+
+  // 儲存相關欄位（R2/B2/外部服務）
+  storageProvider String?         // 'r2', 'b2', 'urusai', 'meteor'
+  storageTier     String?         // 'hot', 'cold', 'external'
+  storageKey      String?         // R2/B2 中的檔案路徑（例：hash.png）
+  fileSize        Int?            // 檔案大小（bytes）
+  contentType     String?         // MIME 類型（例：image/png）
+
   AccessLog       AccessLog[]
   User            User?           @relation(fields: [userId], references: [id])
   ReferrerStats   ReferrerStats[]
@@ -38,6 +46,8 @@ model Mapping {
   @@index([createdAt])
   @@index([isDeleted])
   @@index([userId])
+  @@index([storageProvider])
+  @@index([storageTier])
 }
 
 // ============================================
