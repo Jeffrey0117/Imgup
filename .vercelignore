@@ -1,0 +1,14 @@
+# 不需要上傳到 Vercel 的檔案
+cloudflare-proxy-worker/
+docs/
+scripts/
+*.md
+!README.md
+.github/
+tests/
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+coverage/
+.nyc_output/
