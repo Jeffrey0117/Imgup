@@ -9,9 +9,76 @@ import { authenticateAdmin } from "@/utils/admin-auth";
  * 功能：
  * 1. 驗證 Admin 權限
  * 2. 接受圖片網址輸入
- * 3. 生成短網址並儲存到資料庫
- * 4. 支援密碼保護和過期時間設定
+ * 3. 驗證 URL 指向的是圖片（檢查 Content-Type）
+ * 4. 生成短網址並儲存到資料庫
+ * 5. 支援密碼保護和過期時間設定
  */
+
+// 允許的圖片 MIME 類型
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/bmp',
+  'image/tiff',
+  'image/avif',
+  'image/heic',
+  'image/heif',
+];
+
+/**
+ * 驗證 URL 是否指向圖片
+ */
+async function validateImageUrl(url: string): Promise<{ valid: boolean; contentType?: string; error?: string }> {
+  try {
+    // 先嘗試 HEAD 請求（較快）
+    let response = await fetch(url, {
+      method: 'HEAD',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+      signal: AbortSignal.timeout(10000), // 10 秒超時
+    });
+
+    // 如果 HEAD 失敗或不返回 Content-Type，嘗試 GET
+    if (!response.ok || !response.headers.get('content-type')) {
+      response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Range': 'bytes=0-1023', // 只取前 1KB
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+    }
+
+    if (!response.ok) {
+      return { valid: false, error: `無法存取 URL (HTTP ${response.status})` };
+    }
+
+    const contentType = response.headers.get('content-type')?.toLowerCase() || '';
+
+    // 檢查是否為圖片類型
+    const isImage = ALLOWED_IMAGE_TYPES.some(type => contentType.includes(type));
+
+    if (!isImage) {
+      return {
+        valid: false,
+        contentType,
+        error: `不是有效的圖片格式 (Content-Type: ${contentType || '未知'})`
+      };
+    }
+
+    return { valid: true, contentType };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      return { valid: false, error: '請求超時，無法驗證 URL' };
+    }
+    return { valid: false, error: `驗證失敗: ${error instanceof Error ? error.message : '未知錯誤'}` };
+  }
+}
 export async function POST(request: NextRequest) {
   try {
     // 驗證管理員身份
@@ -39,7 +106,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. 生成唯一 hash（復用現有邏輯）
+    // 4. 驗證 URL 指向的是圖片
+    const imageValidation = await validateImageUrl(url);
+    if (!imageValidation.valid) {
+      return NextResponse.json(
+        { error: imageValidation.error || "URL 不是有效的圖片" },
+        { status: 400 }
+      );
+    }
+
+    // 5. 生成唯一 hash（復用現有邏輯）
     const baseString = url + "|" + filename;
     const checkHashExists = async (hash: string): Promise<boolean> => {
       try {
@@ -54,7 +130,7 @@ export async function POST(request: NextRequest) {
     };
     const hash = await generateUniqueHash(baseString, checkHashExists);
 
-    // 5. 建立短網址
+    // 6. 建立短網址
     const host = request.headers.get("host");
     const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
     const baseUrl = host
@@ -62,7 +138,7 @@ export async function POST(request: NextRequest) {
       : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     const shortUrl = `${baseUrl}/${hash}`;
 
-    // 6. 儲存到資料庫（使用 upsert）
+    // 7. 儲存到資料庫（使用 upsert）
     const mapping = await prisma.mapping.upsert({
       where: { hash },
       update: {
@@ -88,7 +164,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 7. 記錄審計日誌
+    // 8. 記錄審計日誌
     await prisma.auditLog.create({
       data: {
         adminId: auth.admin.id,
@@ -109,7 +185,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 8. 返回結果
+    // 9. 返回結果
     return NextResponse.json({
       success: true,
       hash,
