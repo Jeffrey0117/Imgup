@@ -263,6 +263,22 @@ export default function ImagesPage() {
     return "N/A";
   };
 
+  /**
+   * 將資料庫中的 URL 轉換為可訪問的實際 URL
+   * r2://hash.ext -> https://i.duk.tw/hash.ext
+   * 其他 URL 保持不變
+   */
+  const getDisplayUrl = (url: string, hash: string): string => {
+    if (url.startsWith('r2://')) {
+      // R2 存儲：使用 proxy URL 或短網址
+      const proxyUrl = process.env.NEXT_PUBLIC_PROXY_URL || 'https://i.duk.tw';
+      const r2Path = url.replace('r2://', '');
+      return `${proxyUrl}/${r2Path}`;
+    }
+    // 其他 URL（外部圖片、Meteor 等）保持原樣
+    return url;
+  };
+
   const getFileExtension = (filename: string) => {
     const parts = filename.split(".");
     return parts.length > 1 ? parts.pop()?.toLowerCase() : "";
@@ -567,7 +583,7 @@ export default function ImagesPage() {
                     onMouseMove={handleMouseMove}
                   >
                     <img
-                      src={image.url}
+                      src={getDisplayUrl(image.url, image.hash)}
                       alt={image.filename}
                       loading="lazy"
                     />
@@ -590,15 +606,15 @@ export default function ImagesPage() {
                     /{image.hash}
                   </a>
                 </td>
-                <td data-label="原始 URL" title={image.url}>
+                <td data-label="原始 URL" title={getDisplayUrl(image.url, image.hash)}>
                   <a
-                    href={image.url}
+                    href={getDisplayUrl(image.url, image.hash)}
                     target="_blank"
                     rel="noreferrer"
                     className={styles.hashLink}
                     style={{ fontSize: "12px" }}
                   >
-                    {image.url.length > 20 ? `${image.url.substring(0, 20)}...` : image.url}
+                    {image.url.startsWith('r2://') ? '📦 R2' : (image.url.length > 20 ? `${image.url.substring(0, 20)}...` : image.url)}
                   </a>
                 </td>
                 <td data-label="密碼">
@@ -842,7 +858,7 @@ export default function ImagesPage() {
             top: `${mousePosition.y + 20}px`,
           }}
         >
-          <img src={hoveredImage.url} alt={hoveredImage.filename} />
+          <img src={getDisplayUrl(hoveredImage.url, hoveredImage.hash)} alt={hoveredImage.filename} />
           <div className={imgStyles.previewInfo}>
             <div className={imgStyles.previewFilename}>{hoveredImage.filename}</div>
           </div>
