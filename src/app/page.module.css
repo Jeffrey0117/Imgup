@@ -486,7 +486,7 @@
   padding: 12px 20px;
   border-radius: 8px;
   box-shadow: 0 4px 12px #0008;
-  z-index: 1000;
+  z-index: 10001; /* 比 Modal (1000) 更高，確保顯示在最上層 */
   font-weight: 500;
   animation: toastSlideIn 0.3s ease-out;
 }
