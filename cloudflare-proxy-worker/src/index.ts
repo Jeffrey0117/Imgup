@@ -119,10 +119,11 @@ export default {
           accept: accept.substring(0, 50)
         });
 
-        // 瀏覽器直接訪問（非圖片嵌入）→ 直接渲染預覽頁 HTML（省 Vercel 費用）
+        // 瀏覽器直接訪問（非圖片嵌入）→ 導到預覽頁
         if (isBrowser && !isImageEmbed) {
-          console.log('🎯 瀏覽器訪問 → 直接渲染預覽頁');
-          return await renderPreviewPage(cleanHash, env);
+          const previewUrl = `${SITE_BASE_URL}/${cleanHash}/p`;
+          console.log('🎯 瀏覽器訪問 → 導到預覽頁:', previewUrl);
+          return Response.redirect(previewUrl, 302);
         }
 
         // 優先從 KV 緩存查詢（節省 Vercel API 調用）
