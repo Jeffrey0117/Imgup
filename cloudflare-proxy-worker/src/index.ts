@@ -119,11 +119,10 @@ export default {
           accept: accept.substring(0, 50)
         });
 
-        // 瀏覽器直接訪問（非圖片嵌入）→ 導到預覽頁（有廣告）
+        // 瀏覽器直接訪問（非圖片嵌入）→ 直接渲染預覽頁 HTML（省 Vercel 費用）
         if (isBrowser && !isImageEmbed) {
-          const previewUrl = `${SITE_BASE_URL}/${cleanHash}/p`;
-          console.log('🎯 瀏覽器訪問 → 導到預覽頁:', previewUrl);
-          return Response.redirect(previewUrl, 302);
+          console.log('🎯 瀏覽器訪問 → 直接渲染預覽頁');
+          return await renderPreviewPage(cleanHash, env);
         }
 
         // 優先從 KV 緩存查詢（節省 Vercel API 調用）
@@ -546,4 +545,323 @@ function jsonResponse(data: any, status: number = 200): Response {
       'Access-Control-Allow-Origin': '*',
     },
   });
+}
+
+/**
+ * 🎯 直接在 Worker 渲染預覽頁（省 Vercel 費用）
+ */
+async function renderPreviewPage(hash: string, env: Env): Promise<Response> {
+  // 查詢 mapping 資訊
+  const mappingData = await fetchMappingDataFromNeon(hash, env);
+
+  if (!mappingData) {
+    return new Response(generate404HTML(), {
+      status: 404,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
+  }
+
+  // 如果有密碼保護，重定向到 Vercel 處理
+  if (mappingData.password) {
+    return Response.redirect(`${SITE_BASE_URL}/${hash}/p`, 302);
+  }
+
+  // 生成預覽頁 HTML
+  const html = generatePreviewHTML(hash, mappingData);
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600', // 1 小時快取
+    },
+  });
+}
+
+/**
+ * 從 Neon 查詢完整 mapping 資料（包含 filename 等）
+ */
+async function fetchMappingDataFromNeon(hash: string, env: Env): Promise<{
+  url: string;
+  filename: string;
+  password: string | null;
+  createdAt: Date;
+  expiresAt: Date | null;
+  fileExtension: string | null;
+} | null> {
+  if (!env.DATABASE_URL) {
+    console.error('❌ DATABASE_URL 未設定');
+    return null;
+  }
+
+  try {
+    const sql = neon(env.DATABASE_URL);
+    const result = await sql`
+      SELECT url, filename, password, "createdAt", "expiresAt", "fileExtension", "isDeleted"
+      FROM "Mapping"
+      WHERE hash = ${hash}
+      LIMIT 1
+    `;
+
+    if (result.length === 0) return null;
+
+    const mapping = result[0];
+    if (mapping.isDeleted) return null;
+    if (mapping.expiresAt && new Date(mapping.expiresAt) < new Date()) return null;
+
+    return {
+      url: mapping.url,
+      filename: mapping.filename || '',
+      password: mapping.password,
+      createdAt: new Date(mapping.createdAt),
+      expiresAt: mapping.expiresAt ? new Date(mapping.expiresAt) : null,
+      fileExtension: mapping.fileExtension,
+    };
+  } catch (error) {
+    console.error('❌ Neon 查詢失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * 生成預覽頁 HTML
+ */
+function generatePreviewHTML(hash: string, data: {
+  url: string;
+  filename: string;
+  fileExtension: string | null;
+}): string {
+  // 推導副檔名
+  let ext = data.fileExtension || '';
+  if (!ext && data.filename) {
+    const match = data.filename.match(/\.([a-zA-Z0-9]+)$/);
+    if (match) ext = match[1].toLowerCase();
+  }
+
+  const imageUrl = `https://i.duk.tw/${hash}${ext ? '.' + ext : ''}`;
+  const pageUrl = `${SITE_BASE_URL}/${hash}/p`;
+  const title = '圖鴨上床 duk.tw - 最好用的免費圖床';
+  const description = '免費圖片分享，支援快速上傳，免註冊即可使用';
+
+  return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <meta name="description" content="${description}">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${description}">
+  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:url" content="${pageUrl}">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="duk.tw">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="${description}">
+  <meta name="twitter:image" content="${imageUrl}">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      color: #fff;
+    }
+    .container {
+      max-width: 900px;
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+      margin-top: 20px;
+    }
+    .image-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .image-wrapper img {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .info {
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #888; }
+    .info-value { color: #fff; word-break: break-all; }
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      flex: 1;
+      min-width: 120px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      text-align: center;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.4); }
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .logo span { color: #667eea; }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #22c55e;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      display: none;
+      z-index: 1000;
+    }
+    .ad-container {
+      width: 100%;
+      max-width: 900px;
+      margin: 20px 0;
+      min-height: 90px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">圖鴨<span>上床</span></div>
+
+  <!-- 廣告位 -->
+  <div class="ad-container">
+    <!-- Google AdSense 或其他廣告代碼 -->
+  </div>
+
+  <div class="container">
+    <div class="image-wrapper">
+      <img src="${imageUrl}" alt="${data.filename || '分享圖片'}" loading="eager">
+    </div>
+
+    <div class="info">
+      <div class="info-row">
+        <span class="info-label">檔案名稱</span>
+        <span class="info-value">${data.filename || '未命名'}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">短網址</span>
+        <span class="info-value">${SITE_BASE_URL}/${hash}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">直接連結</span>
+        <span class="info-value">${imageUrl}</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="copyLink('${SITE_BASE_URL}/${hash}')">📋 複製短網址</button>
+      <button class="btn btn-secondary" onclick="copyLink('${imageUrl}')">🔗 複製圖片連結</button>
+      <a href="${imageUrl}" download class="btn btn-secondary">⬇️ 下載圖片</a>
+      <a href="${SITE_BASE_URL}" class="btn btn-secondary">🏠 返回首頁</a>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">已複製到剪貼簿！</div>
+
+  <script>
+    function copyLink(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>`;
+}
+
+/**
+ * 生成 404 頁面
+ */
+function generate404HTML(): string {
+  return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>找不到圖片 - duk.tw</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    h1 { font-size: 72px; margin-bottom: 16px; }
+    p { color: #888; margin-bottom: 24px; }
+    a {
+      color: #667eea;
+      text-decoration: none;
+      padding: 12px 24px;
+      border: 1px solid #667eea;
+      border-radius: 8px;
+    }
+    a:hover { background: #667eea; color: #fff; }
+  </style>
+</head>
+<body>
+  <h1>404</h1>
+  <p>找不到這張圖片，可能已過期或被刪除</p>
+  <a href="${SITE_BASE_URL}">返回首頁</a>
+</body>
+</html>`;
 }
