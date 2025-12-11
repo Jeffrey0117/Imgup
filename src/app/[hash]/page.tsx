@@ -3,6 +3,9 @@ import { Metadata } from "next";
 import { isValidHash } from "../../utils/hash";
 import prisma from "@/lib/prisma";
 
+// ISR: 每 60 秒重新驗證一次，大幅減少 Serverless Function 調用
+export const revalidate = 60;
+
 interface Props {
   params: Promise<{ hash: string }>;
 }
