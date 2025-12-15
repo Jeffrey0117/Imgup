@@ -161,6 +161,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // 🔑 有帶正確 API Key 的請求，跳過 Origin 檢查（允許 Server-Side 呼叫）
+  const hasValidApiKey = requiredKey && providedKey === requiredKey;
+
   try {
     // 步驟 1: 檢查 IP 黑名單
     if (isIPBlacklisted(clientIP)) {
@@ -191,8 +194,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 步驟 3: 驗證 Origin/Referer（使用後台設定或環境變數）
+    // 🔑 有帶正確 API Key 的請求直接跳過 Origin 檢查
     const shouldCheckOrigin = uploadSettings.enableOriginCheck || process.env.ENABLE_ORIGIN_CHECK === 'true';
-    if (shouldCheckOrigin && !validateOrigin(request)) {
+    if (shouldCheckOrigin && !hasValidApiKey && !validateOrigin(request)) {
       await logUploadAttempt(clientIP, false, 'Invalid origin', userAgent);
       return NextResponse.json(
         { status: 0, message: 'Invalid request origin' },
