@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: "HTML 嵌入教學 | 圖鴨上床(duk.tw) - 網頁圖片嵌入指南",
     description: "完整的 HTML img 標籤教學：屬性說明、響應式圖片、SEO 優化等。",
     images: ["https://storage.meteor.today/image/68cff2bdac843e3fb52e87a6.png"],
-    creator: "@duk_tw",
+    creator: "@html__cat",
   },
 };
 

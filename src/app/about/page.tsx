@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: "圖鴨上床 duk.tw｜免費圖床上傳｜Imgur替代｜Duk圖片上傳",
     description: "圖鴨上床 duk.tw 是台灣開發者打造的免費圖床，支援外連、免登入、生成 Markdown 語法。作為 Imgur 替代方案，提供穩定上傳體驗與極簡設計，讓創作者快速上傳與分享圖片。",
     images: ["https://storage.meteor.today/image/68cff2bdac843e3fb52e87a6.png"],
-    creator: "@duk_tw",
+    creator: "@html__cat",
   },
 };
 
@@ -53,7 +53,7 @@ export default function AboutPage() {
               "logo": "https://duk.tw/logo-imgup.png",
               "contactPoint": {
                 "@type": "ContactPoint",
-                "email": "contact@duk.tw",
+                "email": "jeffby8@gmail.com",
                 "contactType": "customer service"
               }
             }
@@ -295,16 +295,16 @@ export default function AboutPage() {
               <div className={styles.contactItem}>
                 <h4>📧 電子郵件</h4>
                 <p>有問題或建議？歡迎寄信給我們</p>
-                <a href="mailto:contact@duk.tw" className={styles.contactLink}>
-                  contact@duk.tw
+                <a href="mailto:jeffby8@gmail.com" className={styles.contactLink}>
+                  jeffby8@gmail.com
                 </a>
               </div>
 
               <div className={styles.contactItem}>
-                <h4>🐦 Twitter</h4>
-                <p>關注我們的最新動態和更新</p>
-                <a href="https://twitter.com/duk_tw" target="_blank" rel="noopener noreferrer" className={styles.contactLink}>
-                  @duk_tw
+                <h4>📱 Threads / IG</h4>
+                <p>關注切板職人的最新動態</p>
+                <a href="https://www.threads.com/@html__cat" target="_blank" rel="noopener noreferrer" className={styles.contactLink}>
+                  @html__cat
                 </a>
               </div>
             </div>

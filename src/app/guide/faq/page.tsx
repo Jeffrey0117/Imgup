@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     title: "常見問題 FAQ | 圖鴨上床(duk.tw) - 圖床使用問答",
     description: "duk.tw 圖床服務的完整 FAQ：上傳問題、功能說明、技術支援等。",
     images: ["https://storage.meteor.today/image/68cff2bdac843e3fb52e87a6.png"],
-    creator: "@duk_tw",
+    creator: "@html__cat",
   },
 };
 

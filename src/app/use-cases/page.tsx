@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     title: "應用案例 | 圖鴨上床(duk.tw) - 實際使用案例分享",
     description: "探索 duk.tw 的實際應用案例：部落客、開發者、設計師等各行各業的用戶如何使用我們的圖床服務提升工作效率。",
     images: ["https://storage.meteor.today/image/68cff2bdac843e3fb52e87a6.png"],
-    creator: "@duk_tw",
+    creator: "@html__cat",
   },
 };
 

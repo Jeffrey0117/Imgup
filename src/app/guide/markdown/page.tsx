@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: "Markdown 語法教學 | 圖鴨上床(duk.tw) - 圖片嵌入指南",
     description: "詳盡的 Markdown 語法教學：圖片嵌入、格式說明、支援平台等。",
     images: ["https://storage.meteor.today/image/68cff2bdac843e3fb52e87a6.png"],
-    creator: "@duk_tw",
+    creator: "@html__cat",
   },
 };
 

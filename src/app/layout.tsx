@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     description:
       "圖鴨上床 duk.tw，台灣熱門免費圖床，支援圖片快速上傳，免註冊即可分享，穩定又方便。",
     images: ["https://storage.meteor.today/image/68cff2bdac843e3fb52e87a6.png"],
-    creator: "@duk_tw",
+    creator: "@html__cat",
   },
 };
 

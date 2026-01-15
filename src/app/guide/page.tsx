@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     title: "使用指南 | 圖鴨上床(duk.tw) - 圖床使用教學",
     description: "詳細的 duk.tw 使用指南：拖曳上傳、批量處理、Markdown/HTML 生成、進階功能等完整教學。",
     images: ["https://storage.meteor.today/image/68cff2bdac843e3fb52e87a6.png"],
-    creator: "@duk_tw",
+    creator: "@html__cat",
   },
 };
 

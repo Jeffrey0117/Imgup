@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: "功能特色 | 圖鴨上床(duk.tw) - 專業圖床工具",
     description: "探索 duk.tw 的強大功能特色：拖曳上傳、批量處理、格式支援、即時生成 Markdown/HTML、免費使用等。",
     images: ["https://storage.meteor.today/image/68cff2bdac843e3fb52e87a6.png"],
-    creator: "@duk_tw",
+    creator: "@html__cat",
   },
 };
 
